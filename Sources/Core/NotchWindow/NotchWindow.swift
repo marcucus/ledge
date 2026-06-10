@@ -24,7 +24,7 @@ public final class NotchWindow: NSPanel {
         hasShadow = false
         hidesOnDeactivate = false
 
-        contentView = NSHostingView(rootView: PlaceholderView(controller: controller))
+        contentView = NSHostingView(rootView: NotchContentView(controller: controller))
 
         controller.onTransition = { [weak self] state in
             self?.updateFrame(for: state, animated: true)
@@ -65,12 +65,12 @@ public final class NotchWindow: NSPanel {
 
     private func updateFrame(for state: NotchState, animated: Bool) {
         guard let geometry = currentGeometry else { return }
-        let height = Layout.height(for: state)
+        let size = Layout.size(for: state, notchWidth: geometry.notchRect.width)
         let newFrame = CGRect(
-            x: geometry.notchRect.minX,
-            y: geometry.anchorPoint.y - height,
-            width: geometry.notchRect.width,
-            height: height
+            x: geometry.anchorPoint.x - size.width / 2,
+            y: geometry.anchorPoint.y - size.height,
+            width: size.width,
+            height: size.height
         )
 
         if animated {
@@ -79,7 +79,6 @@ public final class NotchWindow: NSPanel {
                 context.timingFunction = Motion.curve(for: state)
                 animator().setFrame(newFrame, display: true)
             } completionHandler: { [weak self] in
-                // Recalcul du tracking area une fois le frame final atteint
                 self?.updateTrackingArea()
             }
         } else {
@@ -112,7 +111,7 @@ public final class NotchWindow: NSPanel {
         trackingArea = area
     }
 
-    // MARK: — Global click monitor (dismiss panneau ouvert)
+    // MARK: — Global click monitor
 
     private func addGlobalClickMonitor() {
         guard globalClickMonitor == nil else { return }
@@ -130,11 +129,13 @@ public final class NotchWindow: NSPanel {
 // MARK: — Dimensions
 
 private enum Layout {
-    static func height(for state: NotchState) -> CGFloat {
+    static let expandedWidth: CGFloat = 560
+
+    static func size(for state: NotchState, notchWidth: CGFloat) -> CGSize {
         switch state {
-        case .collapsed: 4      // bande invisible = hot zone
-        case .peeking:   50     // aperçu compact
-        case .expanded:  300    // panneau complet
+        case .collapsed: CGSize(width: notchWidth, height: 4)
+        case .peeking:   CGSize(width: notchWidth, height: 50)
+        case .expanded:  CGSize(width: expandedWidth, height: 300)
         }
     }
 }
@@ -142,40 +143,16 @@ private enum Layout {
 // MARK: — Animation
 
 private enum Motion {
-    // Fermeture rapide (ressenti réactif), ouverture plus douce
     static func duration(for state: NotchState) -> TimeInterval {
         state == .collapsed ? 0.22 : 0.35
     }
 
-    // Courbe spring approximée (bezier cubique) pour l'ouverture ;
-    // ease-in simple pour la fermeture (plus naturel qu'un spring inverse)
     static func curve(for state: NotchState) -> CAMediaTimingFunction {
         switch state {
         case .collapsed:
             return CAMediaTimingFunction(name: .easeIn)
         case .peeking, .expanded:
-            // Léger dépassement reproduisant l'impulsion spring (~0.15 overshoot)
             return CAMediaTimingFunction(controlPoints: 0.34, 1.56, 0.64, 1.0)
-        }
-    }
-}
-
-// MARK: — Vue placeholder
-
-// Vue temporaire pour vérifier les transitions visuellement — remplacée en V0.6
-private struct PlaceholderView: View {
-    var controller: NotchController
-
-    var body: some View {
-        UnevenRoundedRectangle(bottomLeadingRadius: 8, bottomTrailingRadius: 8)
-            .fill(stateColor.opacity(0.7))
-    }
-
-    private var stateColor: Color {
-        switch controller.state {
-        case .collapsed: .clear
-        case .peeking:   .orange
-        case .expanded:  .green
         }
     }
 }
