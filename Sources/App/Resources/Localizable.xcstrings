@@ -1,5 +1,55 @@
 {
   "sourceLanguage" : "en",
-  "strings" : {},
+  "strings" : {
+    "action.close" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Close" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Fermer" } }
+      }
+    },
+    "action.settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Paramètres" } }
+      }
+    },
+    "module.clipboard.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clipboard" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Presse-papiers" } }
+      }
+    },
+    "module.media.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Media" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Média" } }
+      }
+    },
+    "module.system.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "System" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Système" } }
+      }
+    },
+    "module.timers.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Timers" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Timers" } }
+      }
+    },
+    "notch.app.name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Notchy" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Notchy" } }
+      }
+    }
+  },
   "version" : "1.0"
 }
