@@ -1,0 +1,66 @@
+# ─── Projet Notchy — fichiers privés (à ne PAS publier) ───
+PROMPT_IA.md
+
+# ─── macOS ───
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# ─── Xcode ───
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+xcuserdata/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+DerivedData/
+build/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# ─── Swift Package Manager ───
+.build/
+.swiftpm/
+Package.resolved
+.netrc
+
+# ─── Configs locales / secrets ───
+*.local
+.env
+.env.*
+secrets.plist
+
+# ─── Signature & distribution ───
+*.p12
+*.cer
+*.certSigningRequest
+*.provisionprofile
+*.app
+*.dmg
+*.pkg
+
+# ─── Outillage ───
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# ─── Divers ───
+*.log
+*.swp
+*~
+.idea/
+.vscode/
