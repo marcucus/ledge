@@ -1,0 +1,33 @@
+included:
+  - Sources
+
+excluded:
+  - .build
+
+opt_in_rules:
+  - force_unwrapping
+  - empty_count
+  - closure_spacing
+  - extension_access_modifier
+  - first_where
+  - literal_expression_end_indentation
+  - operator_usage_whitespace
+  - redundant_nil_coalescing
+  - toggle_bool
+  - yoda_condition
+
+disabled_rules:
+  - trailing_whitespace
+  - todo
+
+line_length:
+  warning: 120
+  error: 150
+
+function_body_length:
+  warning: 30
+  error: 50
+
+file_length:
+  warning: 400
+  error: 500

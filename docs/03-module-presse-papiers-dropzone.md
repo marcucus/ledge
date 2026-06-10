@@ -35,7 +35,7 @@
 │  │ 📝 "git rebase -i HEAD~3"           il y a 2 min  │ │
 │  │ 🔗 https://exemple.com/article…     il y a 8 min  │ │
 │  │ 🖼  capture-2026.png  (image)        il y a 12 min │ │
-│  │ 📝 adrien@datakeen.co               il y a 1 h    │ │
+│  │ 📝 adrien227@gmail.com               il y a 1 h    │ │
 │  └──────────────────────────────────────────────────┘ │
 │  Clic = recoller · ⌘+clic = coller en texte brut       │
 ├──────────────────────────────────────────────────────┤
