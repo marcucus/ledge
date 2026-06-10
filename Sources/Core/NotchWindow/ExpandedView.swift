@@ -18,7 +18,7 @@ struct ExpandedView: View {
                 moduleTabButton(item)
             }
             Spacer()
-            iconButton(icon: "gear", label: "action.settings") { }
+            iconButton(icon: "gear", label: "action.settings") { controller.openSettings?() }
             iconButton(icon: "xmark", label: "action.close") { controller.dismiss() }
         }
         .padding(.horizontal, 8)
@@ -59,6 +59,7 @@ struct ExpandedView: View {
     }
 }
 
+@MainActor
 private struct ModuleItem {
     let id: String
     let base: any NotchModule

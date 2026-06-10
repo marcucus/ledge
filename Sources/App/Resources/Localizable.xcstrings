@@ -15,6 +15,62 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Paramètres" } }
       }
     },
+    "clipboard.action.clear" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear history" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Vider l'historique" } }
+      }
+    },
+    "clipboard.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No copies yet" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune copie" } }
+      }
+    },
+    "clipboard.item.image" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Image" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Image" } }
+      }
+    },
+    "dropzone.action.airdrop" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "AirDrop" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "AirDrop" } }
+      }
+    },
+    "dropzone.action.clear" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Vider" } }
+      }
+    },
+    "dropzone.action.save" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Save…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Enregistrer…" } }
+      }
+    },
+    "dropzone.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drop files here" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déposez des fichiers ici" } }
+      }
+    },
+    "dropzone.items.count" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "files" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "fichiers" } }
+      }
+    },
     "media.nowPlaying.empty" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -27,6 +83,13 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Clipboard" } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Presse-papiers" } }
+      }
+    },
+    "module.dropzone.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drop Zone" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Zone de dépôt" } }
       }
     },
     "module.media.label" : {
@@ -55,6 +118,391 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Notchy" } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Notchy" } }
+      }
+    },
+    "settings.about.appName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Application" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Application" } }
+      }
+    },
+    "settings.about.checkUpdates" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Check for Updates…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Vérifier les mises à jour…" } }
+      }
+    },
+    "settings.about.copyright" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copyright" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copyright" } }
+      }
+    },
+    "settings.about.version" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Version" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Version" } }
+      }
+    },
+    "settings.appearance.cornerRadius" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Corner radius" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rayon des coins" } }
+      }
+    },
+    "settings.appearance.panelWidth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Panel width" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Largeur du panneau" } }
+      }
+    },
+    "settings.display.fullscreen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Full Screen behavior" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Comportement plein écran" } }
+      }
+    },
+    "settings.display.fullscreen.accessible" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Stay accessible (appears on hover)" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rester accessible (au survol)" } }
+      }
+    },
+    "settings.display.fullscreen.hidden" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hide automatically" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Masquer automatiquement" } }
+      }
+    },
+    "settings.display.fullscreen.overlay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Always visible (overlay)" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Toujours visible (overlay)" } }
+      }
+    },
+    "settings.display.notchDetection" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Notch detection" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Détection de l'encoche" } }
+      }
+    },
+    "settings.display.notchDetection.automatic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Automatic (recommended)" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Automatique (recommandé)" } }
+      }
+    },
+    "settings.display.notchDetection.manual" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Manual" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Manuel" } }
+      }
+    },
+    "settings.display.timerRing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show timer ring when active" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Afficher l'anneau de timer" } }
+      }
+    },
+    "settings.general.collapseDelay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Close delay" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Délai de fermeture" } }
+      }
+    },
+    "settings.general.language" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Language" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Langue" } }
+      }
+    },
+    "settings.general.launchAtLogin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Launch at login" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Lancer au démarrage" } }
+      }
+    },
+    "settings.general.peekDuration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Peek duration" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Durée du survol" } }
+      }
+    },
+    "settings.modules.enabled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enabled" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Activé" } }
+      }
+    },
+    "settings.permissions.accessibility" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Accessibilité" } }
+      }
+    },
+    "settings.permissions.notifications" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Notifications" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Notifications" } }
+      }
+    },
+    "settings.permissions.openSettings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Settings" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir Réglages" } }
+      }
+    },
+    "settings.section.about" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "About" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "À propos" } }
+      }
+    },
+    "settings.section.appearance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Appearance" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Apparence" } }
+      }
+    },
+    "settings.section.display" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Display" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Affichage" } }
+      }
+    },
+    "settings.section.general" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "General" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Général" } }
+      }
+    },
+    "settings.section.modules" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Modules" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Modules" } }
+      }
+    },
+    "settings.section.permissions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Permissions" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Permissions" } }
+      }
+    },
+    "settings.section.shortcuts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shortcuts" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Raccourcis" } }
+      }
+    },
+    "settings.shortcuts.dropzone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drop Zone" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Drop Zone" } }
+      }
+    },
+    "settings.shortcuts.globalEnabled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enable global shortcuts" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Activer les raccourcis globaux" } }
+      }
+    },
+    "settings.shortcuts.media" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Media" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Média" } }
+      }
+    },
+    "settings.shortcuts.newTimer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "New timer" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nouveau minuteur" } }
+      }
+    },
+    "settings.shortcuts.openClose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open / close panel" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir / fermer le panneau" } }
+      }
+    },
+    "settings.shortcuts.paste" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste from history" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Coller depuis l'historique" } }
+      }
+    },
+    "settings.window.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Notchy — Settings" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Notchy — Paramètres" } }
+      }
+    },
+    "system.battery.charging" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Charging" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "En charge" } }
+      }
+    },
+    "system.gauge.battery" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Battery" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Batterie" } }
+      }
+    },
+    "system.gauge.cpu" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "CPU" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "CPU" } }
+      }
+    },
+    "system.gauge.network" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Net" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rés." } }
+      }
+    },
+    "system.gauge.ram" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "RAM" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "RAM" } }
+      }
+    },
+    "system.section.gauges" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Gauges" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Jauges" } }
+      }
+    },
+    "system.section.launcher" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Launcher" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Lanceur" } }
+      }
+    },
+    "system.section.toggles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quick Toggles" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Toggles rapides" } }
+      }
+    },
+    "system.toggle.caffeine" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Caffeine" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Anti-veille" } }
+      }
+    },
+    "system.toggle.mute" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Mute" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Muet" } }
+      }
+    },
+    "timer.action.add" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajouter" } }
+      }
+    },
+    "timer.action.custom" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Custom timer" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Timer personnalisé" } }
+      }
+    },
+    "timer.custom.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "min" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "min" } }
+      }
+    },
+    "timer.notification.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Timer finished!" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Timer terminé !" } }
+      }
+    },
+    "timer.peek.idle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No timer" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun timer" } }
+      }
+    },
+    "timer.pomodoro.longBreak" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Long Break" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Grande pause" } }
+      }
+    },
+    "timer.pomodoro.shortBreak" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Short Break" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pause courte" } }
+      }
+    },
+    "timer.pomodoro.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Start Pomodoro" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Démarrer Pomodoro" } }
+      }
+    },
+    "timer.preset.minutes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld min" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%lld min" } }
       }
     }
   },

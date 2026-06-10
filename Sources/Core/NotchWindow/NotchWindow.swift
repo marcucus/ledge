@@ -3,7 +3,7 @@ import QuartzCore
 import SwiftUI
 
 public final class NotchWindow: NSPanel {
-    let controller = NotchController()
+    public let controller = NotchController()
 
     private var currentGeometry: NotchGeometry?
     private var screenObserver: NSObjectProtocol?

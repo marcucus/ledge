@@ -9,7 +9,7 @@ import Core
 
     private(set) var nowPlaying: MediaState = .empty
     private let source: any MediaSource
-    nonisolated(unsafe) private var notificationObserver: NSObjectProtocol?
+    @ObservationIgnored nonisolated(unsafe) private var notificationObserver: NSObjectProtocol?
 
     public init() {
         source = MediaRemoteSource()
@@ -31,6 +31,11 @@ import Core
 
     public func send(_ command: MediaCommand) {
         Task { await source.send(command) }
+    }
+
+    public func stop() {
+        notificationObserver.map { NotificationCenter.default.removeObserver($0) }
+        notificationObserver = nil
     }
 
     public func makePeekView() -> AnyView { AnyView(MediaPeekView(module: self)) }

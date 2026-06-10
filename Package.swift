@@ -7,7 +7,14 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "App",
-            dependencies: ["Core", "MediaModule"],
+            dependencies: [
+                "Core",
+                "MediaModule",
+                "TimerModule",
+                "DropZoneModule",
+                "ClipboardModule",
+                "SystemModule",
+            ],
             path: "Sources/App",
             exclude: ["Info.plist"],
             resources: [.process("Resources")]
@@ -20,6 +27,27 @@ let package = Package(
             name: "MediaModule",
             dependencies: ["Core"],
             path: "Sources/Modules/Media"
+        ),
+        .target(
+            name: "TimerModule",
+            dependencies: ["Core"],
+            path: "Sources/Modules/Timer"
+        ),
+        .target(
+            name: "DropZoneModule",
+            dependencies: ["Core"],
+            path: "Sources/Modules/DropZone"
+        ),
+        .target(
+            name: "ClipboardModule",
+            dependencies: ["Core"],
+            path: "Sources/Modules/Clipboard"
+        ),
+        .target(
+            name: "SystemModule",
+            dependencies: ["Core"],
+            path: "Sources/Modules/System",
+            linkerSettings: [.linkedFramework("IOKit")]
         ),
         .testTarget(
             name: "CoreTests",

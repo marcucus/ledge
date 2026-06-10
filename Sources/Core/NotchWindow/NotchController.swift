@@ -1,51 +1,54 @@
 import Foundation
 
-@Observable final class NotchController {
-    private(set) var state: NotchState = .collapsed
-    private(set) var modules: [any NotchModule] = []
-    private(set) var selectedModuleID: String = ""
-    var notchWidth: CGFloat = 190
-    var notchHeight: CGFloat = 32
+@MainActor @Observable public final class NotchController {
+    public private(set) var state: NotchState = .collapsed
+    public private(set) var modules: [any NotchModule] = []
+    public private(set) var selectedModuleID: String = ""
+    public var notchWidth: CGFloat = 190
+    public var notchHeight: CGFloat = 32
 
-    var onTransition: ((NotchState) -> Void)?
+    public var onTransition: ((NotchState) -> Void)?
+    public var openSettings: (() -> Void)?
     private var collapseTask: Task<Void, Never>?
 
-    var selectedModule: (any NotchModule)? {
+    public var selectedModule: (any NotchModule)? {
         modules.first { $0.id == selectedModuleID } ?? modules.first
     }
 
-    func register(modules: [any NotchModule]) {
+    public init() {}
+
+    public func register(modules: [any NotchModule]) {
         self.modules = modules
         selectedModuleID = modules.first?.id ?? ""
         modules.forEach { $0.start() }
     }
 
-    func selectModule(id: String) {
+    public func selectModule(id: String) {
         guard modules.contains(where: { $0.id == id }) else { return }
         selectedModuleID = id
     }
 
-    func cursorEntered() {
+    public func cursorEntered() {
         collapseTask?.cancel()
         guard state == .collapsed else { return }
         transition(to: .expanded)
     }
 
-    func cursorExited() {
+    public func cursorExited() {
         guard state == .expanded else { return }
-        collapseTask = Task { @MainActor [weak self] in
+        collapseTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Timing.collapseDelay))
             guard let self, !Task.isCancelled, self.state == .expanded else { return }
             self.transition(to: .collapsed)
         }
     }
 
-    func panelClicked() {
+    public func panelClicked() {
         collapseTask?.cancel()
         transition(to: state == .expanded ? .collapsed : .expanded)
     }
 
-    func dismiss() {
+    public func dismiss() {
         collapseTask?.cancel()
         transition(to: .collapsed)
     }
