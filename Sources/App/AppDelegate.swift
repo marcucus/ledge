@@ -1,13 +1,15 @@
 import AppKit
 import Core
+import MediaModule
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notchWindow: NotchWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // LSUIElement = true dans Info.plist pour Xcode ; idem ici pour swift build
         NSApplication.shared.setActivationPolicy(.accessory)
-        notchWindow = NotchWindow()
+        let window = NotchWindow()
+        window.register(modules: [MediaModule()])
+        notchWindow = window
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

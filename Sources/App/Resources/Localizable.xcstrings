@@ -15,6 +15,13 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Paramètres" } }
       }
     },
+    "media.nowPlaying.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Nothing playing" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rien en lecture" } }
+      }
+    },
     "module.clipboard.label" : {
       "extractionState" : "manual",
       "localizations" : {

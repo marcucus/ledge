@@ -2,11 +2,26 @@ import Foundation
 
 @Observable final class NotchController {
     private(set) var state: NotchState = .collapsed
+    private(set) var modules: [any NotchModule] = []
+    private(set) var selectedModuleID: String = ""
 
-    /// Appelé à chaque transition — NotchWindow l'utilise pour se redimensionner.
     var onTransition: ((NotchState) -> Void)?
-
     private var collapseTask: Task<Void, Never>?
+
+    var selectedModule: (any NotchModule)? {
+        modules.first { $0.id == selectedModuleID } ?? modules.first
+    }
+
+    func register(modules: [any NotchModule]) {
+        self.modules = modules
+        selectedModuleID = modules.first?.id ?? ""
+        modules.forEach { $0.start() }
+    }
+
+    func selectModule(id: String) {
+        guard modules.contains(where: { $0.id == id }) else { return }
+        selectedModuleID = id
+    }
 
     func cursorEntered() {
         guard state == .collapsed else { return }

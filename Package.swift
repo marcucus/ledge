@@ -7,7 +7,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "App",
-            dependencies: ["Core"],
+            dependencies: ["Core", "MediaModule"],
             path: "Sources/App",
             exclude: ["Info.plist"],
             resources: [.process("Resources")]
@@ -15,6 +15,11 @@ let package = Package(
         .target(
             name: "Core",
             path: "Sources/Core"
+        ),
+        .target(
+            name: "MediaModule",
+            dependencies: ["Core"],
+            path: "Sources/Modules/Media"
         ),
         .testTarget(
             name: "CoreTests",

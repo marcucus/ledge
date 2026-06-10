@@ -9,7 +9,7 @@ struct NotchContentView: View {
             case .collapsed:
                 Color.clear
             case .peeking:
-                PeekView()
+                PeekView(controller: controller)
             case .expanded:
                 ExpandedView(controller: controller)
             }

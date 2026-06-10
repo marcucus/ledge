@@ -47,6 +47,10 @@ public final class NotchWindow: NSPanel {
 
     // MARK: — Positionnement
 
+    public func register(modules: [any NotchModule]) {
+        controller.register(modules: modules)
+    }
+
     private func observeScreenChanges() {
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
