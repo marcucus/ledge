@@ -41,15 +41,15 @@ import Testing
         #expect(geo == nil)
     }
 
-    @Test func anchorPointBelowNotchCenter() {
+    @Test func anchorPointAtNotchTop() {
         let geo = NotchGeometry.from(
             screenFrame: screenFrame,
             safeAreaInsetsTop: safeAreaTop,
             auxiliaryTopLeftArea: leftArea,
             auxiliaryTopRightArea: rightArea
         )
-        // midX = 200 + 180/2 = 290 ; minY = 982 - 32 = 950
-        #expect(geo?.anchorPoint == CGPoint(x: 290, y: 950))
+        // midX = 200 + 180/2 = 290 ; maxY = 982 (haut de l'écran)
+        #expect(geo?.anchorPoint == CGPoint(x: 290, y: 982))
     }
 
     @Test func notDetectedWhenAreasIncoherent() {

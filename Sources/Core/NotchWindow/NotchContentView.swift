@@ -3,29 +3,41 @@ import SwiftUI
 struct NotchContentView: View {
     var controller: NotchController
 
-    var body: some View {
-        Group {
-            switch controller.state {
-            case .collapsed:
-                Color.clear
-            case .peeking:
-                PeekView(controller: controller)
-            case .expanded:
-                ExpandedView(controller: controller)
-            }
-        }
-        .background(.regularMaterial)
-        .clipShape(
-            UnevenRoundedRectangle(
-                bottomLeadingRadius: Layout.cornerRadius,
-                bottomTrailingRadius: Layout.cornerRadius
-            )
-        )
-        .animation(.easeInOut(duration: 0.2), value: controller.state)
-    }
-}
+    private var isExpanded: Bool { controller.state == .expanded }
 
-private enum Layout {
-    // Rayon qui prolonge visuellement le coin de l'encoche physique
-    static let cornerRadius: CGFloat = 10
+    var body: some View {
+        ZStack(alignment: .top) {
+            // Panneau noir : ancré en haut (notch), s'étend vers le bas
+            Color.black
+                .clipShape(UnevenRoundedRectangle(
+                    bottomLeadingRadius: isExpanded ? 12 : 10,
+                    bottomTrailingRadius: isExpanded ? 12 : 10
+                ))
+                .frame(
+                    width: isExpanded ? 560 : controller.notchWidth,
+                    height: isExpanded ? controller.notchHeight + 300 : controller.notchHeight
+                )
+                .animation(
+                    isExpanded
+                        ? .easeOut(duration: 0.25)   // en sync avec NSAnimationContext
+                        : .easeOut(duration: 0.22),
+                    value: controller.state
+                )
+
+            // Contenu qui apparaît une fois la forme formée
+            ExpandedView(controller: controller)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .opacity(isExpanded ? 1 : 0)
+                .allowsHitTesting(isExpanded)
+                .animation(
+                    isExpanded
+                        ? .easeOut(duration: 0.1).delay(0.15)
+                        : .easeIn(duration: 0.06),
+                    value: controller.state
+                )
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+        .colorScheme(.dark)
+    }
 }

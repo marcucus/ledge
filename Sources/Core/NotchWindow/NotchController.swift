@@ -4,6 +4,8 @@ import Foundation
     private(set) var state: NotchState = .collapsed
     private(set) var modules: [any NotchModule] = []
     private(set) var selectedModuleID: String = ""
+    var notchWidth: CGFloat = 190
+    var notchHeight: CGFloat = 32
 
     var onTransition: ((NotchState) -> Void)?
     private var collapseTask: Task<Void, Never>?
@@ -24,17 +26,17 @@ import Foundation
     }
 
     func cursorEntered() {
-        guard state == .collapsed else { return }
         collapseTask?.cancel()
-        transition(to: .peeking)
+        guard state == .collapsed else { return }
+        transition(to: .expanded)
     }
 
     func cursorExited() {
-        guard state == .peeking else { return }
-        collapseTask = Task { [weak self] in
+        guard state == .expanded else { return }
+        collapseTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(Timing.collapseDelay))
-            guard let self, !Task.isCancelled, state == .peeking else { return }
-            transition(to: .collapsed)
+            guard let self, !Task.isCancelled, self.state == .expanded else { return }
+            self.transition(to: .collapsed)
         }
     }
 
