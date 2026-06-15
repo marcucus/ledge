@@ -1,13 +1,39 @@
 import AppKit
+import ClipboardModule
 import Core
+import DropZoneModule
+import MediaModule
+import SystemModule
+import TimerModule
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notchWindow: NotchWindow?
+    private var settingsWindowController: SettingsWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // LSUIElement = true dans Info.plist pour Xcode ; idem ici pour swift build
         NSApplication.shared.setActivationPolicy(.accessory)
-        notchWindow = NotchWindow()
+        let window = NotchWindow()
+        let settingsWC = SettingsWindowController()
+        window.controller.openSettings = { settingsWC.show() }
+
+        let systemModule = SystemModule()
+        window.controller.statusModule = systemModule
+
+        let dropZoneModule = DropZoneModule()
+        // Feedback visuel dans la DropZone quand un fichier approche l'encoche
+        window.controller.onDragHoverChange = { [weak dropZoneModule] active in
+            dropZoneModule?.isDragActive = active
+        }
+
+        window.register(modules: [
+            MediaModule(),
+            TimerModule(),
+            dropZoneModule,
+            ClipboardModule(),
+            systemModule,
+        ])
+        notchWindow = window
+        settingsWindowController = settingsWC
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

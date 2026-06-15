@@ -6,9 +6,9 @@ struct NotchGeometry: Equatable {
     let notchRect: CGRect
     let screenFrame: CGRect
 
-    /// Point juste sous le centre de l'encoche — ancre du panneau Notchy.
+    /// Bord supérieur du centre de l'encoche — ancre haute du panneau Notchy.
     var anchorPoint: CGPoint {
-        CGPoint(x: notchRect.midX, y: notchRect.minY)
+        CGPoint(x: notchRect.midX, y: notchRect.maxY)
     }
 
     /// Calcule la géométrie depuis les valeurs brutes de NSScreen.

@@ -2,30 +2,46 @@ import SwiftUI
 
 struct NotchContentView: View {
     var controller: NotchController
+    private var state: NotchState { controller.state }
+    @AppStorage("preferredLanguage") private var language: String = "system"
 
     var body: some View {
-        Group {
-            switch controller.state {
-            case .collapsed:
-                Color.clear
-            case .peeking:
-                PeekView()
-            case .expanded:
-                ExpandedView(controller: controller)
+        VStack(spacing: 0) {
+            // Navbar au niveau de l'encoche physique
+            NavBar(controller: controller)
+                .frame(height: controller.notchHeight)
+                .frame(maxWidth: .infinity)
+                .opacity(state != .collapsed ? 1 : 0)
+
+            // Séparateur + contenu du module (expanded seulement)
+            if state == .expanded {
+                Divider().opacity(0.3)
+                Group {
+                    if let module = controller.selectedModule {
+                        module.makeContentView()
+                    } else {
+                        Color.clear
+                    }
+                }
+                .id("\(controller.selectedModuleID)-\(language)")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .background(.regularMaterial)
-        .clipShape(
-            UnevenRoundedRectangle(
-                bottomLeadingRadius: Layout.cornerRadius,
-                bottomTrailingRadius: Layout.cornerRadius
-            )
-        )
-        .animation(.easeInOut(duration: 0.2), value: controller.state)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(background)
+        .animation(.easeOut(duration: state == .expanded ? 0.12 : 0.08).delay(state == .expanded ? 0.28 : 0), value: state)
+        .colorScheme(.dark)
     }
-}
 
-private enum Layout {
-    // Rayon qui prolonge visuellement le coin de l'encoche physique
-    static let cornerRadius: CGFloat = 10
+    @ViewBuilder
+    private var background: some View {
+        if state != .collapsed {
+            Color.black
+                .clipShape(NotchPanelShape(
+                    topEar:        12,
+                    bottomRadius:  state == .expanded ? 12 : 10
+                ))
+                .animation(.easeOut(duration: 0.15), value: state)
+        }
+    }
 }
