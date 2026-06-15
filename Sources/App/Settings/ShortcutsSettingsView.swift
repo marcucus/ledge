@@ -6,7 +6,7 @@ struct ShortcutsSettingsView: View {
 
     private struct ShortcutRow: Identifiable {
         let id: String
-        let labelKey: LocalizedStringKey
+        let labelKey: String
         let keys: String
     }
 
@@ -25,14 +25,14 @@ struct ShortcutsSettingsView: View {
                     get: { store.globalShortcutEnabled },
                     set: { store.globalShortcutEnabled = $0 }
                 )) {
-                    Text("settings.shortcuts.globalEnabled")
+                    Text("settings.shortcuts.globalEnabled", bundle: localizationBundle)
                 }
             }
 
             Section {
                 ForEach(shortcuts) { row in
                     HStack {
-                        Text(row.labelKey)
+                        Text(LocalizedStringKey(row.labelKey), bundle: localizationBundle)
                         Spacer()
                         Text(row.keys)
                             .foregroundStyle(.secondary)
@@ -42,6 +42,6 @@ struct ShortcutsSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(Text("settings.section.shortcuts"))
+        .navigationTitle(Text("settings.section.shortcuts", bundle: localizationBundle))
     }
 }

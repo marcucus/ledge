@@ -18,11 +18,9 @@ struct SystemPeekView: View {
                         .foregroundStyle(.green)
                 }
             }
-            Spacer()
-            cpuBadge
         }
-        .padding(.horizontal, 8)
-        .frame(maxHeight: .infinity)
+        .imageScale(.small)
+        .padding(.trailing, 4)
     }
 
     // MARK: — Battery icon

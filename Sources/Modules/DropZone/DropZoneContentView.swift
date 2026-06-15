@@ -1,3 +1,4 @@
+import Core
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
@@ -52,7 +53,7 @@ public struct DropZoneContentView: View {
             Image(systemName: "tray.and.arrow.down")
                 .font(.title2)
                 .foregroundStyle(.tertiary)
-            Text("dropzone.empty")
+            Text("dropzone.empty", bundle: localizationBundle)
                 .font(.footnote)
                 .foregroundStyle(.tertiary)
         }
@@ -86,21 +87,26 @@ public struct DropZoneContentView: View {
             actionButton(label: "dropzone.action.clear", icon: "trash", isDestructive: true) {
                 module.clearAll()
             }
+
         }
     }
 
     private func actionButton(
-        label: LocalizedStringKey,
+        label: String,
         icon: String,
         isDestructive: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Label(label, systemImage: icon)
-                .font(.footnote.weight(.medium))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(.white.opacity(0.08), in: Capsule())
+            Label {
+                Text(LocalizedStringKey(label), bundle: localizationBundle)
+            } icon: {
+                Image(systemName: icon)
+            }
+            .font(.footnote.weight(.medium))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(.white.opacity(0.08), in: Capsule())
         }
         .buttonStyle(.plain)
         .foregroundStyle(isDestructive ? .red.opacity(0.8) : .secondary)

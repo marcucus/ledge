@@ -1,3 +1,4 @@
+import Core
 import SwiftUI
 
 public struct TimerPeekView: View {
@@ -17,7 +18,7 @@ public struct TimerPeekView: View {
                 arcProgress(entry: entry)
                 timeLabel(entry: entry)
             } else {
-                Text("timer.peek.idle")
+                Text("timer.peek.idle", bundle: localizationBundle)
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

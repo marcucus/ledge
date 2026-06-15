@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Core
 import UserNotifications
 import ApplicationServices
 
@@ -15,7 +16,7 @@ struct PermissionsSettingsView: View {
                     nameKey: "settings.permissions.accessibility",
                     statusIcon: accessibilityGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill",
                     statusColor: accessibilityGranted ? Color.green : Color.orange,
-                    actionLabel: accessibilityGranted ? nil : LocalizedStringKey("settings.permissions.openSettings"),
+                    showAction: !accessibilityGranted,
                     action: accessibilityGranted ? nil : openAccessibilitySettings
                 )
 
@@ -24,13 +25,13 @@ struct PermissionsSettingsView: View {
                     nameKey: "settings.permissions.notifications",
                     statusIcon: notificationStatusIcon,
                     statusColor: notificationStatusColor,
-                    actionLabel: notificationsStatus == .denied ? LocalizedStringKey("settings.permissions.openSettings") : nil,
+                    showAction: notificationsStatus == .denied,
                     action: notificationsStatus == .denied ? openNotificationSettings : nil
                 )
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(Text("settings.section.permissions"))
+        .navigationTitle(Text("settings.section.permissions", bundle: localizationBundle))
         .task { await refreshStatus() }
     }
 
@@ -52,20 +53,24 @@ struct PermissionsSettingsView: View {
 
     private func permissionRow(
         icon: String,
-        nameKey: LocalizedStringKey,
+        nameKey: String,
         statusIcon: String,
         statusColor: Color,
-        actionLabel: LocalizedStringKey?,
+        showAction: Bool,
         action: (() -> Void)?
     ) -> some View {
         HStack {
-            Label(nameKey, systemImage: icon)
+            Label {
+                Text(LocalizedStringKey(nameKey), bundle: localizationBundle)
+            } icon: {
+                Image(systemName: icon)
+            }
             Spacer()
             Image(systemName: statusIcon)
                 .foregroundStyle(statusColor)
-            if let actionLabel, let action {
+            if showAction, let action {
                 Button(action: action) {
-                    Text(actionLabel)
+                    Text("settings.permissions.openSettings", bundle: localizationBundle)
                 }
                 .buttonStyle(.bordered)
             }

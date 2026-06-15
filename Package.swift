@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "Notchy",
+    defaultLocalization: "en",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
@@ -21,7 +22,8 @@ let package = Package(
         ),
         .target(
             name: "Core",
-            path: "Sources/Core"
+            path: "Sources/Core",
+            resources: [.process("Resources")]
         ),
         .target(
             name: "MediaModule",

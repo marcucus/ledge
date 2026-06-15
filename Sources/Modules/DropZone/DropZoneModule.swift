@@ -10,43 +10,16 @@ public final class DropZoneModule: NotchModule {
     public let tabLabel: LocalizedStringKey = "module.dropzone.label"
 
     public private(set) var items: [ShelfItem] = []
-    public private(set) var isDragActive = false
-
-    nonisolated(unsafe) private var globalDragMonitor: Any?
+    public var isDragActive = false
 
     public init() {}
 
     // MARK: — NotchModule
 
     public func start() {}
-    public func stop() { stopMonitoringDrags() }
+    public func stop() {}
     public func makePeekView() -> AnyView { AnyView(DropZonePeekView(module: self)) }
     public func makeContentView() -> AnyView { AnyView(DropZoneContentView(module: self)) }
-
-    deinit {
-        globalDragMonitor.map { NSEvent.removeMonitor($0) }
-    }
-
-    // MARK: — Global drag detection
-
-    public func startMonitoringDrags(near notchWindow: NSWindow) {
-        guard globalDragMonitor == nil else { return }
-        globalDragMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self, weak notchWindow] _ in
-            guard let self, let window = notchWindow else { return }
-            let mouseLocation = NSEvent.mouseLocation
-            let windowFrame = window.frame
-            let expandedFrame = windowFrame.insetBy(dx: -40, dy: -60)
-            Task { @MainActor in
-                self.isDragActive = expandedFrame.contains(mouseLocation)
-            }
-        }
-    }
-
-    public func stopMonitoringDrags() {
-        globalDragMonitor.map { NSEvent.removeMonitor($0) }
-        globalDragMonitor = nil
-        isDragActive = false
-    }
 
     // MARK: — Shelf operations
 
@@ -81,7 +54,7 @@ public final class DropZoneModule: NotchModule {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = NSLocalizedString("dropzone.action.save", comment: "")
+        panel.prompt = NSLocalizedString("dropzone.action.save", bundle: localizationBundle, comment: "")
         panel.begin { [weak self] response in
             guard response == .OK, let destination = panel.url, let self else { return }
             Task { @MainActor in

@@ -1,3 +1,4 @@
+import Core
 import SwiftUI
 
 struct MediaPeekView: View {
@@ -32,7 +33,7 @@ struct MediaPeekView: View {
             if let title = module.nowPlaying.title {
                 Text(title).font(.caption.weight(.medium)).lineLimit(1)
             } else {
-                Text("media.nowPlaying.empty").font(.caption).foregroundStyle(.secondary)
+                Text("media.nowPlaying.empty", bundle: localizationBundle).font(.caption).foregroundStyle(.secondary)
             }
             if let artist = module.nowPlaying.artist {
                 Text(artist).font(.caption2).foregroundStyle(.secondary).lineLimit(1)

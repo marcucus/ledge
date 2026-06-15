@@ -1,3 +1,4 @@
+import Core
 import SwiftUI
 
 public struct DropZonePeekView: View {
@@ -15,14 +16,14 @@ public struct DropZonePeekView: View {
                 .animation(.easeInOut(duration: 0.15), value: module.isDragActive)
 
             if module.items.isEmpty {
-                Text("dropzone.empty")
+                Text("dropzone.empty", bundle: localizationBundle)
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
                 Text("\(module.items.count)")
                     .font(.callout.weight(.semibold).monospacedDigit())
                     .foregroundStyle(.primary)
-                Text("dropzone.items.count")
+                Text("dropzone.items.count", bundle: localizationBundle)
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

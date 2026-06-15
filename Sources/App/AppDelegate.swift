@@ -15,12 +15,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let window = NotchWindow()
         let settingsWC = SettingsWindowController()
         window.controller.openSettings = { settingsWC.show() }
+
+        let systemModule = SystemModule()
+        window.controller.statusModule = systemModule
+
+        let dropZoneModule = DropZoneModule()
+        // Feedback visuel dans la DropZone quand un fichier approche l'encoche
+        window.controller.onDragHoverChange = { [weak dropZoneModule] active in
+            dropZoneModule?.isDragActive = active
+        }
+
         window.register(modules: [
             MediaModule(),
             TimerModule(),
-            DropZoneModule(),
+            dropZoneModule,
             ClipboardModule(),
-            SystemModule(),
+            systemModule,
         ])
         notchWindow = window
         settingsWindowController = settingsWC

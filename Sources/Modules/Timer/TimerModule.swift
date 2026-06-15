@@ -1,3 +1,4 @@
+import Core
 import Foundation
 import SwiftUI
 import UserNotifications
@@ -153,7 +154,7 @@ public final class TimerModule: NotchModule {
         guard Bundle.main.bundleIdentifier != nil else { return }
         let content = UNMutableNotificationContent()
         content.title = entry.label
-        content.body = NSLocalizedString("timer.notification.body", comment: "")
+        content.body = NSLocalizedString("timer.notification.body", bundle: localizationBundle, comment: "")
         content.sound = .default
         let request = UNNotificationRequest(
             identifier: entry.id.uuidString,
@@ -174,8 +175,8 @@ public struct PomodoroState {
     public var currentPhaseLabel: String {
         switch phase {
         case .work:       return "Pomodoro"
-        case .shortBreak: return NSLocalizedString("timer.pomodoro.shortBreak", comment: "")
-        case .longBreak:  return NSLocalizedString("timer.pomodoro.longBreak", comment: "")
+        case .shortBreak: return NSLocalizedString("timer.pomodoro.shortBreak", bundle: localizationBundle, comment: "")
+        case .longBreak:  return NSLocalizedString("timer.pomodoro.longBreak", bundle: localizationBundle, comment: "")
         }
     }
 

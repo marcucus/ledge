@@ -3,6 +3,7 @@ import Core
 
 struct GeneralSettingsView: View {
     var store: SettingsStore
+    @AppStorage("preferredLanguage") private var preferredLanguage: String = "system"
 
     var body: some View {
         Form {
@@ -11,7 +12,7 @@ struct GeneralSettingsView: View {
                     get: { store.launchAtLogin },
                     set: { store.launchAtLogin = $0 }
                 )) {
-                    Text("settings.general.launchAtLogin")
+                    Text("settings.general.launchAtLogin", bundle: localizationBundle)
                 }
             }
 
@@ -25,12 +26,12 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(Text("settings.section.general"))
+        .navigationTitle(Text("settings.section.general", bundle: localizationBundle))
     }
 
     private var collapseDelayRow: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("settings.general.collapseDelay")
+            Text("settings.general.collapseDelay", bundle: localizationBundle)
             HStack {
                 Slider(
                     value: Binding(
@@ -49,7 +50,7 @@ struct GeneralSettingsView: View {
 
     private var peekDurationRow: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("settings.general.peekDuration")
+            Text("settings.general.peekDuration", bundle: localizationBundle)
             HStack {
                 Slider(
                     value: Binding(
@@ -67,16 +68,28 @@ struct GeneralSettingsView: View {
     }
 
     private var languageRow: some View {
-        HStack {
-            Text("settings.general.language")
-            Spacer()
-            Picker("", selection: .constant("system")) {
-                Text("System").tag("system")
-                Text("Français").tag("fr")
-                Text("English").tag("en")
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("settings.general.language", bundle: localizationBundle)
+                Spacer()
+                Picker("", selection: $preferredLanguage) {
+                    Text("System").tag("system")
+                    Text("Français").tag("fr")
+                    Text("English").tag("en")
+                }
+                .labelsHidden()
+                .frame(width: 160)
+                .onChange(of: preferredLanguage) { _, newValue in
+                    if newValue == "system" {
+                        UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+                    } else {
+                        UserDefaults.standard.set([newValue], forKey: "AppleLanguages")
+                    }
+                }
             }
-            .labelsHidden()
-            .frame(width: 160)
+            Text("settings.general.languageRestart", bundle: localizationBundle)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 }

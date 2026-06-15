@@ -4,20 +4,46 @@ struct PeekView: View {
     var controller: NotchController
 
     var body: some View {
-        if let module = controller.selectedModule {
-            module.makePeekView()
-        } else {
-            defaultPeek
-        }
-    }
+        HStack(spacing: 0) {
+            // Icônes des modules à gauche
+            HStack(spacing: 2) {
+                ForEach(controller.modules.map(ModuleItem.init), id: \.id) { item in
+                    Button { controller.selectModule(id: item.id) } label: {
+                        Image(systemName: item.base.tabIcon)
+                            .imageScale(.small)
+                            .foregroundStyle(item.id == controller.selectedModuleID ? .primary : .tertiary)
+                            .frame(width: 26, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.leading, 12)
 
-    private var defaultPeek: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "sparkle").imageScale(.small).foregroundStyle(.secondary)
-            Text("notch.app.name").font(.callout.weight(.medium))
             Spacer()
+
+            // Contenu peek du module sélectionné (ex: batterie %, média en cours)
+            if let module = controller.selectedModule {
+                module.makePeekView()
+            }
+
+            // Bouton paramètres
+            Button { controller.openSettings?() } label: {
+                Image(systemName: "gear")
+                    .imageScale(.small)
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 26, height: 44)
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 8)
         }
-        .padding(.horizontal, 12)
-        .frame(maxHeight: .infinity)
+        .frame(height: 44)
+        .frame(maxWidth: .infinity)
     }
+}
+
+@MainActor
+private struct ModuleItem {
+    let id: String
+    let base: any NotchModule
+    init(_ module: any NotchModule) { id = module.id; base = module }
 }

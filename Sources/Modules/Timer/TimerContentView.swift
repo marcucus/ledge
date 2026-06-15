@@ -1,3 +1,4 @@
+import Core
 import SwiftUI
 
 public struct TimerContentView: View {
@@ -38,7 +39,7 @@ public struct TimerContentView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
-            .accessibilityLabel(Text("timer.action.custom"))
+            .accessibilityLabel(Text("timer.action.custom", bundle: localizationBundle))
         }
     }
 
@@ -46,7 +47,7 @@ public struct TimerContentView: View {
         let minutes = Int(duration / 60)
         return Button {
             module.addTimer(
-                label: String(format: NSLocalizedString("timer.preset.minutes", comment: ""), minutes),
+                label: String(format: NSLocalizedString("timer.preset.minutes", bundle: localizationBundle, comment: ""), minutes),
                 duration: duration
             )
         } label: {
@@ -63,7 +64,7 @@ public struct TimerContentView: View {
 
     private var customInputRow: some View {
         HStack(spacing: 8) {
-            TextField("timer.custom.placeholder", text: $customMinutes)
+            TextField(NSLocalizedString("timer.custom.placeholder", bundle: localizationBundle, comment: ""), text: $customMinutes)
                 .textFieldStyle(.plain)
                 .font(.footnote)
                 .frame(width: 60)
@@ -73,7 +74,7 @@ public struct TimerContentView: View {
             Button {
                 addCustomTimer()
             } label: {
-                Text("timer.action.add")
+                Text("timer.action.add", bundle: localizationBundle)
                     .font(.footnote.weight(.medium))
             }
             .buttonStyle(.plain)
@@ -85,7 +86,7 @@ public struct TimerContentView: View {
         guard let minutes = Int(customMinutes), minutes > 0 else { return }
         let duration = TimeInterval(minutes * 60)
         module.addTimer(
-            label: String(format: NSLocalizedString("timer.preset.minutes", comment: ""), minutes),
+            label: String(format: NSLocalizedString("timer.preset.minutes", bundle: localizationBundle, comment: ""), minutes),
             duration: duration
         )
         customMinutes = ""
@@ -97,7 +98,7 @@ public struct TimerContentView: View {
     @ViewBuilder
     private var timerList: some View {
         if module.entries.isEmpty {
-            Text("timer.peek.idle")
+            Text("timer.peek.idle", bundle: localizationBundle)
                 .font(.footnote)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -115,7 +116,7 @@ public struct TimerContentView: View {
         Button {
             module.startPomodoro()
         } label: {
-            Label("timer.pomodoro.start", systemImage: "tomato")
+            Label(NSLocalizedString("timer.pomodoro.start", bundle: localizationBundle, comment: ""), systemImage: "tomato")
                 .font(.footnote.weight(.medium))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)

@@ -1,3 +1,4 @@
+import Core
 import AppKit
 import SwiftUI
 
@@ -18,7 +19,7 @@ struct ClipboardContentView: View {
 
     private var toolbar: some View {
         HStack {
-            Text("module.clipboard.label")
+            Text("module.clipboard.label", bundle: localizationBundle)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
             Spacer()
@@ -60,7 +61,7 @@ struct ClipboardContentView: View {
             Image(systemName: "clipboard")
                 .imageScale(.large)
                 .foregroundStyle(.tertiary)
-            Text("clipboard.empty")
+            Text("clipboard.empty", bundle: localizationBundle)
                 .font(.callout)
                 .foregroundStyle(.tertiary)
         }
@@ -120,7 +121,7 @@ private struct ClipboardRowView: View {
     private var preview: some View {
         if case .image = item.content {
             // Use localized key for image label
-            Text("clipboard.item.image")
+            Text("clipboard.item.image", bundle: localizationBundle)
                 .font(.caption)
                 .lineLimit(1)
                 .foregroundStyle(.secondary)

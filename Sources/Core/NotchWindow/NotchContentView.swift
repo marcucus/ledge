@@ -2,42 +2,46 @@ import SwiftUI
 
 struct NotchContentView: View {
     var controller: NotchController
-
-    private var isExpanded: Bool { controller.state == .expanded }
+    private var state: NotchState { controller.state }
+    @AppStorage("preferredLanguage") private var language: String = "system"
 
     var body: some View {
-        ZStack(alignment: .top) {
-            // Panneau noir : ancré en haut (notch), s'étend vers le bas
-            Color.black
-                .clipShape(UnevenRoundedRectangle(
-                    bottomLeadingRadius: isExpanded ? 12 : 10,
-                    bottomTrailingRadius: isExpanded ? 12 : 10
-                ))
-                .frame(
-                    width: isExpanded ? 560 : controller.notchWidth,
-                    height: isExpanded ? controller.notchHeight + 300 : controller.notchHeight
-                )
-                .animation(
-                    isExpanded
-                        ? .easeOut(duration: 0.25)   // en sync avec NSAnimationContext
-                        : .easeOut(duration: 0.22),
-                    value: controller.state
-                )
+        VStack(spacing: 0) {
+            // Navbar au niveau de l'encoche physique
+            NavBar(controller: controller)
+                .frame(height: controller.notchHeight)
+                .frame(maxWidth: .infinity)
+                .opacity(state != .collapsed ? 1 : 0)
 
-            // Contenu qui apparaît une fois la forme formée
-            ExpandedView(controller: controller)
+            // Séparateur + contenu du module (expanded seulement)
+            if state == .expanded {
+                Divider().opacity(0.3)
+                Group {
+                    if let module = controller.selectedModule {
+                        module.makeContentView()
+                    } else {
+                        Color.clear
+                    }
+                }
+                .id("\(controller.selectedModuleID)-\(language)")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .opacity(isExpanded ? 1 : 0)
-                .allowsHitTesting(isExpanded)
-                .animation(
-                    isExpanded
-                        ? .easeOut(duration: 0.1).delay(0.15)
-                        : .easeIn(duration: 0.06),
-                    value: controller.state
-                )
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(background)
+        .animation(.easeOut(duration: state == .expanded ? 0.12 : 0.08).delay(state == .expanded ? 0.28 : 0), value: state)
         .colorScheme(.dark)
+    }
+
+    @ViewBuilder
+    private var background: some View {
+        if state != .collapsed {
+            Color.black
+                .clipShape(NotchPanelShape(
+                    topEar:        12,
+                    bottomRadius:  state == .expanded ? 12 : 10
+                ))
+                .animation(.easeOut(duration: 0.15), value: state)
+        }
     }
 }

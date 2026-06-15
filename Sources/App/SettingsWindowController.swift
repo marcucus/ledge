@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import Core
 
-final class SettingsWindowController: NSWindowController {
+final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     convenience init() {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 720, height: 500),
@@ -10,10 +10,11 @@ final class SettingsWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = NSLocalizedString("settings.window.title", comment: "")
+        window.title = NSLocalizedString("settings.window.title", bundle: localizationBundle, comment: "")
         window.center()
         window.setFrameAutosaveName("SettingsWindow")
         self.init(window: window)
+        window.delegate = self
         let hostingView = NSHostingView(
             rootView: SettingsRootView(store: SettingsStore.shared)
         )
@@ -21,8 +22,13 @@ final class SettingsWindowController: NSWindowController {
     }
 
     func show() {
+        NSApp.setActivationPolicy(.regular)
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
     }
 }

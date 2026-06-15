@@ -1,3 +1,4 @@
+import Core
 import AppKit
 import SwiftUI
 
@@ -36,12 +37,12 @@ struct SystemContentView: View {
     private var batteryRow: some View {
         HStack {
             Image(systemName: "battery.100").imageScale(.small)
-            Text("system.gauge.battery")
+            Text("system.gauge.battery", bundle: localizationBundle)
             Spacer()
             if let pct = module.battery.percentage {
                 Text("\(pct)%").monospacedDigit()
                 if module.battery.isCharging {
-                    Text("system.battery.charging").foregroundStyle(.green)
+                    Text("system.battery.charging", bundle: localizationBundle).foregroundStyle(.green)
                 }
                 if let cycles = module.battery.cycleCount {
                     Text("\(cycles) cyc.").foregroundStyle(.secondary)
@@ -56,7 +57,7 @@ struct SystemContentView: View {
     private var cpuRow: some View {
         HStack {
             Image(systemName: "cpu").imageScale(.small)
-            Text("system.gauge.cpu")
+            Text("system.gauge.cpu", bundle: localizationBundle)
             Spacer()
             SparklineView(samples: module.cpu.history, color: .blue)
                 .frame(width: 60, height: 16)
@@ -68,7 +69,7 @@ struct SystemContentView: View {
     private var ramRow: some View {
         HStack {
             Image(systemName: "memorychip").imageScale(.small)
-            Text("system.gauge.ram")
+            Text("system.gauge.ram", bundle: localizationBundle)
             Spacer()
             ProgressView(value: module.ram.usageFraction)
                 .progressViewStyle(.linear)
@@ -82,7 +83,7 @@ struct SystemContentView: View {
     private var networkRow: some View {
         HStack {
             Image(systemName: "network").imageScale(.small)
-            Text("system.gauge.network")
+            Text("system.gauge.network", bundle: localizationBundle)
             Spacer()
             Text("↓\(module.network.downloadLabel) ↑\(module.network.uploadLabel)")
                 .monospacedDigit()
@@ -132,7 +133,7 @@ struct SystemContentView: View {
     // MARK: — Helpers
 
     private func sectionHeader(_ key: LocalizedStringKey) -> some View {
-        Text(key)
+        Text(key, bundle: localizationBundle)
             .font(.caption2.weight(.semibold))
             .foregroundStyle(.secondary)
             .textCase(.uppercase)
@@ -175,7 +176,7 @@ private struct ToggleButton: View {
             VStack(spacing: 4) {
                 Image(systemName: toggle.icon)
                     .imageScale(.medium)
-                Text(LocalizedStringKey(toggle.labelKey))
+                Text(LocalizedStringKey(toggle.labelKey), bundle: localizationBundle)
                     .font(.caption2)
             }
             .frame(width: 52, height: 48)

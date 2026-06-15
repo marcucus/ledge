@@ -1,4 +1,5 @@
 import SwiftUI
+import Core
 
 struct AboutSettingsView: View {
     private var appVersion: String {
@@ -16,7 +17,7 @@ struct AboutSettingsView: View {
         Form {
             Section {
                 HStack {
-                    Text("settings.about.appName")
+                    Text("settings.about.appName", bundle: localizationBundle)
                         .fontWeight(.semibold)
                     Spacer()
                     Text("Notchy")
@@ -24,7 +25,7 @@ struct AboutSettingsView: View {
                 }
 
                 HStack {
-                    Text("settings.about.version")
+                    Text("settings.about.version", bundle: localizationBundle)
                     Spacer()
                     Text(appVersion)
                         .foregroundStyle(.secondary)
@@ -32,7 +33,7 @@ struct AboutSettingsView: View {
                 }
 
                 HStack {
-                    Text("settings.about.copyright")
+                    Text("settings.about.copyright", bundle: localizationBundle)
                     Spacer()
                     Text(copyright)
                         .foregroundStyle(.secondary)
@@ -44,11 +45,11 @@ struct AboutSettingsView: View {
                 Button {
                     // Placeholder — update check not yet implemented
                 } label: {
-                    Text("settings.about.checkUpdates")
+                    Text("settings.about.checkUpdates", bundle: localizationBundle)
                 }
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(Text("settings.section.about"))
+        .navigationTitle(Text("settings.section.about", bundle: localizationBundle))
     }
 }

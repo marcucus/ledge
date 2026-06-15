@@ -16,7 +16,7 @@ struct AppearanceSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(Text("settings.section.appearance"))
+        .navigationTitle(Text("settings.section.appearance", bundle: localizationBundle))
     }
 
     private var panelWidthRow: some View {
@@ -28,14 +28,14 @@ struct AppearanceSettingsView: View {
             Text("Standard").tag(PanelWidth.standard)
             Text("Large").tag(PanelWidth.large)
         } label: {
-            Text("settings.appearance.panelWidth")
+            Text("settings.appearance.panelWidth", bundle: localizationBundle)
         }
         .pickerStyle(.segmented)
     }
 
     private var cornerRadiusRow: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("settings.appearance.cornerRadius")
+            Text("settings.appearance.cornerRadius", bundle: localizationBundle)
             HStack {
                 Slider(value: $cornerRadius, in: 4...24, step: 1)
                 Text(String(format: "%.0f pt", cornerRadius))

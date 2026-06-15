@@ -1,3 +1,4 @@
+import Core
 import SwiftUI
 
 struct MediaContentView: View {
@@ -71,7 +72,7 @@ struct MediaContentView: View {
     private var emptyState: some View {
         VStack(spacing: 8) {
             Image(systemName: "music.note").imageScale(.large).foregroundStyle(.quaternary)
-            Text("media.nowPlaying.empty").font(.callout).foregroundStyle(.tertiary)
+            Text("media.nowPlaying.empty", bundle: localizationBundle).font(.callout).foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

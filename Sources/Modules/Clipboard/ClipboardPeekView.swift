@@ -1,3 +1,4 @@
+import Core
 import SwiftUI
 
 // MARK: — ClipboardPeekView
@@ -18,7 +19,7 @@ struct ClipboardPeekView: View {
                     .lineLimit(1)
                     .foregroundStyle(.primary)
             } else {
-                Text("clipboard.empty")
+                Text("clipboard.empty", bundle: localizationBundle)
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -34,7 +35,7 @@ struct ClipboardPeekView: View {
     private func clipboardPreviewText(_ content: ClipboardContent) -> some View {
         switch content {
         case .image:
-            Text("clipboard.item.image")  // LocalizedStringKey lookup
+            Text("clipboard.item.image", bundle: localizationBundle)  // LocalizedStringKey lookup
         default:
             Text(content.previewText)     // plain string (url or truncated text)
         }

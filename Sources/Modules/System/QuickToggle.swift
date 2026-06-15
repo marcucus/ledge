@@ -15,7 +15,7 @@ public enum ToggleKind: String, CaseIterable {
 /// A self-contained toggle with a readable state and an async action closure.
 @MainActor
 public struct QuickToggle: Identifiable {
-    public let id: ToggleKind
+    public nonisolated let id: ToggleKind
     public var icon: String
     public let labelKey: String
     public var isOn: Bool
