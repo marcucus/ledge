@@ -22,7 +22,6 @@ import Core
     }
 
     public func start() {
-        // Notification système quand le titre/état change
         notificationObserver = NotificationCenter.default.addObserver(
             forName: NSNotification.Name("kMRMediaRemoteNowPlayingInfoDidChangeNotification"),
             object: nil, queue: .main

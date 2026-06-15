@@ -1,15 +1,17 @@
 import AppKit
+import ClipboardModule
 import Core
+import DropZoneModule
+import MediaModule
+import SystemModule
+import TimerModule
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notchWindow: NotchWindow?
+    private var settingsWindowController: SettingsWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // LSUIElement = true dans Info.plist pour Xcode ; idem ici pour swift build
         NSApplication.shared.setActivationPolicy(.accessory)
-<<<<<<< Updated upstream
-        notchWindow = NotchWindow()
-=======
         let window = NotchWindow()
         let settingsWC = SettingsWindowController()
         window.controller.openSettings = { settingsWC.show() }
@@ -23,7 +25,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let mediaModule = MediaModule()
-        // Auto-sélectionne l'onglet Media quand la lecture démarre
         mediaModule.onBecameActive = { [weak window] in
             window?.controller.selectModule(id: "media")
         }
@@ -37,7 +38,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ])
         notchWindow = window
         settingsWindowController = settingsWC
->>>>>>> Stashed changes
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

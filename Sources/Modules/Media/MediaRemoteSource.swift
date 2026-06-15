@@ -9,10 +9,11 @@ final class MediaRemoteSource: MediaSource {
 
     init() {
         let url = URL(fileURLWithPath: "/System/Library/PrivateFrameworks/MediaRemote.framework")
-        bundle = CFBundleCreate(nil, url as CFURL)
+        bundle = CFBundleCreate(kCFAllocatorDefault, url as CFURL)
+        // Charger le binaire — sans ça, tous les CFBundleGetFunctionPointerForName retournent nil
+        if let b = bundle { CFBundleLoadExecutable(b) }
 
-        // Indispensable : sans cet appel, kMRMediaRemoteNowPlayingInfoDidChangeNotification
-        // n'est jamais envoyé par le système.
+        // Indispensable : enregistre l'app pour recevoir kMRMediaRemoteNowPlayingInfoDidChangeNotification
         if let b = bundle,
            let ptr = CFBundleGetFunctionPointerForName(b, "MRMediaRemoteRegisterForNowPlayingNotifications" as CFString) {
             let fn = unsafeBitCast(ptr, to: RegisterFn.self)
@@ -28,13 +29,13 @@ final class MediaRemoteSource: MediaSource {
         let fn = unsafeBitCast(ptr, to: GetInfoFn.self)
         return await withCheckedContinuation { continuation in
             fn(DispatchQueue.main) { info in
-                let title    = info["kMRMediaRemoteNowPlayingInfoTitle"]   as? String
-                let artist   = info["kMRMediaRemoteNowPlayingInfoArtist"]  as? String
-                let album    = info["kMRMediaRemoteNowPlayingInfoAlbum"]   as? String
-                let elapsed  = info["kMRMediaRemoteNowPlayingInfoElapsedTime"] as? TimeInterval ?? 0
-                let duration = info["kMRMediaRemoteNowPlayingInfoDuration"]    as? TimeInterval ?? 0
+                let title     = info["kMRMediaRemoteNowPlayingInfoTitle"]       as? String
+                let artist    = info["kMRMediaRemoteNowPlayingInfoArtist"]      as? String
+                let album     = info["kMRMediaRemoteNowPlayingInfoAlbum"]       as? String
+                let elapsed   = info["kMRMediaRemoteNowPlayingInfoElapsedTime"] as? TimeInterval ?? 0
+                let duration  = info["kMRMediaRemoteNowPlayingInfoDuration"]    as? TimeInterval ?? 0
                 let isPlaying = (info["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double ?? 0) > 0
-                let artwork  = (info["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data)
+                let artwork   = (info["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data)
                     .flatMap(NSImage.init(data:))
                 continuation.resume(returning: MediaState(
                     title: title, artist: artist, album: album,
