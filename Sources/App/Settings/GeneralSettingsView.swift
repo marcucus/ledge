@@ -1,5 +1,5 @@
-import SwiftUI
 import Core
+import SwiftUI
 
 struct GeneralSettingsView: View {
     var store: SettingsStore
@@ -13,6 +13,20 @@ struct GeneralSettingsView: View {
                     set: { store.launchAtLogin = $0 }
                 )) {
                     Text("settings.general.launchAtLogin", bundle: localizationBundle)
+                }
+            }
+
+            Section {
+                Toggle(isOn: Binding(
+                    get: { store.hudReplaceSystem },
+                    set: { store.hudReplaceSystem = $0 }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("settings.general.hudReplace", bundle: localizationBundle)
+                        Text("settings.general.hudReplaceDetail", bundle: localizationBundle)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 

@@ -30,7 +30,10 @@
 "settings.display.notchDetection.manual" = "Manual";
 "settings.display.timerRing" = "Show timer ring when active";
 "settings.general.collapseDelay" = "Close delay";
+"settings.general.hudReplace" = "Replace system volume/brightness HUD";
+"settings.general.hudReplaceDetail" = "Shows Notchy's compact bar instead of macOS overlay (requires Accessibility permission).";
 "settings.general.language" = "Language";
+"settings.general.languageRestart" = "Changes take effect on next launch.";
 "settings.general.launchAtLogin" = "Launch at login";
 "settings.general.peekDuration" = "Peek duration";
 "settings.modules.enabled" = "Enabled";

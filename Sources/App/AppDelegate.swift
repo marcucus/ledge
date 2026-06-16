@@ -9,9 +9,11 @@ import TimerModule
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notchWindow: NotchWindow?
     private var settingsWindowController: SettingsWindowController?
+    private var systemObserver: SystemObserver?
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    func applicationDidFinishLaunching(_: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
+
         let window = NotchWindow()
         let settingsWC = SettingsWindowController()
         window.controller.openSettings = { settingsWC.show() }
@@ -36,11 +38,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ClipboardModule(),
             systemModule,
         ])
+
+        systemObserver = makeSystemObserver(for: window)
         notchWindow = window
         settingsWindowController = settingsWC
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+    /// Branche le HUD volume/luminosité sur la fenêtre encoche.
+    @MainActor private func makeSystemObserver(for window: NotchWindow) -> SystemObserver {
+        let observer = SystemObserver(settings: .shared)
+        observer.onVolumeChange = { [weak window] value, isMuted in
+            window?.controller.showHUD(HUDContent(kind: .volume, value: value, isMuted: isMuted))
+        }
+        observer.onBrightnessChange = { [weak window] value in
+            window?.controller.showHUD(HUDContent(kind: .brightness, value: value))
+        }
+        observer.start()
+        return observer
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
         false
     }
 }

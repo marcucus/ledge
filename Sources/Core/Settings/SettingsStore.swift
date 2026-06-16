@@ -51,6 +51,14 @@ import Foundation
         set { defaults.set(newValue, forKey: Keys.dropzoneEnabled) }
     }
 
+    // MARK: — System HUD
+
+    /// Remplace le HUD volume/luminosité natif de macOS par celui de Notchy. Activé par défaut.
+    public var hudReplaceSystem: Bool {
+        get { defaults.object(forKey: Keys.hudReplaceSystem) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Keys.hudReplaceSystem) }
+    }
+
     // MARK: — Appearance
 
     public var panelWidth: PanelWidth {
@@ -86,23 +94,26 @@ import Foundation
 // MARK: — UserDefaults keys
 
 private enum Keys {
-    static let collapseDelay          = "collapseDelay"
-    static let launchAtLogin          = "launchAtLogin"
-    static let peekDuration           = "peekDuration"
-    static let mediaEnabled           = "mediaEnabled"
-    static let timersEnabled          = "timersEnabled"
-    static let clipboardEnabled       = "clipboardEnabled"
-    static let systemEnabled          = "systemEnabled"
-    static let dropzoneEnabled        = "dropzoneEnabled"
-    static let panelWidth             = "panelWidth"
-    static let notchDetectionMode     = "notchDetectionMode"
-    static let fullscreenBehavior     = "fullscreenBehavior"
+    static let collapseDelay = "collapseDelay"
+    static let launchAtLogin = "launchAtLogin"
+    static let peekDuration = "peekDuration"
+    static let mediaEnabled = "mediaEnabled"
+    static let timersEnabled = "timersEnabled"
+    static let clipboardEnabled = "clipboardEnabled"
+    static let systemEnabled = "systemEnabled"
+    static let dropzoneEnabled = "dropzoneEnabled"
+    static let hudReplaceSystem = "hudReplaceSystem"
+    static let panelWidth = "panelWidth"
+    static let notchDetectionMode = "notchDetectionMode"
+    static let fullscreenBehavior = "fullscreenBehavior"
     static let showRingWhenTimerActive = "showRingWhenTimerActive"
-    static let globalShortcutEnabled  = "globalShortcutEnabled"
+    static let globalShortcutEnabled = "globalShortcutEnabled"
 }
 
 // MARK: — Helpers
 
 private extension Double {
-    var nonZero: Double? { self == 0 ? nil : self }
+    var nonZero: Double? {
+        self == 0 ? nil : self
+    }
 }

@@ -30,7 +30,10 @@
 "settings.display.notchDetection.manual" = "Manuel";
 "settings.display.timerRing" = "Afficher l'anneau de timer";
 "settings.general.collapseDelay" = "Délai de fermeture";
+"settings.general.hudReplace" = "Remplacer le HUD volume/luminosité macOS";
+"settings.general.hudReplaceDetail" = "Affiche la barre compacte Notchy à la place de l'overlay macOS (nécessite la permission Accessibilité).";
 "settings.general.language" = "Langue";
+"settings.general.languageRestart" = "Les changements prennent effet au prochain lancement.";
 "settings.general.launchAtLogin" = "Lancer au démarrage";
 "settings.general.peekDuration" = "Durée du survol";
 "settings.modules.enabled" = "Activé";

@@ -91,7 +91,7 @@ public final class NotchWindow: NSPanel {
         case .expanded:
             backgroundColor = .black
             let size = CGSize(width: Layout.expandedWidth,
-                              height: geometry.notchRect.height + Layout.contentHeight)
+                              height: Layout.navbarHeight + Layout.contentHeight)
             let frame = makeFrame(size: size, geometry: geometry)
             if animated {
                 NSAnimationContext.runAnimationGroup({ ctx in
@@ -110,10 +110,9 @@ public final class NotchWindow: NSPanel {
             addGlobalClickMonitor()
 
         case .peeking:
-            // Même hauteur que l'encoche, juste plus large
             backgroundColor = .black
             let size = CGSize(width: Layout.expandedWidth,
-                              height: geometry.notchRect.height)
+                              height: Layout.navbarHeight)
             let frame = makeFrame(size: size, geometry: geometry)
             if animated {
                 NSAnimationContext.runAnimationGroup({ ctx in
@@ -130,6 +129,28 @@ public final class NotchWindow: NSPanel {
                 updateTrackingArea()
             }
 
+        case .hud:
+            // Fenêtre qui entoure l'encoche (plus large des deux côtés) avec la barre en dessous
+            backgroundColor = .black
+            let hudWidth  = max(280, controller.notchWidth + 170)
+            let hudHeight = controller.notchHeight + 34
+            let hudSize = CGSize(width: hudWidth, height: hudHeight)
+            let hudFrame = makeFrame(size: hudSize, geometry: geometry)
+            if animated {
+                NSAnimationContext.runAnimationGroup({ ctx in
+                    ctx.duration = Layout.peekDuration
+                    ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                    self.animator().setFrame(hudFrame, display: true)
+                }, completionHandler: {
+                    self.backgroundColor = .clear
+                    self.updateTrackingArea()
+                })
+            } else {
+                setFrame(hudFrame, display: true, animate: false)
+                backgroundColor = .clear
+                updateTrackingArea()
+            }
+
         case .collapsed:
             backgroundColor = .clear
             removeGlobalClickMonitor()
@@ -137,9 +158,9 @@ public final class NotchWindow: NSPanel {
                                    height: geometry.notchRect.height)
             if animated {
                 let frame = makeFrame(size: notchSize, geometry: geometry)
-                // Depuis peek : rétrécir en largeur immédiatement (hauteur inchangée)
+                // Depuis peek / hud : rétrécir immédiatement
                 // Depuis expanded : attendre la fin de l'animation SwiftUI
-                if from == .peeking {
+                if from == .peeking || from == .hud {
                     NSAnimationContext.runAnimationGroup { ctx in
                         ctx.duration = Layout.peekDuration
                         ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)

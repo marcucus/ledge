@@ -41,6 +41,7 @@ et les jauges ne se rafraîchissent que panneau ouvert.
 | [06 — Écran Paramètres](docs/06-ecran-parametres.md) | Réglages globaux + par module + les 4 choix critiques. |
 | [07 — Architecture technique](docs/07-architecture-technique.md) | Légèreté, détection dynamique de l'encoche, multi-écran, plein écran, permissions. |
 | [08 — Conventions de code](docs/08-conventions-de-code.md) | Standards Swift/SwiftUI : structure, style, qualité, outillage. La constitution du code. |
+| [09 — Avancement & contexte](docs/09-avancement-et-contexte.md) | État réel du code : ce qui est implémenté par module, le HUD volume/luminosité, limites connues, prochaines étapes. |
 
 
 ## Roadmap

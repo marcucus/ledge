@@ -49,7 +49,7 @@ let package = Package(
             name: "SystemModule",
             dependencies: ["Core"],
             path: "Sources/Modules/System",
-            linkerSettings: [.linkedFramework("IOKit")]
+            linkerSettings: [.linkedFramework("IOKit"), .linkedFramework("CoreAudio")]
         ),
         .testTarget(
             name: "CoreTests",
