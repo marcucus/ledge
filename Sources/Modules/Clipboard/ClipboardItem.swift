@@ -34,9 +34,9 @@ extension ClipboardContent {
     /// is responsible for passing it through `LocalizedStringKey` if needed.
     var previewText: String {
         switch self {
-        case .text(let s):  return String(s.prefix(80))
-        case .url(let u):   return u.absoluteString
-        case .image:        return "clipboard.item.image"  // treated as key by the views
+        case let .text(text): String(text.prefix(80))
+        case let .url(url): url.absoluteString
+        case .image: "clipboard.item.image" // treated as key by the views
         }
     }
 }

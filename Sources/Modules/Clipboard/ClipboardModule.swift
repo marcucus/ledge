@@ -16,8 +16,8 @@ public final class ClipboardModule: NotchModule {
     @ObservationIgnored private let maxItems = 50
     @ObservationIgnored private let source = ClipboardSource()
 
-    // nonisolated(unsafe) so deinit (non-isolated) can reach it
-    @ObservationIgnored nonisolated(unsafe) private var _source: ClipboardSource
+    /// nonisolated(unsafe) so deinit (non-isolated) can reach it
+    @ObservationIgnored private nonisolated(unsafe) var _source: ClipboardSource
 
     public init() {
         _source = source
@@ -65,17 +65,17 @@ public final class ClipboardModule: NotchModule {
     }
 
     private func writeToPasteboard(_ item: ClipboardItem) {
-        let pb = NSPasteboard.general
-        pb.clearContents()
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
         switch item.content {
-        case .text(let s):
-            pb.setString(s, forType: .string)
-        case .url(let u):
-            pb.setString(u.absoluteString, forType: .string)
-            pb.setString(u.absoluteString, forType: .URL)
-        case .image(let img):
+        case let .text(text):
+            pasteboard.setString(text, forType: .string)
+        case let .url(url):
+            pasteboard.setString(url.absoluteString, forType: .string)
+            pasteboard.setString(url.absoluteString, forType: .URL)
+        case let .image(img):
             if let tiff = img.tiffRepresentation {
-                pb.setData(tiff, forType: .tiff)
+                pasteboard.setData(tiff, forType: .tiff)
             }
         }
     }
@@ -84,9 +84,9 @@ public final class ClipboardModule: NotchModule {
         // Post Cmd+V key-down / key-up via CGEvent to trigger paste in the active app.
         let src = CGEventSource(stateID: .hidSystemState)
         let keyDown = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: true)
-        let keyUp   = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: false)
+        let keyUp = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: false)
         keyDown?.flags = .maskCommand
-        keyUp?.flags   = .maskCommand
+        keyUp?.flags = .maskCommand
         keyDown?.post(tap: .cghidEventTap)
         keyUp?.post(tap: .cghidEventTap)
     }
@@ -94,9 +94,20 @@ public final class ClipboardModule: NotchModule {
 
 // MARK: — NotchModule protocol conformance
 
-extension ClipboardModule {
-    public var tabIcon: String { "doc.on.clipboard" }
-    public var tabLabel: LocalizedStringKey { "module.clipboard.label" }
-    public func makePeekView() -> AnyView { AnyView(ClipboardPeekView(module: self)) }
-    public func makeContentView() -> AnyView { AnyView(ClipboardContentView(module: self)) }
+public extension ClipboardModule {
+    var tabIcon: String {
+        "doc.on.clipboard"
+    }
+
+    var tabLabel: LocalizedStringKey {
+        "module.clipboard.label"
+    }
+
+    func makePeekView() -> AnyView {
+        AnyView(ClipboardPeekView(module: self))
+    }
+
+    func makeContentView() -> AnyView {
+        AnyView(ClipboardContentView(module: self))
+    }
 }

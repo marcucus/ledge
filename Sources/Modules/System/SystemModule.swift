@@ -26,8 +26,8 @@ public final class SystemModule: NotchModule {
     // MARK: — Observed state
 
     private(set) var battery = BatteryStats.unavailable
-    private(set) var cpu     = CPUStats.zero
-    private(set) var ram     = RAMStats.zero
+    private(set) var cpu = CPUStats.zero
+    private(set) var ram = RAMStats.zero
     private(set) var network = NetworkStats.zero
 
     var toggles: [QuickToggle] = []
@@ -35,12 +35,12 @@ public final class SystemModule: NotchModule {
 
     // MARK: — Private sources
 
-    @ObservationIgnored private let batterySource   = BatterySource()
-    @ObservationIgnored private let pollingSource   = PollingSource()
+    @ObservationIgnored private let batterySource = BatterySource()
+    @ObservationIgnored private let pollingSource = PollingSource()
     @ObservationIgnored private let caffeineManager = CaffeineManager()
 
-    @ObservationIgnored nonisolated(unsafe) private var _batterySource: BatterySource
-    @ObservationIgnored nonisolated(unsafe) private var _pollingSource: PollingSource
+    @ObservationIgnored private nonisolated(unsafe) var _batterySource: BatterySource
+    @ObservationIgnored private nonisolated(unsafe) var _pollingSource: PollingSource
 
     // MARK: — Init
 
@@ -62,9 +62,9 @@ public final class SystemModule: NotchModule {
         batterySource.onUpdate = { [weak self] stats in
             Task { @MainActor [weak self] in self?.battery = stats }
         }
-        pollingSource.onCPU     = { [weak self] s in Task { @MainActor [weak self] in self?.cpu = s } }
-        pollingSource.onRAM     = { [weak self] s in Task { @MainActor [weak self] in self?.ram = s } }
-        pollingSource.onNetwork = { [weak self] s in Task { @MainActor [weak self] in self?.network = s } }
+        pollingSource.onCPU = { [weak self] stats in Task { @MainActor [weak self] in self?.cpu = stats } }
+        pollingSource.onRAM = { [weak self] stats in Task { @MainActor [weak self] in self?.ram = stats } }
+        pollingSource.onNetwork = { [weak self] stats in Task { @MainActor [weak self] in self?.network = stats } }
         batterySource.start()
     }
 
@@ -76,10 +76,14 @@ public final class SystemModule: NotchModule {
     // MARK: — Polling lifecycle (called by the content view)
 
     /// Call from the content view's `onAppear`.
-    func beginPolling() { pollingSource.beginPolling() }
+    func beginPolling() {
+        pollingSource.beginPolling()
+    }
 
     /// Call from the content view's `onDisappear`.
-    func endPolling()   { pollingSource.endPolling() }
+    func endPolling() {
+        pollingSource.endPolling()
+    }
 
     // MARK: — Launcher
 
@@ -131,9 +135,9 @@ public final class SystemModule: NotchModule {
     private func buildDefaultLauncher() {
         // Pre-populate with a handful of common apps (skips if bundle doesn't exist)
         let candidates: [(String, String)] = [
-            ("Safari",   "/Applications/Safari.app"),
+            ("Safari", "/Applications/Safari.app"),
             ("Terminal", "/System/Applications/Utilities/Terminal.app"),
-            ("Finder",   "/System/Library/CoreServices/Finder.app"),
+            ("Finder", "/System/Library/CoreServices/Finder.app"),
         ]
         launcherItems = candidates.compactMap { name, path in
             let url = URL(fileURLWithPath: path)
@@ -145,9 +149,20 @@ public final class SystemModule: NotchModule {
 
 // MARK: — NotchModule protocol conformance
 
-extension SystemModule {
-    public var tabIcon: String { "cpu" }
-    public var tabLabel: LocalizedStringKey { "module.system.label" }
-    public func makePeekView() -> AnyView { AnyView(SystemPeekView(module: self)) }
-    public func makeContentView() -> AnyView { AnyView(SystemContentView(module: self)) }
+public extension SystemModule {
+    var tabIcon: String {
+        "cpu"
+    }
+
+    var tabLabel: LocalizedStringKey {
+        "module.system.label"
+    }
+
+    func makePeekView() -> AnyView {
+        AnyView(SystemPeekView(module: self))
+    }
+
+    func makeContentView() -> AnyView {
+        AnyView(SystemContentView(module: self))
+    }
 }

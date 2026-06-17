@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>me.adrienmarques.notchy</string>
+    <string>me.adrienmarques.ledge</string>
     <key>CFBundleName</key>
-    <string>Notchy</string>
+    <string>Ledge</string>
     <key>CFBundleDisplayName</key>
-    <string>Notchy</string>
+    <string>Ledge</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleVersion</key>

@@ -6,7 +6,7 @@ struct NotchGeometry: Equatable {
     let notchRect: CGRect
     let screenFrame: CGRect
 
-    /// Bord supérieur du centre de l'encoche — ancre haute du panneau Notchy.
+    /// Bord supérieur du centre de l'encoche — ancre haute du panneau Ledge.
     var anchorPoint: CGPoint {
         CGPoint(x: notchRect.midX, y: notchRect.maxY)
     }

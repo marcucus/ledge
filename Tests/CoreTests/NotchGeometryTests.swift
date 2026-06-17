@@ -1,8 +1,8 @@
+@testable import Core
 import CoreGraphics
 import Testing
-@testable import Core
 
-@Suite struct NotchGeometryTests {
+struct NotchGeometryTests {
     // Valeurs fictives réalistes (MacBook Pro 14", résolution logique)
     private let screenFrame = CGRect(x: 0, y: 0, width: 1512, height: 982)
     private let safeAreaTop: CGFloat = 32

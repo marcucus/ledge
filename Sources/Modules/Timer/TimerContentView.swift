@@ -47,7 +47,10 @@ public struct TimerContentView: View {
         let minutes = Int(duration / 60)
         return Button {
             module.addTimer(
-                label: String(format: NSLocalizedString("timer.preset.minutes", bundle: localizationBundle, comment: ""), minutes),
+                label: String(
+                    format: NSLocalizedString("timer.preset.minutes", bundle: localizationBundle, comment: ""),
+                    minutes
+                ),
                 duration: duration
             )
         } label: {
@@ -64,13 +67,16 @@ public struct TimerContentView: View {
 
     private var customInputRow: some View {
         HStack(spacing: 8) {
-            TextField(NSLocalizedString("timer.custom.placeholder", bundle: localizationBundle, comment: ""), text: $customMinutes)
-                .textFieldStyle(.plain)
-                .font(.footnote)
-                .frame(width: 60)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+            TextField(
+                NSLocalizedString("timer.custom.placeholder", bundle: localizationBundle, comment: ""),
+                text: $customMinutes
+            )
+            .textFieldStyle(.plain)
+            .font(.footnote)
+            .frame(width: 60)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
             Button {
                 addCustomTimer()
             } label: {
@@ -86,7 +92,10 @@ public struct TimerContentView: View {
         guard let minutes = Int(customMinutes), minutes > 0 else { return }
         let duration = TimeInterval(minutes * 60)
         module.addTimer(
-            label: String(format: NSLocalizedString("timer.preset.minutes", bundle: localizationBundle, comment: ""), minutes),
+            label: String(
+                format: NSLocalizedString("timer.preset.minutes", bundle: localizationBundle, comment: ""),
+                minutes
+            ),
             duration: duration
         )
         customMinutes = ""
@@ -116,11 +125,14 @@ public struct TimerContentView: View {
         Button {
             module.startPomodoro()
         } label: {
-            Label(NSLocalizedString("timer.pomodoro.start", bundle: localizationBundle, comment: ""), systemImage: "tomato")
-                .font(.footnote.weight(.medium))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(.orange.opacity(0.15), in: Capsule())
+            Label(
+                NSLocalizedString("timer.pomodoro.start", bundle: localizationBundle, comment: ""),
+                systemImage: "tomato"
+            )
+            .font(.footnote.weight(.medium))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(.orange.opacity(0.15), in: Capsule())
         }
         .buttonStyle(.plain)
         .foregroundStyle(.orange)
@@ -135,9 +147,9 @@ private struct TimerRowView: View {
 
     private var formatted: String {
         let total = max(0, Int(entry.remaining))
-        let m = total / 60
-        let s = total % 60
-        return String(format: "%02d:%02d", m, s)
+        let minutes = total / 60
+        let secs = total % 60
+        return String(format: "%02d:%02d", minutes, secs)
     }
 
     var body: some View {
@@ -162,8 +174,13 @@ private struct TimerRowView: View {
             let center = CGPoint(x: size.width / 2, y: size.height / 2)
             let radius = min(size.width, size.height) / 2 - 1.5
             var track = Path()
-            track.addArc(center: center, radius: radius,
-                         startAngle: .degrees(-90), endAngle: .degrees(270), clockwise: false)
+            track.addArc(
+                center: center,
+                radius: radius,
+                startAngle: .degrees(-90),
+                endAngle: .degrees(270),
+                clockwise: false
+            )
             context.stroke(track, with: .color(.white.opacity(0.15)), lineWidth: 2)
             guard entry.progress > 0 else { return }
             var progress = Path()

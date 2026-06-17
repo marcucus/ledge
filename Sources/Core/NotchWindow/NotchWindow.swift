@@ -3,7 +3,7 @@ import QuartzCore
 import SwiftUI
 
 public final class NotchWindow: NSPanel {
-    public let controller = NotchController()
+    public let controller = NotchController(settings: .shared)
 
     private var currentGeometry: NotchGeometry?
     private var screenObserver: NSObjectProtocol?
@@ -36,9 +36,9 @@ public final class NotchWindow: NSPanel {
 
         controller.onTransition = { [weak self] newState in
             guard let self else { return }
-            let from = self.lastState
-            self.lastState = newState
-            self.updateFrame(for: newState, from: from, animated: true)
+            let from = lastState
+            lastState = newState
+            updateFrame(for: newState, from: from, animated: true)
         }
 
         observeScreenChanges()
@@ -55,8 +55,13 @@ public final class NotchWindow: NSPanel {
 
     // MARK: — Événements souris
 
-    override public func mouseEntered(with event: NSEvent) { controller.cursorEntered() }
-    override public func mouseExited(with event: NSEvent)  { controller.cursorExited() }
+    override public func mouseEntered(with _: NSEvent) {
+        controller.cursorEntered()
+    }
+
+    override public func mouseExited(with _: NSEvent) {
+        controller.cursorExited()
+    }
 
     // MARK: — Modules
 
@@ -84,83 +89,107 @@ public final class NotchWindow: NSPanel {
 
     private func updateFrame(for state: NotchState, from: NotchState, animated: Bool) {
         guard let geometry = currentGeometry else { return }
-        controller.notchWidth  = geometry.notchRect.width
+        controller.notchWidth = geometry.notchRect.width
         controller.notchHeight = geometry.notchRect.height
 
         switch state {
-        case .expanded:
-            backgroundColor = .black
-            let size = CGSize(width: Layout.expandedWidth,
-                              height: geometry.notchRect.height + Layout.contentHeight)
-            let frame = makeFrame(size: size, geometry: geometry)
-            if animated {
-                NSAnimationContext.runAnimationGroup({ ctx in
-                    ctx.duration = Layout.openDuration
-                    ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                    self.animator().setFrame(frame, display: true)
-                }, completionHandler: {
-                    self.backgroundColor = .clear
-                    self.updateTrackingArea()
-                })
-            } else {
-                setFrame(frame, display: true, animate: false)
-                backgroundColor = .clear
-                updateTrackingArea()
-            }
-            addGlobalClickMonitor()
+        case .expanded: applyExpanded(geometry: geometry, animated: animated)
+        case .peeking: applyPeeking(geometry: geometry, animated: animated)
+        case .hud: applyHUD(geometry: geometry, animated: animated)
+        case .collapsed: applyCollapsed(geometry: geometry, from: from, animated: animated)
+        }
+        orderFrontRegardless()
+    }
 
-        case .peeking:
-            // Même hauteur que l'encoche, juste plus large
-            backgroundColor = .black
-            let size = CGSize(width: Layout.expandedWidth,
-                              height: geometry.notchRect.height)
-            let frame = makeFrame(size: size, geometry: geometry)
-            if animated {
-                NSAnimationContext.runAnimationGroup({ ctx in
-                    ctx.duration = Layout.peekDuration
-                    ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                    self.animator().setFrame(frame, display: true)
-                }, completionHandler: {
-                    self.backgroundColor = .clear
-                    self.updateTrackingArea()
-                })
-            } else {
-                setFrame(frame, display: true, animate: false)
-                backgroundColor = .clear
-                updateTrackingArea()
-            }
+    /// Anime (ou pose directement si `animated == false`) la fenêtre vers `frame`,
+    /// puis exécute `onComplete`. Factorise la mécanique d'animation des 4 états.
+    private func transitionFrame(
+        to frame: CGRect,
+        duration: TimeInterval,
+        animated: Bool,
+        onComplete: @escaping () -> Void
+    ) {
+        guard animated else {
+            setFrame(frame, display: true, animate: false)
+            onComplete()
+            return
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = duration
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            self.animator().setFrame(frame, display: true)
+        } completionHandler: { onComplete() }
+    }
 
-        case .collapsed:
-            backgroundColor = .clear
-            removeGlobalClickMonitor()
-            let notchSize = CGSize(width: geometry.notchRect.width,
-                                   height: geometry.notchRect.height)
-            if animated {
-                let frame = makeFrame(size: notchSize, geometry: geometry)
-                // Depuis peek : rétrécir en largeur immédiatement (hauteur inchangée)
-                // Depuis expanded : attendre la fin de l'animation SwiftUI
-                if from == .peeking {
-                    NSAnimationContext.runAnimationGroup { ctx in
-                        ctx.duration = Layout.peekDuration
-                        ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                        self.animator().setFrame(frame, display: true)
-                    } completionHandler: {
-                        self.updateTrackingArea()
-                    }
-                } else {
-                    Task { @MainActor [weak self] in
-                        try? await Task.sleep(for: .milliseconds(380))
-                        guard let self, self.controller.state == .collapsed else { return }
-                        self.setFrame(frame, display: true, animate: false)
-                        self.updateTrackingArea()
-                    }
-                }
-            } else {
-                applyFrame(size: notchSize, geometry: geometry)
+    /// Pendant l'animation le fond est noir, puis redevient transparent (la forme SwiftUI prend le relais).
+    private func revealClearBackground() {
+        backgroundColor = .clear
+        updateTrackingArea()
+    }
+
+    private func applyExpanded(geometry: NotchGeometry, animated: Bool) {
+        backgroundColor = .black
+        let size = CGSize(width: Layout.expandedWidth, height: Layout.navbarHeight + Layout.contentHeight)
+        transitionFrame(
+            to: makeFrame(size: size, geometry: geometry),
+            duration: Layout.openDuration,
+            animated: animated
+        ) { [weak self] in
+            self?.revealClearBackground()
+        }
+        addGlobalClickMonitor()
+    }
+
+    private func applyPeeking(geometry: NotchGeometry, animated: Bool) {
+        backgroundColor = .black
+        let size = CGSize(width: Layout.expandedWidth, height: Layout.navbarHeight)
+        transitionFrame(
+            to: makeFrame(size: size, geometry: geometry),
+            duration: Layout.peekDuration,
+            animated: animated
+        ) { [weak self] in
+            self?.revealClearBackground()
+        }
+    }
+
+    private func applyHUD(geometry: NotchGeometry, animated: Bool) {
+        // Fenêtre qui entoure l'encoche (plus large des deux côtés), barre fine en dessous.
+        backgroundColor = .black
+        let size = CGSize(
+            width: max(Layout.hudMinWidth, controller.notchWidth + Layout.hudSideMargin),
+            height: controller.notchHeight + Layout.hudBottomMargin
+        )
+        transitionFrame(
+            to: makeFrame(size: size, geometry: geometry),
+            duration: Layout.peekDuration,
+            animated: animated
+        ) { [weak self] in
+            self?.revealClearBackground()
+        }
+    }
+
+    private func applyCollapsed(geometry: NotchGeometry, from: NotchState, animated: Bool) {
+        backgroundColor = .clear
+        removeGlobalClickMonitor()
+        let size = CGSize(width: geometry.notchRect.width, height: geometry.notchRect.height)
+        guard animated else {
+            applyFrame(size: size, geometry: geometry)
+            return
+        }
+        let frame = makeFrame(size: size, geometry: geometry)
+        // Depuis peek / hud : rétrécir tout de suite. Depuis expanded : attendre l'animation SwiftUI.
+        if from == .peeking || from == .hud {
+            transitionFrame(to: frame, duration: Layout.peekDuration, animated: true) { [weak self] in
+                self?.updateTrackingArea()
+            }
+        } else {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .milliseconds(Layout.collapseFromExpandedDelayMs))
+                guard let self, controller.state == .collapsed else { return }
+                setFrame(frame, display: true, animate: false)
+                updateTrackingArea()
             }
         }
-
-        orderFrontRegardless()
     }
 
     private func applyFrame(size: CGSize, geometry: NotchGeometry) {
@@ -262,10 +291,16 @@ public final class NotchWindow: NSPanel {
 // MARK: — Constantes
 
 private enum Layout {
-    static let expandedWidth: CGFloat       = 744   // 720 contenu + 12 px d'oreille de chaque côté
-    static let navbarHeight: CGFloat        = 44
-    static let contentHeight: CGFloat       = 180
-    static let openDuration: TimeInterval   = 0.40
-    static let closeDuration: TimeInterval  = 0.34
-    static let peekDuration: TimeInterval   = 0.20
+    static let expandedWidth: CGFloat = 744 // 720 contenu + 12 px d'oreille de chaque côté
+    static let navbarHeight: CGFloat = 44
+    static let contentHeight: CGFloat = 180
+    static let openDuration: TimeInterval = 0.40
+    static let closeDuration: TimeInterval = 0.34
+    static let peekDuration: TimeInterval = 0.20
+    // HUD : la fenêtre déborde de chaque côté de l'encoche, barre fine en dessous.
+    static let hudMinWidth: CGFloat = 280
+    static let hudSideMargin: CGFloat = 170
+    static let hudBottomMargin: CGFloat = 34
+    /// Attendre la fin de l'animation SwiftUI avant de rétrécir la fenêtre depuis l'état ouvert.
+    static let collapseFromExpandedDelayMs = 380
 }

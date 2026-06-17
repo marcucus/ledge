@@ -1,33 +1,47 @@
-import SwiftUI
 import Core
+import SwiftUI
 
 struct ModulesSettingsView: View {
     var store: SettingsStore
 
     var body: some View {
-        Form {
+        List {
             Section {
-                moduleRow(icon: "music.note",        nameKey: "module.media.label",     enabled: Binding(get: { store.mediaEnabled },     set: { store.mediaEnabled = $0 }))
-                moduleRow(icon: "timer",              nameKey: "module.timers.label",    enabled: Binding(get: { store.timersEnabled },    set: { store.timersEnabled = $0 }))
-                moduleRow(icon: "doc.on.clipboard",   nameKey: "module.clipboard.label", enabled: Binding(get: { store.clipboardEnabled }, set: { store.clipboardEnabled = $0 }))
-                moduleRow(icon: "cpu",                nameKey: "module.system.label",    enabled: Binding(get: { store.systemEnabled },    set: { store.systemEnabled = $0 }))
-                moduleRow(icon: "arrow.down.to.line", nameKey: "module.dropzone.label",  enabled: Binding(get: { store.dropzoneEnabled }, set: { store.dropzoneEnabled = $0 }))
+                ForEach(orderedEntries) { entry in
+                    moduleRow(entry)
+                }
+                .onMove(perform: move)
             }
         }
-        .formStyle(.grouped)
         .navigationTitle(Text("settings.section.modules", bundle: localizationBundle))
     }
 
-    private func moduleRow(icon: String, nameKey: String, enabled: Binding<Bool>) -> some View {
+    /// Entrées dans l'ordre persisté, en rattachant à la fin tout module absent de l'ordre (robustesse).
+    private var orderedEntries: [ModuleCatalog.Entry] {
+        let ordered = store.moduleOrder.compactMap(ModuleCatalog.entry(for:))
+        let missing = ModuleCatalog.entries.filter { entry in !ordered.contains { $0.id == entry.id } }
+        return ordered + missing
+    }
+
+    private func moduleRow(_ entry: ModuleCatalog.Entry) -> some View {
         HStack {
             Label {
-                Text(LocalizedStringKey(nameKey), bundle: localizationBundle)
+                Text(LocalizedStringKey(entry.nameKey), bundle: localizationBundle)
             } icon: {
-                Image(systemName: icon)
+                Image(systemName: entry.icon)
             }
             Spacer()
-            Toggle(isOn: enabled) { EmptyView() }
+            Toggle(isOn: Binding(
+                get: { store.isModuleEnabled(entry.id) },
+                set: { store.setModule(entry.id, enabled: $0) }
+            )) { EmptyView() }
                 .labelsHidden()
         }
+    }
+
+    private func move(from source: IndexSet, to destination: Int) {
+        var order = orderedEntries.map(\.id)
+        order.move(fromOffsets: source, toOffset: destination)
+        store.moduleOrder = order
     }
 }

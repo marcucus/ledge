@@ -1,12 +1,14 @@
-import SwiftUI
 import AppKit
-import Core
-import UserNotifications
 import ApplicationServices
+import Core
+import SwiftUI
+import UserNotifications
 
 struct PermissionsSettingsView: View {
     @State private var accessibilityGranted = false
-    @State private var notificationsStatus: UNAuthorizationStatus = .notDetermined
+    @State private var notificationsGranted = false
+    /// En run non-bundlé (swift run), UNUserNotificationCenter n'est pas disponible.
+    private let notificationsAvailable = Bundle.main.bundleIdentifier != nil
 
     var body: some View {
         Form {
@@ -14,50 +16,36 @@ struct PermissionsSettingsView: View {
                 permissionRow(
                     icon: "figure.arms.open",
                     nameKey: "settings.permissions.accessibility",
-                    statusIcon: accessibilityGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill",
-                    statusColor: accessibilityGranted ? Color.green : Color.orange,
-                    showAction: !accessibilityGranted,
-                    action: accessibilityGranted ? nil : openAccessibilitySettings
+                    granted: accessibilityGranted,
+                    actionKey: "settings.permissions.openSettings",
+                    action: openAccessibilitySettings
                 )
-
-                permissionRow(
-                    icon: "bell.badge",
-                    nameKey: "settings.permissions.notifications",
-                    statusIcon: notificationStatusIcon,
-                    statusColor: notificationStatusColor,
-                    showAction: notificationsStatus == .denied,
-                    action: notificationsStatus == .denied ? openNotificationSettings : nil
-                )
+                if notificationsAvailable {
+                    permissionRow(
+                        icon: "bell.badge",
+                        nameKey: "settings.permissions.notifications",
+                        granted: notificationsGranted,
+                        actionKey: "settings.permissions.request",
+                        action: requestNotifications
+                    )
+                }
+                automationRow
             }
         }
         .formStyle(.grouped)
         .navigationTitle(Text("settings.section.permissions", bundle: localizationBundle))
-        .task { await refreshStatus() }
-    }
-
-    private var notificationStatusIcon: String {
-        switch notificationsStatus {
-        case .authorized, .provisional, .ephemeral: "checkmark.circle.fill"
-        case .denied:                                "xmark.circle.fill"
-        default:                                     "questionmark.circle.fill"
-        }
-    }
-
-    private var notificationStatusColor: Color {
-        switch notificationsStatus {
-        case .authorized, .provisional, .ephemeral: .green
-        case .denied:                                .red
-        default:                                     .secondary
+        .task {
+            accessibilityGranted = AXIsProcessTrusted()
+            await refreshNotifications()
         }
     }
 
     private func permissionRow(
         icon: String,
         nameKey: String,
-        statusIcon: String,
-        statusColor: Color,
-        showAction: Bool,
-        action: (() -> Void)?
+        granted: Bool,
+        actionKey: String,
+        action: @escaping () -> Void
     ) -> some View {
         HStack {
             Label {
@@ -66,30 +54,48 @@ struct PermissionsSettingsView: View {
                 Image(systemName: icon)
             }
             Spacer()
-            Image(systemName: statusIcon)
-                .foregroundStyle(statusColor)
-            if showAction, let action {
+            Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(granted ? Color.green : Color.orange)
+            if !granted {
                 Button(action: action) {
-                    Text("settings.permissions.openSettings", bundle: localizationBundle)
+                    Text(LocalizedStringKey(actionKey), bundle: localizationBundle)
                 }
                 .buttonStyle(.bordered)
             }
         }
     }
 
-    private func refreshStatus() async {
-        accessibilityGranted = AXIsProcessTrusted()
-        let settings = await UNUserNotificationCenter.current().notificationSettings()
-        notificationsStatus = settings.authorizationStatus
+    /// L'Automation (Apple Music) suit la demande paresseuse : accordée au 1er contrôle (doc 07).
+    private var automationRow: some View {
+        HStack {
+            Label {
+                Text("settings.permissions.automation", bundle: localizationBundle)
+            } icon: {
+                Image(systemName: "applescript")
+            }
+            Spacer()
+            Text("settings.permissions.automation.detail", bundle: localizationBundle)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
     }
 
     private func openAccessibilitySettings() {
-        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else { return }
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+        else { return }
         NSWorkspace.shared.open(url)
     }
 
-    private func openNotificationSettings() {
-        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") else { return }
-        NSWorkspace.shared.open(url)
+    private func requestNotifications() {
+        Task {
+            _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+            await refreshNotifications()
+        }
+    }
+
+    private func refreshNotifications() async {
+        guard notificationsAvailable else { return }
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        notificationsGranted = settings.authorizationStatus == .authorized
     }
 }

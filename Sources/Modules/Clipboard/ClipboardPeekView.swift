@@ -35,9 +35,9 @@ struct ClipboardPeekView: View {
     private func clipboardPreviewText(_ content: ClipboardContent) -> some View {
         switch content {
         case .image:
-            Text("clipboard.item.image", bundle: localizationBundle)  // LocalizedStringKey lookup
+            Text("clipboard.item.image", bundle: localizationBundle) // LocalizedStringKey lookup
         default:
-            Text(content.previewText)     // plain string (url or truncated text)
+            Text(content.previewText) // plain string (url or truncated text)
         }
     }
 }

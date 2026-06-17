@@ -1,10 +1,10 @@
-import SwiftUI
 import Core
+import SwiftUI
 
 struct AboutSettingsView: View {
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
-        let build   = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
         return "\(version) (\(build))"
     }
 
@@ -20,7 +20,7 @@ struct AboutSettingsView: View {
                     Text("settings.about.appName", bundle: localizationBundle)
                         .fontWeight(.semibold)
                     Spacer()
-                    Text("Notchy")
+                    Text("Ledge")
                         .foregroundStyle(.secondary)
                 }
 

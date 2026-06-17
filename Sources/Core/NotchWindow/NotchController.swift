@@ -13,19 +13,35 @@ import Foundation
     public var statusModule: (any NotchModule)?
     /// Appelé quand un drag de fichier entre/quitte la zone de proximité.
     public var onDragHoverChange: ((Bool) -> Void)?
+    /// Contenu HUD courant (volume / luminosité). Nil = pas de HUD.
+    public private(set) var hudContent: HUDContent?
     private var collapseTask: Task<Void, Never>?
+    private var hudTask: Task<Void, Never>?
     @ObservationIgnored private var lastExpandTime: TimeInterval = 0
     @ObservationIgnored private var isDragHovering = false
 
-    public var selectedModule: (any NotchModule)? {
-        modules.first { $0.id == selectedModuleID } ?? modules.first
+    private let settings: SettingsStore
+
+    /// Modules réellement affichés : catalogue filtré (activés) et trié selon les réglages.
+    /// Recalculé à la lecture → la NavBar réagit à chaud aux changements de `SettingsStore`.
+    public var visibleModules: [any NotchModule] {
+        let order = settings.moduleOrder
+        return modules
+            .filter { settings.isModuleEnabled($0.id) }
+            .sorted { (order.firstIndex(of: $0.id) ?? .max) < (order.firstIndex(of: $1.id) ?? .max) }
     }
 
-    public init() {}
+    public var selectedModule: (any NotchModule)? {
+        visibleModules.first { $0.id == selectedModuleID } ?? visibleModules.first
+    }
+
+    public init(settings: SettingsStore) {
+        self.settings = settings
+    }
 
     public func register(modules: [any NotchModule]) {
         self.modules = modules
-        selectedModuleID = modules.first?.id ?? ""
+        selectedModuleID = visibleModules.first?.id ?? ""
         modules.forEach { $0.start() }
     }
 
@@ -34,9 +50,30 @@ import Foundation
         selectedModuleID = id
     }
 
+    // MARK: — HUD
+
+    public func showHUD(_ content: HUDContent) {
+        hudContent = content
+        hudTask?.cancel()
+        guard state != .expanded else { return }
+        if state == .collapsed || state == .hud {
+            transition(to: .hud)
+        }
+        hudTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(1600))
+            guard let self, !Task.isCancelled else { return }
+            hudContent = nil
+            if state == .hud {
+                transition(to: .collapsed)
+            }
+        }
+    }
+
     public func cursorEntered() {
         collapseTask?.cancel()
-        guard state == .collapsed else { return }
+        hudTask?.cancel()
+        hudContent = nil
+        guard state == .collapsed || state == .peeking || state == .hud else { return }
         lastExpandTime = ProcessInfo.processInfo.systemUptime
         transition(to: .expanded)
     }
@@ -65,7 +102,7 @@ import Foundation
         collapseTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
             guard let self, !Task.isCancelled else { return }
-            self.transition(to: .collapsed)
+            transition(to: .collapsed)
         }
     }
 
@@ -79,7 +116,7 @@ import Foundation
         collapseTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Timing.collapseDelay))
             guard let self, !Task.isCancelled else { return }
-            self.transition(to: .collapsed)
+            transition(to: .collapsed)
         }
     }
 

@@ -1,5 +1,5 @@
-import SwiftUI
 import Core
+import SwiftUI
 
 struct DisplaySettingsView: View {
     var store: SettingsStore
@@ -11,9 +11,12 @@ struct DisplaySettingsView: View {
                     get: { store.fullscreenBehavior },
                     set: { store.fullscreenBehavior = $0 }
                 )) {
-                    Text("settings.display.fullscreen.accessible", bundle: localizationBundle).tag(FullscreenBehavior.accessible)
-                    Text("settings.display.fullscreen.hidden", bundle: localizationBundle).tag(FullscreenBehavior.hidden)
-                    Text("settings.display.fullscreen.overlay", bundle: localizationBundle).tag(FullscreenBehavior.overlay)
+                    Text("settings.display.fullscreen.accessible", bundle: localizationBundle)
+                        .tag(FullscreenBehavior.accessible)
+                    Text("settings.display.fullscreen.hidden", bundle: localizationBundle)
+                        .tag(FullscreenBehavior.hidden)
+                    Text("settings.display.fullscreen.overlay", bundle: localizationBundle)
+                        .tag(FullscreenBehavior.overlay)
                 } label: {
                     Text("settings.display.fullscreen", bundle: localizationBundle)
                 }
@@ -24,8 +27,10 @@ struct DisplaySettingsView: View {
                     get: { store.notchDetectionMode },
                     set: { store.notchDetectionMode = $0 }
                 )) {
-                    Text("settings.display.notchDetection.automatic", bundle: localizationBundle).tag(NotchDetectionMode.automatic)
-                    Text("settings.display.notchDetection.manual", bundle: localizationBundle).tag(NotchDetectionMode.manual)
+                    Text("settings.display.notchDetection.automatic", bundle: localizationBundle)
+                        .tag(NotchDetectionMode.automatic)
+                    Text("settings.display.notchDetection.manual", bundle: localizationBundle)
+                        .tag(NotchDetectionMode.manual)
                 } label: {
                     Text("settings.display.notchDetection", bundle: localizationBundle)
                 }

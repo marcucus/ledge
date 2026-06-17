@@ -14,7 +14,7 @@
 "module.media.label" = "Média";
 "module.system.label" = "Système";
 "module.timers.label" = "Timers";
-"notch.app.name" = "Notchy";
+"notch.app.name" = "Ledge";
 "settings.about.appName" = "Application";
 "settings.about.checkUpdates" = "Vérifier les mises à jour…";
 "settings.about.copyright" = "Copyright";
@@ -37,6 +37,9 @@
 "settings.permissions.accessibility" = "Accessibilité";
 "settings.permissions.notifications" = "Notifications";
 "settings.permissions.openSettings" = "Ouvrir Réglages";
+"settings.permissions.request" = "Demander";
+"settings.permissions.automation" = "Automation (Apple Music)";
+"settings.permissions.automation.detail" = "Accordée au premier contrôle d'Apple Music";
 "settings.section.about" = "À propos";
 "settings.section.appearance" = "Apparence";
 "settings.section.display" = "Affichage";
@@ -50,7 +53,7 @@
 "settings.shortcuts.newTimer" = "Nouveau minuteur";
 "settings.shortcuts.openClose" = "Ouvrir / fermer le panneau";
 "settings.shortcuts.paste" = "Coller depuis l'historique";
-"settings.window.title" = "Notchy — Paramètres";
+"settings.window.title" = "Ledge — Paramètres";
 "system.battery.charging" = "En charge";
 "system.gauge.battery" = "Batterie";
 "system.gauge.cpu" = "CPU";

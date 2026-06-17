@@ -1,5 +1,5 @@
-import Core
 import AppKit
+import Core
 import SwiftUI
 
 // MARK: — SystemContentView
@@ -18,7 +18,7 @@ struct SystemContentView: View {
             }
             .padding(12)
         }
-        .onAppear  { module.beginPolling() }
+        .onAppear { module.beginPolling() }
         .onDisappear { module.endPolling() }
     }
 
@@ -150,14 +150,12 @@ private struct SparklineView: View {
         GeometryReader { geo in
             Path { path in
                 guard samples.count > 1 else { return }
-                let w = geo.size.width
-                let h = geo.size.height
-                let step = w / CGFloat(samples.count - 1)
-                for (i, val) in samples.enumerated() {
-                    let x = CGFloat(i) * step
-                    let y = h - CGFloat(val) * h
-                    if i == 0 { path.move(to: CGPoint(x: x, y: y)) }
-                    else      { path.addLine(to: CGPoint(x: x, y: y)) }
+                let width = geo.size.width
+                let height = geo.size.height
+                let step = width / CGFloat(samples.count - 1)
+                for (index, sample) in samples.enumerated() {
+                    let point = CGPoint(x: CGFloat(index) * step, y: height - CGFloat(sample) * height)
+                    if index == 0 { path.move(to: point) } else { path.addLine(to: point) }
                 }
             }
             .stroke(color, lineWidth: 1.5)
@@ -184,8 +182,10 @@ private struct ToggleButton: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(toggle.isOn ? Color.accentColor.opacity(0.5) : Color.clear,
-                                  lineWidth: 1)
+                    .strokeBorder(
+                        toggle.isOn ? Color.accentColor.opacity(0.5) : Color.clear,
+                        lineWidth: 1
+                    )
             )
         }
         .buttonStyle(.plain)
@@ -199,7 +199,7 @@ private struct LauncherItemView: View {
     let item: AppLauncherItem
     let action: () -> Void
 
-    @State private var icon: NSImage? = nil
+    @State private var icon: NSImage?
 
     var body: some View {
         Button(action: action) {

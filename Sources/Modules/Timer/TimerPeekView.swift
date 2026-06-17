@@ -66,8 +66,8 @@ public struct TimerPeekView: View {
 
     private func formatted(_ seconds: TimeInterval) -> String {
         let total = max(0, Int(seconds))
-        let m = total / 60
-        let s = total % 60
-        return String(format: "%02d:%02d", m, s)
+        let minutes = total / 60
+        let secs = total % 60
+        return String(format: "%02d:%02d", minutes, secs)
     }
 }

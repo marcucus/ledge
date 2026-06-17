@@ -1,5 +1,5 @@
-import Core
 import AppKit
+import Core
 import SwiftUI
 
 // MARK: — ClipboardContentView
@@ -106,7 +106,7 @@ private struct ClipboardRowView: View {
             Image(systemName: "link")
                 .imageScale(.small)
                 .foregroundStyle(.blue)
-        case .image(let img):
+        case let .image(img):
             Image(nsImage: img)
                 .resizable()
                 .scaledToFill()

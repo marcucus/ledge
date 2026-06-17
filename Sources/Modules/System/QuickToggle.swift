@@ -27,7 +27,7 @@ public struct QuickToggle: Identifiable {
         toggle: @escaping @MainActor () async -> Void
     ) {
         self.id = id; self.icon = icon; self.labelKey = labelKey
-        self.isOn = isOn; self.action = toggle
+        self.isOn = isOn; action = toggle
     }
 }
 
@@ -43,7 +43,7 @@ final class CaffeineManager {
         let result = IOPMAssertionCreateWithName(
             kIOPMAssertionTypePreventSystemSleep as CFString,
             IOPMAssertionLevel(kIOPMAssertionLevelOn),
-            "Notchy Caffeine" as CFString,
+            "Ledge Caffeine" as CFString,
             &assertionID
         )
         if result == kIOReturnSuccess { isActive = true }
@@ -57,7 +57,7 @@ final class CaffeineManager {
     }
 
     func toggle() {
-        isActive ? disable() : enable()
+        if isActive { disable() } else { enable() }
     }
 }
 

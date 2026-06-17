@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "Notchy",
+    name: "Ledge",
     defaultLocalization: "en",
     platforms: [.macOS(.v14)],
     targets: [
@@ -49,7 +49,7 @@ let package = Package(
             name: "SystemModule",
             dependencies: ["Core"],
             path: "Sources/Modules/System",
-            linkerSettings: [.linkedFramework("IOKit")]
+            linkerSettings: [.linkedFramework("IOKit"), .linkedFramework("CoreAudio")]
         ),
         .testTarget(
             name: "CoreTests",

@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// Forme du panneau Notchy.
+/// Forme du panneau Ledge.
 ///
 /// Les coins hauts utilisent une "oreille" (topEar px de chaque côté) : la fenêtre est plus
 /// large que le contenu, ce qui crée un carré dans chaque coin haut. Le traitement est le
 /// même que pour les coins bas : contrôle au vertex extérieur → arc concave visible.
 struct NotchPanelShape: Shape {
-    var topEar: CGFloat       // largeur de l'oreille en haut (ex. 12 px)
+    var topEar: CGFloat // largeur de l'oreille en haut (ex. 12 px)
     var bottomRadius: CGFloat
 
     var animatableData: AnimatablePair<CGFloat, CGFloat> {
@@ -15,46 +15,46 @@ struct NotchPanelShape: Shape {
     }
 
     func path(in rect: CGRect) -> Path {
-        var p = Path()
-        let e = topEar
-        let b = bottomRadius
+        var path = Path()
+        let ear = topEar
+        let bottom = bottomRadius
 
         // ── Coin haut-gauche : carré (oreille) + même traitement que les coins bas
         //    Contrôle au vertex EXTÉRIEUR (0, 0) → arc concave depuis l'extérieur
-        p.move(to: CGPoint(x: rect.minX, y: rect.minY + e))
-        p.addQuadCurve(
-            to: CGPoint(x: rect.minX + e, y: rect.minY),
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + ear))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + ear, y: rect.minY),
             control: CGPoint(x: rect.minX, y: rect.minY)
         )
 
         // ── Bord supérieur
-        p.addLine(to: CGPoint(x: rect.maxX - e, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - ear, y: rect.minY))
 
         // ── Coin haut-droit : même traitement
-        p.addQuadCurve(
-            to: CGPoint(x: rect.maxX, y: rect.minY + e),
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX, y: rect.minY + ear),
             control: CGPoint(x: rect.maxX, y: rect.minY)
         )
 
         // ── Bord droit
-        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - b))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - bottom))
 
         // ── Coin bas-droit : même traitement (référence)
-        p.addQuadCurve(
-            to: CGPoint(x: rect.maxX - b, y: rect.maxY),
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX - bottom, y: rect.maxY),
             control: CGPoint(x: rect.maxX, y: rect.maxY)
         )
 
         // ── Bord inférieur
-        p.addLine(to: CGPoint(x: rect.minX + b, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX + bottom, y: rect.maxY))
 
         // ── Coin bas-gauche
-        p.addQuadCurve(
-            to: CGPoint(x: rect.minX, y: rect.maxY - b),
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX, y: rect.maxY - bottom),
             control: CGPoint(x: rect.minX, y: rect.maxY)
         )
 
-        p.closeSubpath()
-        return p
+        path.closeSubpath()
+        return path
     }
 }
