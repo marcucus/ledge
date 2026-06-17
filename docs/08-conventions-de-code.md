@@ -1,6 +1,6 @@
 # 08 — Conventions de code & standards
 
-> La constitution du code de Notchy. Objectif : **structure parfaite, qualité maximale,
+> La constitution du code de Ledge. Objectif : **structure parfaite, qualité maximale,
 > minimum de lignes** — sans jamais sacrifier la lisibilité au profit de la concision.
 > Toute contribution au projet suit ce document à la lettre.
 

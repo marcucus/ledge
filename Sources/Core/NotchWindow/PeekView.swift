@@ -45,5 +45,7 @@ struct PeekView: View {
 private struct ModuleItem {
     let id: String
     let base: any NotchModule
-    init(_ module: any NotchModule) { id = module.id; base = module }
+    init(_ module: any NotchModule) {
+        id = module.id; base = module
+    }
 }

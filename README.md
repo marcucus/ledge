@@ -1,4 +1,4 @@
-# Notchy — app d'encoche pour macOS
+# Ledge — app d'encoche pour macOS
 
 > Nom de travail. Une app qui transforme l'encoche du MacBook en menu interactif léger,
 > façon Dynamic Island, avec des modules pluggables.

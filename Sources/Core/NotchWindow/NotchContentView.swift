@@ -2,7 +2,10 @@ import SwiftUI
 
 struct NotchContentView: View {
     var controller: NotchController
-    private var state: NotchState { controller.state }
+    private var state: NotchState {
+        controller.state
+    }
+
     @AppStorage("preferredLanguage") private var language: String = "system"
 
     var body: some View {
@@ -32,7 +35,10 @@ struct NotchContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(background)
-        .animation(.easeOut(duration: state == .expanded ? 0.12 : 0.08).delay(state == .expanded ? 0.28 : 0), value: state)
+        .animation(
+            .easeOut(duration: state == .expanded ? 0.12 : 0.08).delay(state == .expanded ? 0.28 : 0),
+            value: state
+        )
         .colorScheme(.dark)
     }
 
@@ -41,8 +47,8 @@ struct NotchContentView: View {
         if state != .collapsed {
             Color.black
                 .clipShape(NotchPanelShape(
-                    topEar:        12,
-                    bottomRadius:  state == .expanded ? 12 : 10
+                    topEar: 12,
+                    bottomRadius: state == .expanded ? 12 : 10
                 ))
                 .animation(.easeOut(duration: 0.15), value: state)
         }
@@ -50,6 +56,7 @@ struct NotchContentView: View {
 }
 
 // MARK: — HUD bar (volume / luminosité)
+
 // Barre fine centrée dans la zone visible sous l'encoche (pas d'icône).
 
 struct HUDBar: View {

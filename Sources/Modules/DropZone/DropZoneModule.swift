@@ -18,8 +18,13 @@ public final class DropZoneModule: NotchModule {
 
     public func start() {}
     public func stop() {}
-    public func makePeekView() -> AnyView { AnyView(DropZonePeekView(module: self)) }
-    public func makeContentView() -> AnyView { AnyView(DropZoneContentView(module: self)) }
+    public func makePeekView() -> AnyView {
+        AnyView(DropZonePeekView(module: self))
+    }
+
+    public func makeContentView() -> AnyView {
+        AnyView(DropZoneContentView(module: self))
+    }
 
     // MARK: — Shelf operations
 

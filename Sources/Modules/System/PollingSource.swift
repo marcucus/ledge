@@ -2,6 +2,7 @@ import Darwin
 import Foundation
 
 // MARK: — PollingSource
+
 //
 // CPU, RAM, and network are sampled only while the panel is open (2 Hz max).
 // The module calls beginPolling()/endPolling() from its content view's
@@ -9,8 +10,8 @@ import Foundation
 
 /// Samples CPU, RAM, and network at a fixed interval when active.
 final class PollingSource {
-    var onCPU:     ((CPUStats) -> Void)?
-    var onRAM:     ((RAMStats) -> Void)?
+    var onCPU: ((CPUStats) -> Void)?
+    var onRAM: ((RAMStats) -> Void)?
     var onNetwork: ((NetworkStats) -> Void)?
 
     private var timer: Timer?
@@ -18,11 +19,11 @@ final class PollingSource {
     private let historyMax = 30
 
     // Previous network byte counters for delta computation
-    private var prevBytesIn:  UInt64 = 0
+    private var prevBytesIn: UInt64 = 0
     private var prevBytesOut: UInt64 = 0
-    private var prevSampleTime: Date = Date()
+    private var prevSampleTime: Date = .init()
 
-    // Previous CPU tick counts for delta computation
+    /// Previous CPU tick counts for delta computation
     private var prevCPUTicks: [Int32] = []
 
     // MARK: — Lifecycle
@@ -64,18 +65,18 @@ final class PollingSource {
             return
         }
 
-        var totalIdle   = 0
+        var totalIdle = 0
         var totalActive = 0
         let stride = Int(CPU_STATE_MAX)
 
-        for i in Swift.stride(from: 0, to: current.count, by: stride) {
-            let maxIdx = i + Int(CPU_STATE_MAX) - 1
+        for index in Swift.stride(from: 0, to: current.count, by: stride) {
+            let maxIdx = index + Int(CPU_STATE_MAX) - 1
             guard maxIdx < current.count, maxIdx < prevCPUTicks.count else { break }
-            let idle   = Int(current[i + Int(CPU_STATE_IDLE)])   - Int(prevCPUTicks[i + Int(CPU_STATE_IDLE)])
-            let user   = Int(current[i + Int(CPU_STATE_USER)])   - Int(prevCPUTicks[i + Int(CPU_STATE_USER)])
-            let system = Int(current[i + Int(CPU_STATE_SYSTEM)]) - Int(prevCPUTicks[i + Int(CPU_STATE_SYSTEM)])
-            let nice   = Int(current[i + Int(CPU_STATE_NICE)])   - Int(prevCPUTicks[i + Int(CPU_STATE_NICE)])
-            totalIdle   += max(0, idle)
+            let idle = Int(current[index + Int(CPU_STATE_IDLE)]) - Int(prevCPUTicks[index + Int(CPU_STATE_IDLE)])
+            let user = Int(current[index + Int(CPU_STATE_USER)]) - Int(prevCPUTicks[index + Int(CPU_STATE_USER)])
+            let system = Int(current[index + Int(CPU_STATE_SYSTEM)]) - Int(prevCPUTicks[index + Int(CPU_STATE_SYSTEM)])
+            let nice = Int(current[index + Int(CPU_STATE_NICE)]) - Int(prevCPUTicks[index + Int(CPU_STATE_NICE)])
+            totalIdle += max(0, idle)
             totalActive += max(0, user) + max(0, system) + max(0, nice)
         }
 
@@ -93,9 +94,14 @@ final class PollingSource {
         var infoPtr: processor_info_array_t?
         var infoCount: mach_msg_type_number_t = 0
 
-        let kr = host_processor_info(mach_host_self(), PROCESSOR_CPU_LOAD_INFO,
-                                     &cpuCount, &infoPtr, &infoCount)
-        guard kr == KERN_SUCCESS, let ptr = infoPtr else { return [] }
+        let result = host_processor_info(
+            mach_host_self(),
+            PROCESSOR_CPU_LOAD_INFO,
+            &cpuCount,
+            &infoPtr,
+            &infoCount
+        )
+        guard result == KERN_SUCCESS, let ptr = infoPtr else { return [] }
 
         let ticks = Array(UnsafeBufferPointer(start: ptr, count: Int(infoCount)))
         let deallocSize = vm_size_t(infoCount) * vm_size_t(MemoryLayout<integer_t>.size)
@@ -110,19 +116,19 @@ final class PollingSource {
         // HOST_VM_INFO64_COUNT is the canonical count expected by the kernel
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64_data_t>.size / MemoryLayout<integer_t>.size)
 
-        let kr = withUnsafeMutablePointer(to: &stats) { ptr in
+        let result = withUnsafeMutablePointer(to: &stats) { ptr in
             ptr.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { raw in
                 host_statistics64(mach_host_self(), HOST_VM_INFO64, raw, &count)
             }
         }
-        guard kr == KERN_SUCCESS else { return }
+        guard result == KERN_SUCCESS else { return }
 
-        let pageSize  = UInt64(vm_kernel_page_size)
-        let active    = UInt64(stats.active_count)   * pageSize
-        let wired     = UInt64(stats.wire_count)     * pageSize
+        let pageSize = UInt64(vm_kernel_page_size)
+        let active = UInt64(stats.active_count) * pageSize
+        let wired = UInt64(stats.wire_count) * pageSize
         let compressed = UInt64(stats.compressor_page_count) * pageSize
-        let used      = active + wired + compressed
-        let total     = ProcessInfo.processInfo.physicalMemory
+        let used = active + wired + compressed
+        let total = ProcessInfo.processInfo.physicalMemory
         onRAM?(RAMStats(used: min(used, total), total: total))
     }
 
@@ -130,7 +136,7 @@ final class PollingSource {
 
     private func seedNetworkCounters() {
         let (bytesIn, bytesOut) = readNetworkBytes()
-        prevBytesIn  = bytesIn
+        prevBytesIn = bytesIn
         prevBytesOut = bytesOut
         prevSampleTime = Date()
     }
@@ -141,11 +147,11 @@ final class PollingSource {
         guard elapsed > 0 else { return }
 
         let (bytesIn, bytesOut) = readNetworkBytes()
-        let rateIn  = Double(bytesIn  > prevBytesIn  ? bytesIn  - prevBytesIn  : 0) / elapsed
+        let rateIn = Double(bytesIn > prevBytesIn ? bytesIn - prevBytesIn : 0) / elapsed
         let rateOut = Double(bytesOut > prevBytesOut ? bytesOut - prevBytesOut : 0) / elapsed
 
-        prevBytesIn    = bytesIn
-        prevBytesOut   = bytesOut
+        prevBytesIn = bytesIn
+        prevBytesOut = bytesOut
         prevSampleTime = now
 
         onNetwork?(NetworkStats(bytesInPerSec: rateIn, bytesOutPerSec: rateOut))
@@ -156,7 +162,7 @@ final class PollingSource {
         guard getifaddrs(&ifaddrPtr) == 0, let start = ifaddrPtr else { return (0, 0) }
         defer { freeifaddrs(start) }
 
-        var totalIn:  UInt64 = 0
+        var totalIn: UInt64 = 0
         var totalOut: UInt64 = 0
         var cursor: UnsafeMutablePointer<ifaddrs>? = start
 
@@ -164,12 +170,13 @@ final class PollingSource {
             let flags = ifa.pointee.ifa_flags
             // Skip loopback and interfaces that are down
             let isLoopback = (flags & UInt32(IFF_LOOPBACK)) != 0
-            let isUp       = (flags & UInt32(IFF_UP))       != 0
-            let hasData    = ifa.pointee.ifa_data != nil
+            let isUp = (flags & UInt32(IFF_UP)) != 0
+            let hasData = ifa.pointee.ifa_data != nil
 
-            if !isLoopback && isUp && hasData,
-               let data = ifa.pointee.ifa_data?.assumingMemoryBound(to: if_data.self) {
-                totalIn  += UInt64(data.pointee.ifi_ibytes)
+            if !isLoopback, isUp, hasData,
+               let data = ifa.pointee.ifa_data?.assumingMemoryBound(to: if_data.self)
+            {
+                totalIn += UInt64(data.pointee.ifi_ibytes)
                 totalOut += UInt64(data.pointee.ifi_obytes)
             }
             cursor = ifa.pointee.ifa_next

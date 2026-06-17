@@ -11,7 +11,7 @@ ou un raccourci global.
 
 ```
 ╭───────────────────────────────────────────────────────────────╮
-│  Notchy — Réglages                                       — ☐ ✕  │
+│  Ledge — Réglages                                       — ☐ ✕  │
 ├──────────────────┬────────────────────────────────────────────┤
 │ ▸ Général         │                                            │
 │ ▸ Apparence       │      [ Contenu de la section sélectionnée ] │
@@ -49,7 +49,7 @@ GÉNÉRAL
 - **Au premier lancement**, l'app suit **automatiquement la langue du Mac** (réglages système).
 - Le sélecteur propose **« Système »** (= suivre le Mac, valeur par défaut) **+ la liste des
   langues fournies** par l'app.
-- Choisir une langue ici **force** cette langue pour Notchy, indépendamment du système.
+- Choisir une langue ici **force** cette langue pour Ledge, indépendamment du système.
 - Le changement s'applique **immédiatement** (pas besoin de redémarrer l'app) : tous les
   textes des panneaux et des réglages se mettent à jour à la volée.
 - Détails techniques (chargement des `.lproj`, `Localizable`, override de langue) → cf.
@@ -99,7 +99,7 @@ Chaque « Configurer → » ouvre les réglages détaillés du module (listés d
 
 ```
 AFFICHAGE — Écrans
-  Sur quel écran afficher Notchy ?
+  Sur quel écran afficher Ledge ?
      (•) Écran avec l'encoche (intégré)
      ( ) Écran principal (celui de la barre de menu)
      ( ) Écran où se trouve le curseur

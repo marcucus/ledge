@@ -2,7 +2,7 @@
 
 ## Vision
 
-L'encoche est un « trou noir » matériel que macOS n'exploite pas. Notchy en fait un
+L'encoche est un « trou noir » matériel que macOS n'exploite pas. Ledge en fait un
 **point d'ancrage vivant** : au repos elle reste l'encoche, mais elle s'anime et se déploie
 en un menu riche dès qu'on en a besoin. L'app doit donner l'impression d'une **extension
 naturelle du matériel**, pas d'une fenêtre posée par-dessus.

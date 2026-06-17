@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 
 // MARK: — ClipboardSource
+
 //
 // Why polling?  NSPasteboard offers no push-notification API for copy events.
 // We watch `changeCount` (a lightweight integer comparison) every 0.8 s.
@@ -13,7 +14,7 @@ final class ClipboardSource {
     /// Called on the main actor whenever a new item is detected.
     var onNewItem: ((ClipboardItem) -> Void)?
 
-    // Configurable max-history size (set by the module before starting)
+    /// Configurable max-history size (set by the module before starting)
     var maxItems: Int = 50
 
     private var timer: Timer?
@@ -74,7 +75,8 @@ final class ClipboardSource {
         }
 
         if let tiffData = first.data(forType: .tiff) ?? first.data(forType: .png),
-           let image = NSImage(data: tiffData) {
+           let image = NSImage(data: tiffData)
+        {
             let thumbnail = makeThumbnail(from: image)
             return ClipboardItem(content: .image(thumbnail))
         }

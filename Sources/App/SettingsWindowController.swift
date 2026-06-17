@@ -1,6 +1,6 @@
 import AppKit
-import SwiftUI
 import Core
+import SwiftUI
 
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     convenience init() {
@@ -28,7 +28,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    func windowWillClose(_ notification: Notification) {
+    func windowWillClose(_: Notification) {
         NSApp.setActivationPolicy(.accessory)
     }
 }

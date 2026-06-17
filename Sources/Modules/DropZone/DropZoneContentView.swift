@@ -1,6 +1,6 @@
+import AppKit
 import Core
 import SwiftUI
-import AppKit
 import UniformTypeIdentifiers
 
 public struct DropZoneContentView: View {
@@ -87,7 +87,6 @@ public struct DropZoneContentView: View {
             actionButton(label: "dropzone.action.clear", icon: "trash", isDestructive: true) {
                 module.clearAll()
             }
-
         }
     }
 
@@ -121,7 +120,7 @@ public struct DropZoneContentView: View {
                 guard let data = item as? Data,
                       let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
                 Task { @MainActor in
-                    self.module.addURLs([url])
+                    module.addURLs([url])
                 }
             }
             handled = true
@@ -129,7 +128,7 @@ public struct DropZoneContentView: View {
         return handled
     }
 
-    // Finds the underlying NSView to anchor NSSharingServicePicker
+    /// Finds the underlying NSView to anchor NSSharingServicePicker
     private func findNSView() -> NSView? {
         NSApplication.shared.keyWindow?.contentView
     }

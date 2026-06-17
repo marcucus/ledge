@@ -96,7 +96,7 @@ L'app est **multilingue dès le départ**. Règle de conception : **aucun texte 
 dur** — toute chaîne affichée passe par la localisation.
 
 **Comportement attendu :**
-- **Au premier lancement** : Notchy suit la **langue du Mac** (`Locale.preferredLanguages` /
+- **Au premier lancement** : Ledge suit la **langue du Mac** (`Locale.preferredLanguages` /
   les langues système). C'est le mode « Système », valeur par défaut.
 - Un **sélecteur de langue** dans *Paramètres → Général* permet de **forcer** une langue
   précise, indépendamment du système (cf. [doc 06](06-ecran-parametres.md)).
@@ -136,7 +136,7 @@ casser à chaque màj macOS. Mitigation :
 ## Découpage en cibles / packages (proposition)
 
 ```
-Notchy/
+Ledge/
   App/                 → cycle de vie, agent, fenêtre encoche, routing modules
   Core/
     NotchWindow        → NSWindow + ancrage + états (repos/survol/ouvert)

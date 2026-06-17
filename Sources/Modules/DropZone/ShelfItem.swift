@@ -7,9 +7,9 @@ public struct ShelfItem: Identifiable {
     public var icon: NSImage?
 
     public init(url: URL) {
-        self.id = UUID()
+        id = UUID()
         self.url = url
-        self.displayName = url.lastPathComponent
-        self.icon = NSWorkspace.shared.icon(forFile: url.path)
+        displayName = url.lastPathComponent
+        icon = NSWorkspace.shared.icon(forFile: url.path)
     }
 }

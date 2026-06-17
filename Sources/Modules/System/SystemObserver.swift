@@ -7,7 +7,7 @@ import CoreGraphics
 /// When `suppressNativeHUD` is true (réglage activé) and Accessibility is granted,
 /// a CGEventTap intercepts the volume/brightness media keys, **consumes** them so macOS
 /// never shows its own overlay, and applies the change itself (CoreAudio / DisplayServices)
-/// before showing Notchy's compact HUD instead.
+/// before showing Ledge's compact HUD instead.
 @MainActor
 public final class SystemObserver {
     public var onVolumeChange: ((Double, Bool) -> Void)?

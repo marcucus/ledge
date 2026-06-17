@@ -68,8 +68,8 @@ struct MediaContentView: View {
                     .fill(.white.opacity(0.85))
                     .frame(width: max(0, geo.size.width * module.nowPlaying.progress), height: 4)
             }
-            .frame(maxHeight: .infinity)            // centre la barre dans la zone tactile
-            .contentShape(Rectangle())              // toute la hauteur est cliquable
+            .frame(maxHeight: .infinity) // centre la barre dans la zone tactile
+            .contentShape(Rectangle()) // toute la hauteur est cliquable
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { value in
@@ -84,7 +84,7 @@ struct MediaContentView: View {
                     }
             )
         }
-        .frame(height: 16)                          // zone de glissement haute de 16 px
+        .frame(height: 16) // zone de glissement haute de 16 px
     }
 
     @ViewBuilder
@@ -147,10 +147,10 @@ struct MediaContentView: View {
 
     // MARK: — Helpers
 
-    private func formatTime(_ t: TimeInterval) -> String {
-        guard t > 0 else { return "0:00" }
-        let m = Int(t) / 60
-        let s = Int(t) % 60
-        return "\(m):\(String(format: "%02d", s))"
+    private func formatTime(_ time: TimeInterval) -> String {
+        guard time > 0 else { return "0:00" }
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        return "\(minutes):\(String(format: "%02d", seconds))"
     }
 }

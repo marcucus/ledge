@@ -10,7 +10,7 @@ struct NavBar: View {
         HStack(spacing: 0) {
             // Catégories à gauche
             HStack(spacing: 0) {
-                ForEach(controller.modules.map(ModuleItem.init), id: \.id) { item in
+                ForEach(controller.visibleModules.map(ModuleItem.init), id: \.id) { item in
                     ModuleTabButton(
                         item: item,
                         isSelected: item.id == controller.selectedModuleID
@@ -89,5 +89,7 @@ private struct ModuleTabButton: View {
 private struct ModuleItem {
     let id: String
     let base: any NotchModule
-    init(_ module: any NotchModule) { id = module.id; base = module }
+    init(_ module: any NotchModule) {
+        id = module.id; base = module
+    }
 }

@@ -12,9 +12,9 @@ public struct TimerEntry: Identifiable, Sendable {
         self.id = id
         self.label = label
         self.duration = duration
-        self.remaining = duration
-        self.isRunning = false
-        self.isPaused = false
+        remaining = duration
+        isRunning = false
+        isPaused = false
     }
 
     public var progress: Double {

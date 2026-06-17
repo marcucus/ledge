@@ -4,7 +4,7 @@ public struct HUDContent {
     public enum Kind { case volume, brightness }
 
     public let kind: Kind
-    public let value: Double   // 0.0 – 1.0
+    public let value: Double // 0.0 – 1.0
     public let isMuted: Bool
 
     public init(kind: Kind, value: Double, isMuted: Bool = false) {
@@ -28,8 +28,8 @@ public struct HUDContent {
 
     public var tint: Color {
         switch kind {
-        case .volume:     return .white
-        case .brightness: return Color(red: 1.0, green: 0.85, blue: 0.2)
+        case .volume: .white
+        case .brightness: Color(red: 1.0, green: 0.85, blue: 0.2)
         }
     }
 }

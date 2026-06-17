@@ -13,6 +13,11 @@ public protocol NotchModule: AnyObject {
 
 public extension NotchModule {
     func stop() {}
-    func makePeekView() -> AnyView { AnyView(EmptyView()) }
-    func makeContentView() -> AnyView { AnyView(EmptyView()) }
+    func makePeekView() -> AnyView {
+        AnyView(EmptyView())
+    }
+
+    func makeContentView() -> AnyView {
+        AnyView(EmptyView())
+    }
 }

@@ -5,7 +5,22 @@ import Foundation
 
     private let defaults = UserDefaults.standard
 
-    private init() {}
+    /// Ordre d'affichage des onglets (= ordre des modules dans l'encoche). Persisté, observable.
+    public var moduleOrder: [String] {
+        didSet { defaults.set(moduleOrder, forKey: Keys.moduleOrder) }
+    }
+
+    /// Modules désactivés par l'utilisateur (par défaut tous activés). Persisté, observable.
+    private var disabledModuleIDs: Set<String> {
+        didSet { defaults.set(Array(disabledModuleIDs), forKey: Keys.disabledModules) }
+    }
+
+    public static let defaultModuleOrder = ["media", "timers", "dropzone", "clipboard", "system"]
+
+    private init() {
+        moduleOrder = (defaults.array(forKey: Keys.moduleOrder) as? [String]) ?? Self.defaultModuleOrder
+        disabledModuleIDs = Set(defaults.stringArray(forKey: Keys.disabledModules) ?? [])
+    }
 
     // MARK: — General
 
@@ -26,34 +41,17 @@ import Foundation
 
     // MARK: — Modules
 
-    public var mediaEnabled: Bool {
-        get { defaults.object(forKey: Keys.mediaEnabled) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: Keys.mediaEnabled) }
+    public func isModuleEnabled(_ id: String) -> Bool {
+        !disabledModuleIDs.contains(id)
     }
 
-    public var timersEnabled: Bool {
-        get { defaults.object(forKey: Keys.timersEnabled) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: Keys.timersEnabled) }
-    }
-
-    public var clipboardEnabled: Bool {
-        get { defaults.object(forKey: Keys.clipboardEnabled) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: Keys.clipboardEnabled) }
-    }
-
-    public var systemEnabled: Bool {
-        get { defaults.object(forKey: Keys.systemEnabled) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: Keys.systemEnabled) }
-    }
-
-    public var dropzoneEnabled: Bool {
-        get { defaults.object(forKey: Keys.dropzoneEnabled) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: Keys.dropzoneEnabled) }
+    public func setModule(_ id: String, enabled: Bool) {
+        if enabled { disabledModuleIDs.remove(id) } else { disabledModuleIDs.insert(id) }
     }
 
     // MARK: — System HUD
 
-    /// Remplace le HUD volume/luminosité natif de macOS par celui de Notchy. Activé par défaut.
+    /// Remplace le HUD volume/luminosité natif de macOS par celui de Ledge. Activé par défaut.
     public var hudReplaceSystem: Bool {
         get { defaults.object(forKey: Keys.hudReplaceSystem) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Keys.hudReplaceSystem) }
@@ -97,11 +95,8 @@ private enum Keys {
     static let collapseDelay = "collapseDelay"
     static let launchAtLogin = "launchAtLogin"
     static let peekDuration = "peekDuration"
-    static let mediaEnabled = "mediaEnabled"
-    static let timersEnabled = "timersEnabled"
-    static let clipboardEnabled = "clipboardEnabled"
-    static let systemEnabled = "systemEnabled"
-    static let dropzoneEnabled = "dropzoneEnabled"
+    static let moduleOrder = "moduleOrder"
+    static let disabledModules = "disabledModules"
     static let hudReplaceSystem = "hudReplaceSystem"
     static let panelWidth = "panelWidth"
     static let notchDetectionMode = "notchDetectionMode"

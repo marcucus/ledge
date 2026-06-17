@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "Notchy",
+    name: "Ledge",
     defaultLocalization: "en",
     platforms: [.macOS(.v14)],
     targets: [

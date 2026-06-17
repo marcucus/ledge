@@ -11,7 +11,7 @@ struct ExpandedView: View {
         }
     }
 
-    // Barre d'onglets au niveau de l'encoche physique
+    /// Barre d'onglets au niveau de l'encoche physique
     private var tabBar: some View {
         HStack(spacing: 0) {
             ForEach(controller.modules.map(ModuleItem.init), id: \.id) { item in
@@ -63,5 +63,7 @@ struct ExpandedView: View {
 private struct ModuleItem {
     let id: String
     let base: any NotchModule
-    init(_ module: any NotchModule) { id = module.id; base = module }
+    init(_ module: any NotchModule) {
+        id = module.id; base = module
+    }
 }

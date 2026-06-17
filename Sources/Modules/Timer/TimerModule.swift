@@ -2,7 +2,6 @@ import Core
 import Foundation
 import SwiftUI
 import UserNotifications
-import Core
 
 public enum TimerAction {
     case start(id: UUID)
@@ -19,9 +18,9 @@ public final class TimerModule: NotchModule {
     public let tabLabel: LocalizedStringKey = "module.timers.label"
 
     public private(set) var entries: [TimerEntry] = []
-    public private(set) var pomodoroState: PomodoroState = PomodoroState()
+    public private(set) var pomodoroState: PomodoroState = .init()
 
-    @ObservationIgnored nonisolated(unsafe) private var dispatchTimers: [UUID: DispatchSourceTimer] = [:]
+    @ObservationIgnored private nonisolated(unsafe) var dispatchTimers: [UUID: DispatchSourceTimer] = [:]
 
     public init() {
         requestNotificationPermission()
@@ -32,13 +31,20 @@ public final class TimerModule: NotchModule {
     public func start() {}
 
     public func stop() {
-        for (_, source) in dispatchTimers { source.cancel() }
+        for (_, source) in dispatchTimers {
+            source.cancel()
+        }
         dispatchTimers.removeAll()
         entries.removeAll()
     }
 
-    public func makePeekView() -> AnyView { AnyView(TimerPeekView(module: self)) }
-    public func makeContentView() -> AnyView { AnyView(TimerContentView(module: self)) }
+    public func makePeekView() -> AnyView {
+        AnyView(TimerPeekView(module: self))
+    }
+
+    public func makeContentView() -> AnyView {
+        AnyView(TimerContentView(module: self))
+    }
 
     deinit {
         for (_, source) in dispatchTimers {
@@ -51,10 +57,10 @@ public final class TimerModule: NotchModule {
 
     public func send(_ action: TimerAction) {
         switch action {
-        case .start(let id):   startEntry(id)
-        case .pause(let id):   pauseEntry(id)
-        case .stop(let id):    stopEntry(id)
-        case .reset(let id):   resetEntry(id)
+        case let .start(id): startEntry(id)
+        case let .pause(id): pauseEntry(id)
+        case let .stop(id): stopEntry(id)
+        case let .reset(id): resetEntry(id)
         }
     }
 
@@ -174,17 +180,17 @@ public struct PomodoroState {
 
     public var currentPhaseLabel: String {
         switch phase {
-        case .work:       return "Pomodoro"
-        case .shortBreak: return NSLocalizedString("timer.pomodoro.shortBreak", bundle: localizationBundle, comment: "")
-        case .longBreak:  return NSLocalizedString("timer.pomodoro.longBreak", bundle: localizationBundle, comment: "")
+        case .work: "Pomodoro"
+        case .shortBreak: NSLocalizedString("timer.pomodoro.shortBreak", bundle: localizationBundle, comment: "")
+        case .longBreak: NSLocalizedString("timer.pomodoro.longBreak", bundle: localizationBundle, comment: "")
         }
     }
 
     public var currentPhaseDuration: TimeInterval {
         switch phase {
-        case .work:       return 25 * 60
-        case .shortBreak: return 5 * 60
-        case .longBreak:  return 15 * 60
+        case .work: 25 * 60
+        case .shortBreak: 5 * 60
+        case .longBreak: 15 * 60
         }
     }
 

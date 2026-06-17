@@ -2,6 +2,7 @@ import Foundation
 import IOKit.ps
 
 // MARK: — BatterySource
+
 //
 // Uses IOPSNotificationCreateRunLoopSource — the OS pushes a notification
 // whenever battery state changes (charge level, plug state, etc.).
@@ -42,15 +43,15 @@ final class BatterySource {
 
     private func readStats() -> BatteryStats {
         let snapshot = IOPSCopyPowerSourcesInfo().takeRetainedValue()
-        let sources  = IOPSCopyPowerSourcesList(snapshot).takeRetainedValue() as [CFTypeRef]
+        let sources = IOPSCopyPowerSourcesList(snapshot).takeRetainedValue() as [CFTypeRef]
 
         for source in sources {
             guard let desc = IOPSGetPowerSourceDescription(snapshot, source)
-                    .takeUnretainedValue() as? [String: Any] else { continue }
+                .takeUnretainedValue() as? [String: Any] else { continue }
 
-            let pct        = desc[kIOPSCurrentCapacityKey] as? Int
+            let pct = desc[kIOPSCurrentCapacityKey] as? Int
             let isCharging = (desc[kIOPSIsChargingKey] as? Bool) ?? false
-            let cycles     = desc["Cycle Count"] as? Int
+            let cycles = desc["Cycle Count"] as? Int
 
             return BatteryStats(percentage: pct, isCharging: isCharging, cycleCount: cycles)
         }

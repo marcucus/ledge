@@ -35,8 +35,14 @@ public struct RAMStats {
     /// Total physical memory bytes.
     public var total: UInt64
 
-    public var usedGB: Double { Double(used) / 1_073_741_824 }
-    public var totalGB: Double { Double(total) / 1_073_741_824 }
+    public var usedGB: Double {
+        Double(used) / 1_073_741_824
+    }
+
+    public var totalGB: Double {
+        Double(total) / 1_073_741_824
+    }
+
     public var usageFraction: Double {
         guard total > 0 else { return 0 }
         return Double(used) / Double(total)
@@ -57,14 +63,19 @@ public struct NetworkStats {
     public static let zero = NetworkStats(bytesInPerSec: 0, bytesOutPerSec: 0)
 
     /// Human-readable download rate string.
-    public var downloadLabel: String { formatRate(bytesInPerSec) }
+    public var downloadLabel: String {
+        formatRate(bytesInPerSec)
+    }
+
     /// Human-readable upload rate string.
-    public var uploadLabel: String   { formatRate(bytesOutPerSec) }
+    public var uploadLabel: String {
+        formatRate(bytesOutPerSec)
+    }
 
     private func formatRate(_ bytes: Double) -> String {
-        let mb = bytes / 1_048_576
-        if mb >= 1 { return String(format: "%.1f MB/s", mb) }
-        let kb = bytes / 1_024
-        return String(format: "%.0f KB/s", kb)
+        let megabytes = bytes / 1_048_576
+        if megabytes >= 1 { return String(format: "%.1f MB/s", megabytes) }
+        let kilobytes = bytes / 1024
+        return String(format: "%.0f KB/s", kilobytes)
     }
 }

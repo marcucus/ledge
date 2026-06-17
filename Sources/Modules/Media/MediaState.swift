@@ -15,7 +15,9 @@ public struct MediaState {
         elapsed: 0, duration: 0
     )
 
-    public var isActive: Bool { title != nil }
+    public var isActive: Bool {
+        title != nil
+    }
 
     public var progress: Double {
         guard duration > 0 else { return 0 }

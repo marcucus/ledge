@@ -1,5 +1,5 @@
-import SwiftUI
 import Core
+import SwiftUI
 
 struct ShortcutsSettingsView: View {
     var store: SettingsStore
@@ -12,10 +12,10 @@ struct ShortcutsSettingsView: View {
 
     private let shortcuts: [ShortcutRow] = [
         ShortcutRow(id: "openClose", labelKey: "settings.shortcuts.openClose", keys: "⌃ Space"),
-        ShortcutRow(id: "media",     labelKey: "settings.shortcuts.media",     keys: "—"),
-        ShortcutRow(id: "newTimer",  labelKey: "settings.shortcuts.newTimer",  keys: "⌥⌘ T"),
-        ShortcutRow(id: "paste",     labelKey: "settings.shortcuts.paste",     keys: "⌥⌘ V"),
-        ShortcutRow(id: "dropzone",  labelKey: "settings.shortcuts.dropzone",  keys: "—"),
+        ShortcutRow(id: "media", labelKey: "settings.shortcuts.media", keys: "—"),
+        ShortcutRow(id: "newTimer", labelKey: "settings.shortcuts.newTimer", keys: "⌥⌘ T"),
+        ShortcutRow(id: "paste", labelKey: "settings.shortcuts.paste", keys: "⌥⌘ V"),
+        ShortcutRow(id: "dropzone", labelKey: "settings.shortcuts.dropzone", keys: "—"),
     ]
 
     var body: some View {

@@ -37,7 +37,7 @@ struct SystemPeekView: View {
         case 75...: return module.battery.isCharging ? "battery.100.bolt" : "battery.100"
         case 50...: return "battery.75"
         case 25...: return "battery.50"
-        default:    return "battery.25"
+        default: return "battery.25"
         }
     }
 

@@ -7,7 +7,7 @@
 
 ## Vue d'ensemble
 
-Notchy est passé de la phase **conception** (docs 01–08) à une phase **implémentation
+Ledge est passé de la phase **conception** (docs 01–08) à une phase **implémentation
 active**. Le socle technique (V0) et le premier module riche (Média, V1) sont en place, et les
 quatre modules existent au moins en version fonctionnelle. Le travail récent porte sur le
 **polissage** (média, alignement de la NavBar) et sur une **nouvelle fonctionnalité système** :
@@ -75,7 +75,7 @@ Conforme à la [doc 07](07-architecture-technique.md), avec quelques précisions
 
 Nouvelle brique dans `SystemModule`, indépendante des jauges.
 
-**Objectif** : afficher la barre maison de Notchy quand on change le volume ou la luminosité,
+**Objectif** : afficher la barre maison de Ledge quand on change le volume ou la luminosité,
 et **remplacer** l'overlay natif de macOS.
 
 **Composants**
@@ -98,9 +98,9 @@ et **remplacer** l'overlay natif de macOS.
   (`@AppStorage("hudReplaceSystem")`, **activé par défaut** via `register(defaults:)`).
 
 **Comportement**
-- Réglage **activé** (défaut) : la barre Notchy s'affiche (via polling, sans permission) ; le HUD
+- Réglage **activé** (défaut) : la barre Ledge s'affiche (via polling, sans permission) ; le HUD
   macOS est supprimé **dès que l'Accessibilité est accordée** (le `CGEventTap` peut alors agir).
-- Réglage **désactivé** : comportement macOS natif, Notchy ne montre rien.
+- Réglage **désactivé** : comportement macOS natif, Ledge ne montre rien.
 
 ## Limites connues / points ouverts
 
@@ -108,7 +108,7 @@ et **remplacer** l'overlay natif de macOS.
 |---|---|---|
 | **Pochette d'album** | ⚠️ Partiel | MediaRemote est bloqué pour Apple Music sur macOS 15 (run non-bundlé) ; la notification distribuée `com.apple.Music.playerInfo` ne fournit pas d'image. Piste : `iTunesLibrary` via « Persistent ID ». |
 | **Seek Apple Music** | ✅ Contourné | MediaRemote bloqué → on passe par **AppleScript** (`set player position`) pour Music, MediaRemote (`MRMediaRemoteSetElapsedTime`) pour les autres lecteurs. Demande la permission **Automation** au 1er usage. |
-| **Suppression HUD natif en `swift run`** | ⚠️ Fragile | Le `CGEventTap` exige l'Accessibilité accordée au binaire `.build/.../notchy`. Plus fiable avec un vrai `.app` signé. La barre Notchy elle-même (polling) marche sans permission. |
+| **Suppression HUD natif en `swift run`** | ⚠️ Fragile | Le `CGEventTap` exige l'Accessibilité accordée au binaire `.build/.../notchy`. Plus fiable avec un vrai `.app` signé. La barre Ledge elle-même (polling) marche sans permission. |
 | **Distribution** | ⏳ À faire | Pas encore de bundle `.app` signé/notarisé ni de mécanisme de mise à jour (Sparkle). |
 
 ## Permissions requises (récapitulatif)

@@ -20,15 +20,28 @@ import Foundation
     @ObservationIgnored private var lastExpandTime: TimeInterval = 0
     @ObservationIgnored private var isDragHovering = false
 
-    public var selectedModule: (any NotchModule)? {
-        modules.first { $0.id == selectedModuleID } ?? modules.first
+    private let settings: SettingsStore
+
+    /// Modules réellement affichés : catalogue filtré (activés) et trié selon les réglages.
+    /// Recalculé à la lecture → la NavBar réagit à chaud aux changements de `SettingsStore`.
+    public var visibleModules: [any NotchModule] {
+        let order = settings.moduleOrder
+        return modules
+            .filter { settings.isModuleEnabled($0.id) }
+            .sorted { (order.firstIndex(of: $0.id) ?? .max) < (order.firstIndex(of: $1.id) ?? .max) }
     }
 
-    public init() {}
+    public var selectedModule: (any NotchModule)? {
+        visibleModules.first { $0.id == selectedModuleID } ?? visibleModules.first
+    }
+
+    public init(settings: SettingsStore) {
+        self.settings = settings
+    }
 
     public func register(modules: [any NotchModule]) {
         self.modules = modules
-        selectedModuleID = modules.first?.id ?? ""
+        selectedModuleID = visibleModules.first?.id ?? ""
         modules.forEach { $0.start() }
     }
 
@@ -49,9 +62,9 @@ import Foundation
         hudTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(1600))
             guard let self, !Task.isCancelled else { return }
-            self.hudContent = nil
-            if self.state == .hud {
-                self.transition(to: .collapsed)
+            hudContent = nil
+            if state == .hud {
+                transition(to: .collapsed)
             }
         }
     }
@@ -89,7 +102,7 @@ import Foundation
         collapseTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
             guard let self, !Task.isCancelled else { return }
-            self.transition(to: .collapsed)
+            transition(to: .collapsed)
         }
     }
 
@@ -103,7 +116,7 @@ import Foundation
         collapseTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Timing.collapseDelay))
             guard let self, !Task.isCancelled else { return }
-            self.transition(to: .collapsed)
+            transition(to: .collapsed)
         }
     }
 
