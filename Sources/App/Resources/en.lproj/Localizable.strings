@@ -1,4 +1,5 @@
 "action.close" = "Close";
+"action.quit" = "Quit Ledge";
 "action.settings" = "Settings";
 "clipboard.action.clear" = "Clear history";
 "clipboard.empty" = "No copies yet";

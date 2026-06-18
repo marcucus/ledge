@@ -24,7 +24,6 @@ public final class NotchWindow: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         level = .init(rawValue: NSWindow.Level.statusBar.rawValue + 1)
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isMovable = false
         hasShadow = false
         hidesOnDeactivate = false
@@ -44,6 +43,7 @@ public final class NotchWindow: NSPanel {
         observeScreenChanges()
         positionOnNotch()
         startFileDragMonitoring()
+        startObservingSettings()
     }
 
     deinit {
@@ -51,6 +51,33 @@ public final class NotchWindow: NSPanel {
         globalClickMonitor.map { NSEvent.removeMonitor($0) }
         globalFileDragMonitor.map { NSEvent.removeMonitor($0) }
         globalFileUpMonitor.map { NSEvent.removeMonitor($0) }
+    }
+
+    // MARK: — Observation des réglages
+
+    private func startObservingSettings() {
+        withObservationTracking {
+            applyCollectionBehavior(for: controller.fullscreenBehavior)
+            _ = controller.expandedWidth
+        } onChange: { [weak self] in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.applyCollectionBehavior(for: self.controller.fullscreenBehavior)
+                self.updateFrame(for: self.controller.state, from: self.controller.state, animated: true)
+                self.startObservingSettings()
+            }
+        }
+    }
+
+    private func applyCollectionBehavior(for behavior: FullscreenBehavior) {
+        switch behavior {
+        case .accessible:
+            collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        case .hidden:
+            collectionBehavior = [.canJoinAllSpaces]
+        case .overlay:
+            collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        }
     }
 
     // MARK: — Événements souris
@@ -129,7 +156,7 @@ public final class NotchWindow: NSPanel {
 
     private func applyExpanded(geometry: NotchGeometry, animated: Bool) {
         backgroundColor = .black
-        let size = CGSize(width: Layout.expandedWidth, height: Layout.navbarHeight + Layout.contentHeight)
+        let size = CGSize(width: controller.expandedWidth, height: Layout.navbarHeight + Layout.contentHeight)
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
             duration: Layout.openDuration,
@@ -142,7 +169,7 @@ public final class NotchWindow: NSPanel {
 
     private func applyPeeking(geometry: NotchGeometry, animated: Bool) {
         backgroundColor = .black
-        let size = CGSize(width: Layout.expandedWidth, height: Layout.navbarHeight)
+        let size = CGSize(width: controller.expandedWidth, height: Layout.navbarHeight)
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
             duration: Layout.peekDuration,
@@ -247,9 +274,9 @@ public final class NotchWindow: NSPanel {
         guard let geometry = currentGeometry else { return }
         let mouse = NSEvent.mouseLocation
         let zone = CGRect(
-            x: geometry.anchorPoint.x - Layout.expandedWidth / 2,
+            x: geometry.anchorPoint.x - controller.expandedWidth / 2,
             y: geometry.notchRect.minY - 120,
-            width: Layout.expandedWidth,
+            width: controller.expandedWidth,
             height: 120 + geometry.notchRect.height
         )
 
@@ -291,7 +318,6 @@ public final class NotchWindow: NSPanel {
 // MARK: — Constantes
 
 private enum Layout {
-    static let expandedWidth: CGFloat = 744 // 720 contenu + 12 px d'oreille de chaque côté
     static let navbarHeight: CGFloat = 44
     static let contentHeight: CGFloat = 180
     static let openDuration: TimeInterval = 0.40

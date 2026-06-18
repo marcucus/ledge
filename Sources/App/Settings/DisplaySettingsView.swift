@@ -22,28 +22,6 @@ struct DisplaySettingsView: View {
                 }
             }
 
-            Section {
-                Picker(selection: Binding(
-                    get: { store.notchDetectionMode },
-                    set: { store.notchDetectionMode = $0 }
-                )) {
-                    Text("settings.display.notchDetection.automatic", bundle: localizationBundle)
-                        .tag(NotchDetectionMode.automatic)
-                    Text("settings.display.notchDetection.manual", bundle: localizationBundle)
-                        .tag(NotchDetectionMode.manual)
-                } label: {
-                    Text("settings.display.notchDetection", bundle: localizationBundle)
-                }
-            }
-
-            Section {
-                Toggle(isOn: Binding(
-                    get: { store.showRingWhenTimerActive },
-                    set: { store.showRingWhenTimerActive = $0 }
-                )) {
-                    Text("settings.display.timerRing", bundle: localizationBundle)
-                }
-            }
         }
         .formStyle(.grouped)
         .navigationTitle(Text("settings.section.display", bundle: localizationBundle))

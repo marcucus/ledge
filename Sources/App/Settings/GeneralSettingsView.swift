@@ -1,4 +1,5 @@
 import Core
+import ServiceManagement
 import SwiftUI
 
 struct GeneralSettingsView: View {
@@ -9,8 +10,14 @@ struct GeneralSettingsView: View {
         Form {
             Section {
                 Toggle(isOn: Binding(
-                    get: { store.launchAtLogin },
-                    set: { store.launchAtLogin = $0 }
+                    get: { SMAppService.mainApp.status == .enabled },
+                    set: { shouldEnable in
+                        if shouldEnable {
+                            try? SMAppService.mainApp.register()
+                        } else {
+                            try? SMAppService.mainApp.unregister()
+                        }
+                    }
                 )) {
                     Text("settings.general.launchAtLogin", bundle: localizationBundle)
                 }
@@ -32,7 +39,6 @@ struct GeneralSettingsView: View {
 
             Section {
                 collapseDelayRow
-                peekDurationRow
             }
 
             Section {
@@ -56,25 +62,6 @@ struct GeneralSettingsView: View {
                     step: 0.1
                 )
                 Text(String(format: "%.1f s", store.collapseDelay))
-                    .monospacedDigit()
-                    .frame(width: 48, alignment: .trailing)
-            }
-        }
-    }
-
-    private var peekDurationRow: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("settings.general.peekDuration", bundle: localizationBundle)
-            HStack {
-                Slider(
-                    value: Binding(
-                        get: { store.peekDuration },
-                        set: { store.peekDuration = $0 }
-                    ),
-                    in: 0.5...5.0,
-                    step: 0.5
-                )
-                Text(String(format: "%.1f s", store.peekDuration))
                     .monospacedDigit()
                     .frame(width: 48, alignment: .trailing)
             }

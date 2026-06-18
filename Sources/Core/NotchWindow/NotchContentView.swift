@@ -48,7 +48,7 @@ struct NotchContentView: View {
             Color.black
                 .clipShape(NotchPanelShape(
                     topEar: 12,
-                    bottomRadius: state == .expanded ? 12 : 10
+                    bottomRadius: state == .expanded ? controller.panelCornerRadius : 10
                 ))
                 .animation(.easeOut(duration: 0.15), value: state)
         }

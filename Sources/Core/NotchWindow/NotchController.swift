@@ -35,6 +35,21 @@ import Foundation
         visibleModules.first { $0.id == selectedModuleID } ?? visibleModules.first
     }
 
+    /// Largeur du panneau selon le réglage panelWidth (compact/standard/large).
+    public var expandedWidth: CGFloat {
+        switch settings.panelWidth {
+        case .compact: 580
+        case .standard: 744
+        case .large: 920
+        }
+    }
+
+    /// Rayon des coins bas du panneau.
+    public var panelCornerRadius: CGFloat { CGFloat(settings.cornerRadius) }
+
+    /// Comportement plein écran courant.
+    public var fullscreenBehavior: FullscreenBehavior { settings.fullscreenBehavior }
+
     public init(settings: SettingsStore) {
         self.settings = settings
     }
@@ -114,7 +129,7 @@ import Foundation
         let elapsed = ProcessInfo.processInfo.systemUptime - lastExpandTime
         guard elapsed > 0.45 else { return }
         collapseTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(Timing.collapseDelay))
+            try? await Task.sleep(for: .seconds(self?.settings.collapseDelay ?? 0.6))
             guard let self, !Task.isCancelled else { return }
             transition(to: .collapsed)
         }
@@ -142,6 +157,3 @@ import Foundation
     }
 }
 
-private enum Timing {
-    static let collapseDelay: TimeInterval = 0.6
-}

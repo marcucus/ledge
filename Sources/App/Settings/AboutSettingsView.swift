@@ -1,3 +1,4 @@
+import AppKit
 import Core
 import SwiftUI
 
@@ -13,37 +14,40 @@ struct AboutSettingsView: View {
             ?? "© 2024 Adrien Marques"
     }
 
+    private func loadLogoFromBundle() -> NSImage? {
+        guard let url = Bundle.module.url(forResource: "ledgelogo", withExtension: "png") else { return nil }
+        return NSImage(contentsOf: url)
+    }
+
     var body: some View {
         Form {
             Section {
-                HStack {
-                    Text("settings.about.appName", bundle: localizationBundle)
-                        .fontWeight(.semibold)
-                    Spacer()
-                    Text("Ledge")
-                        .foregroundStyle(.secondary)
+                HStack(spacing: 16) {
+                    if let img = NSImage(named: "ledgelogo") ?? loadLogoFromBundle() {
+                        Image(nsImage: img)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Ledge")
+                            .font(.title2.weight(.semibold))
+                        Text(appVersion)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                        Text(copyright)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
-
-                HStack {
-                    Text("settings.about.version", bundle: localizationBundle)
-                    Spacer()
-                    Text(appVersion)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-
-                HStack {
-                    Text("settings.about.copyright", bundle: localizationBundle)
-                    Spacer()
-                    Text(copyright)
-                        .foregroundStyle(.secondary)
-                        .font(.footnote)
-                }
+                .padding(.vertical, 4)
             }
 
             Section {
                 Button {
-                    // Placeholder — update check not yet implemented
+                    (NSApplication.shared.delegate as? AppDelegate)?.checkForUpdates()
                 } label: {
                     Text("settings.about.checkUpdates", bundle: localizationBundle)
                 }

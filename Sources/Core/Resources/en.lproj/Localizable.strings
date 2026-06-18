@@ -1,4 +1,5 @@
 "action.close" = "Close";
+"action.quit" = "Quit Ledge";
 "action.settings" = "Settings";
 "clipboard.action.clear" = "Clear history";
 "clipboard.empty" = "No copies yet";
@@ -21,6 +22,9 @@
 "settings.about.version" = "Version";
 "settings.appearance.cornerRadius" = "Corner radius";
 "settings.appearance.panelWidth" = "Panel width";
+"settings.appearance.panelWidth.compact" = "Compact";
+"settings.appearance.panelWidth.standard" = "Standard";
+"settings.appearance.panelWidth.large" = "Large";
 "settings.display.fullscreen" = "Full Screen behavior";
 "settings.display.fullscreen.accessible" = "Stay accessible (appears on hover)";
 "settings.display.fullscreen.hidden" = "Hide automatically";
@@ -30,9 +34,10 @@
 "settings.display.notchDetection.manual" = "Manual";
 "settings.display.timerRing" = "Show timer ring when active";
 "settings.general.collapseDelay" = "Close delay";
+"settings.general.hudReplace" = "Replace system HUD";
+"settings.general.hudReplaceDetail" = "Use Ledge instead of the macOS volume/brightness HUD";
 "settings.general.language" = "Language";
 "settings.general.launchAtLogin" = "Launch at login";
-"settings.general.peekDuration" = "Peek duration";
 "settings.modules.enabled" = "Enabled";
 "settings.permissions.accessibility" = "Accessibility";
 "settings.permissions.notifications" = "Notifications";
@@ -47,6 +52,7 @@
 "settings.section.modules" = "Modules";
 "settings.section.permissions" = "Permissions";
 "settings.section.shortcuts" = "Shortcuts";
+"settings.shortcuts.comingSoon" = "Keyboard shortcuts are coming in a future update.";
 "settings.shortcuts.dropzone" = "Drop Zone";
 "settings.shortcuts.globalEnabled" = "Enable global shortcuts";
 "settings.shortcuts.media" = "Media";

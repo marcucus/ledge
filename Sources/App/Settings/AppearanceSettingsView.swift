@@ -3,7 +3,6 @@ import SwiftUI
 
 struct AppearanceSettingsView: View {
     var store: SettingsStore
-    @State private var cornerRadius: Double = 12.0
 
     var body: some View {
         Form {
@@ -24,9 +23,9 @@ struct AppearanceSettingsView: View {
             get: { store.panelWidth },
             set: { store.panelWidth = $0 }
         )) {
-            Text("Compact").tag(PanelWidth.compact)
-            Text("Standard").tag(PanelWidth.standard)
-            Text("Large").tag(PanelWidth.large)
+            Text("settings.appearance.panelWidth.compact", bundle: localizationBundle).tag(PanelWidth.compact)
+            Text("settings.appearance.panelWidth.standard", bundle: localizationBundle).tag(PanelWidth.standard)
+            Text("settings.appearance.panelWidth.large", bundle: localizationBundle).tag(PanelWidth.large)
         } label: {
             Text("settings.appearance.panelWidth", bundle: localizationBundle)
         }
@@ -37,8 +36,11 @@ struct AppearanceSettingsView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("settings.appearance.cornerRadius", bundle: localizationBundle)
             HStack {
-                Slider(value: $cornerRadius, in: 4...24, step: 1)
-                Text(String(format: "%.0f pt", cornerRadius))
+                Slider(value: Binding(
+                    get: { store.cornerRadius },
+                    set: { store.cornerRadius = $0 }
+                ), in: 4...24, step: 1)
+                Text(String(format: "%.0f pt", store.cornerRadius))
                     .monospacedDigit()
                     .frame(width: 48, alignment: .trailing)
             }
