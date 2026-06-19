@@ -17,7 +17,6 @@ import Foundation
     public private(set) var hudContent: HUDContent?
     private var collapseTask: Task<Void, Never>?
     private var hudTask: Task<Void, Never>?
-    @ObservationIgnored private var lastExpandTime: TimeInterval = 0
     @ObservationIgnored private var isDragHovering = false
 
     private let settings: SettingsStore
@@ -89,7 +88,7 @@ import Foundation
         hudTask?.cancel()
         hudContent = nil
         guard state == .collapsed || state == .peeking || state == .hud else { return }
-        lastExpandTime = ProcessInfo.processInfo.systemUptime
+
         transition(to: .expanded)
     }
 
@@ -102,7 +101,7 @@ import Foundation
         collapseTask?.cancel()
         selectModule(id: preferredModuleID)
         if state == .collapsed {
-            lastExpandTime = ProcessInfo.processInfo.systemUptime
+    
             transition(to: .expanded)
         }
         onDragHoverChange?(true)
@@ -124,10 +123,6 @@ import Foundation
     public func cursorExited() {
         guard state != .collapsed, !isDragHovering else { return }
         collapseTask?.cancel()
-        // Ignore les mouseExited spurieux qui arrivent juste après l'expansion
-        // (causés par le recalcul de la tracking area pendant l'animation)
-        let elapsed = ProcessInfo.processInfo.systemUptime - lastExpandTime
-        guard elapsed > 0.45 else { return }
         collapseTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(self?.settings.collapseDelay ?? 0.6))
             guard let self, !Task.isCancelled else { return }
@@ -138,7 +133,7 @@ import Foundation
     public func panelClicked() {
         collapseTask?.cancel()
         if state == .collapsed {
-            lastExpandTime = ProcessInfo.processInfo.systemUptime
+    
             transition(to: .expanded)
         } else {
             dismiss()

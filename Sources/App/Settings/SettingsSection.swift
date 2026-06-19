@@ -14,7 +14,15 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     }
 
     var label: LocalizedStringKey {
-        LocalizedStringKey("settings.section.\(rawValue)")
+        switch self {
+        case .general: "settings.section.general"
+        case .appearance: "settings.section.appearance"
+        case .modules: "settings.section.modules"
+        case .display: "settings.section.display"
+        case .permissions: "settings.section.permissions"
+        case .shortcuts: "settings.section.shortcuts"
+        case .about: "settings.section.about"
+        }
     }
 
     var icon: String {

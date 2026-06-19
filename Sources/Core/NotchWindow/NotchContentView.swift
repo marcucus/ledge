@@ -35,8 +35,11 @@ struct NotchContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(background)
+        // Ouverture : contenu apparaît 0.28 s après le début (pendant que la fenêtre s'agrandit).
+        // Fermeture : la fenêtre se rétracte avec un fond noir — l'animation SwiftUI est couverte,
+        //             on la laisse courte pour éviter toute artefact visible.
         .animation(
-            .easeOut(duration: state == .expanded ? 0.12 : 0.08).delay(state == .expanded ? 0.28 : 0),
+            .easeOut(duration: state == .expanded ? 0.12 : 0.06).delay(state == .expanded ? 0.28 : 0),
             value: state
         )
         .colorScheme(.dark)

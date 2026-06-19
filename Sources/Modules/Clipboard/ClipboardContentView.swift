@@ -26,8 +26,12 @@ struct ClipboardContentView: View {
             Button {
                 module.clearHistory()
             } label: {
-                Label("clipboard.action.clear", systemImage: "trash")
-                    .font(.caption)
+                Label {
+                    Text("clipboard.action.clear", bundle: localizationBundle)
+                } icon: {
+                    Image(systemName: "trash")
+                }
+                .font(.caption)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)

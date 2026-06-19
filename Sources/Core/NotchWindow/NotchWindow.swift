@@ -152,6 +152,11 @@ public final class NotchWindow: NSPanel {
     private func revealClearBackground() {
         backgroundColor = .clear
         updateTrackingArea()
+        // Si le curseur a quitté la fenêtre pendant l'animation d'ouverture (window.frame était déjà
+        // à la taille expanded dès le début → mouseExited filtré), on déclenche la fermeture ici.
+        if !frame.contains(NSEvent.mouseLocation) {
+            controller.cursorExited()
+        }
     }
 
     private func applyExpanded(geometry: NotchGeometry, animated: Bool) {
@@ -196,25 +201,25 @@ public final class NotchWindow: NSPanel {
     }
 
     private func applyCollapsed(geometry: NotchGeometry, from: NotchState, animated: Bool) {
-        backgroundColor = .clear
         removeGlobalClickMonitor()
         let size = CGSize(width: geometry.notchRect.width, height: geometry.notchRect.height)
         guard animated else {
+            backgroundColor = .clear
             applyFrame(size: size, geometry: geometry)
             return
         }
         let frame = makeFrame(size: size, geometry: geometry)
-        // Depuis peek / hud : rétrécir tout de suite. Depuis expanded : attendre l'animation SwiftUI.
-        if from == .peeking || from == .hud {
-            transitionFrame(to: frame, duration: Layout.peekDuration, animated: true) { [weak self] in
-                self?.updateTrackingArea()
+        if from == .expanded {
+            // Fermeture symétrique à l'ouverture : fond noir couvre le contenu SwiftUI,
+            // la fenêtre se rétracte avec la même animation, puis redevient transparente.
+            backgroundColor = .black
+            transitionFrame(to: frame, duration: Layout.closeDuration, animated: true) { [weak self] in
+                self?.revealClearBackground()
             }
         } else {
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .milliseconds(Layout.collapseFromExpandedDelayMs))
-                guard let self, controller.state == .collapsed else { return }
-                setFrame(frame, display: true, animate: false)
-                updateTrackingArea()
+            // Depuis peek / hud : rétrécir directement, fond déjà transparent.
+            transitionFrame(to: frame, duration: Layout.peekDuration, animated: true) { [weak self] in
+                self?.updateTrackingArea()
             }
         }
     }
@@ -327,6 +332,4 @@ private enum Layout {
     static let hudMinWidth: CGFloat = 280
     static let hudSideMargin: CGFloat = 170
     static let hudBottomMargin: CGFloat = 34
-    /// Attendre la fin de l'animation SwiftUI avant de rétrécir la fenêtre depuis l'état ouvert.
-    static let collapseFromExpandedDelayMs = 380
 }
