@@ -49,6 +49,12 @@ import Foundation
     /// Comportement plein écran courant.
     public var fullscreenBehavior: FullscreenBehavior { settings.fullscreenBehavior }
 
+    /// Afficher les libellés texte sous les icônes de modules dans la NavBar.
+    public var showModuleLabels: Bool { settings.showModuleLabels }
+
+    /// Nom de l'écran cible ("" = auto, i.e. écran avec encoche).
+    public var targetScreenName: String { settings.targetScreenName }
+
     public init(settings: SettingsStore) {
         self.settings = settings
     }

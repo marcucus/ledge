@@ -63,6 +63,38 @@ import Foundation
         didSet { defaults.set(globalShortcutEnabled, forKey: Keys.globalShortcutEnabled) }
     }
 
+    // MARK: — NavBar
+
+    public var showModuleLabels: Bool {
+        didSet { defaults.set(showModuleLabels, forKey: Keys.showModuleLabels) }
+    }
+
+    // MARK: — Clipboard module
+
+    public var clipboardMaxItems: Int {
+        didSet { defaults.set(clipboardMaxItems, forKey: Keys.clipboardMaxItems) }
+    }
+
+    // MARK: — Timer / Pomodoro
+
+    public var pomodoroWorkDuration: Double {
+        didSet { defaults.set(pomodoroWorkDuration, forKey: Keys.pomodoroWorkDuration) }
+    }
+
+    public var pomodoroShortBreakDuration: Double {
+        didSet { defaults.set(pomodoroShortBreakDuration, forKey: Keys.pomodoroShortBreakDuration) }
+    }
+
+    public var pomodoroLongBreakDuration: Double {
+        didSet { defaults.set(pomodoroLongBreakDuration, forKey: Keys.pomodoroLongBreakDuration) }
+    }
+
+    // MARK: — Display
+
+    public var targetScreenName: String {
+        didSet { defaults.set(targetScreenName, forKey: Keys.targetScreenName) }
+    }
+
     private init() {
         collapseDelay = defaults.double(forKey: Keys.collapseDelay).nonZero ?? 0.6
         launchAtLogin = defaults.bool(forKey: Keys.launchAtLogin)
@@ -75,6 +107,12 @@ import Foundation
         fullscreenBehavior = FullscreenBehavior(rawValue: defaults.integer(forKey: Keys.fullscreenBehavior)) ?? .accessible
         showRingWhenTimerActive = defaults.object(forKey: Keys.showRingWhenTimerActive) as? Bool ?? true
         globalShortcutEnabled = defaults.object(forKey: Keys.globalShortcutEnabled) as? Bool ?? true
+        showModuleLabels = defaults.object(forKey: Keys.showModuleLabels) as? Bool ?? false
+        clipboardMaxItems = defaults.object(forKey: Keys.clipboardMaxItems) as? Int ?? 50
+        pomodoroWorkDuration = defaults.double(forKey: Keys.pomodoroWorkDuration).nonZero ?? 25
+        pomodoroShortBreakDuration = defaults.double(forKey: Keys.pomodoroShortBreakDuration).nonZero ?? 5
+        pomodoroLongBreakDuration = defaults.double(forKey: Keys.pomodoroLongBreakDuration).nonZero ?? 15
+        targetScreenName = defaults.string(forKey: Keys.targetScreenName) ?? ""
     }
 
     // MARK: — Module helpers
@@ -102,6 +140,12 @@ private enum Keys {
     static let fullscreenBehavior = "fullscreenBehavior"
     static let showRingWhenTimerActive = "showRingWhenTimerActive"
     static let globalShortcutEnabled = "globalShortcutEnabled"
+    static let showModuleLabels = "showModuleLabels"
+    static let clipboardMaxItems = "clipboardMaxItems"
+    static let pomodoroWorkDuration = "pomodoroWorkDuration"
+    static let pomodoroShortBreakDuration = "pomodoroShortBreakDuration"
+    static let pomodoroLongBreakDuration = "pomodoroLongBreakDuration"
+    static let targetScreenName = "targetScreenName"
 }
 
 // MARK: — Helpers

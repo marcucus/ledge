@@ -13,7 +13,8 @@ struct NavBar: View {
                 ForEach(controller.visibleModules.map(ModuleItem.init), id: \.id) { item in
                     ModuleTabButton(
                         item: item,
-                        isSelected: item.id == controller.selectedModuleID
+                        isSelected: item.id == controller.selectedModuleID,
+                        showLabel: controller.showModuleLabels
                     ) {
                         controller.selectModule(id: item.id)
                     }
@@ -57,24 +58,33 @@ struct NavBar: View {
 private struct ModuleTabButton: View {
     let item: ModuleItem
     let isSelected: Bool
+    let showLabel: Bool
     let action: () -> Void
 
     @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: item.base.tabIcon)
-                .imageScale(.medium)
-                .foregroundStyle(isSelected ? .primary : (isHovered ? .secondary : .tertiary))
-                .frame(width: 34, height: 44)
-                .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(Color.white.opacity(
-                            isSelected ? 0.14 : (isHovered ? 0.07 : 0)
-                        ))
-                        .padding(.horizontal, 2)
-                        .padding(.vertical, 6)
-                )
+            VStack(spacing: 1) {
+                Image(systemName: item.base.tabIcon)
+                    .imageScale(.medium)
+                    .foregroundStyle(isSelected ? .primary : (isHovered ? .secondary : .tertiary))
+                if showLabel {
+                    Text(item.base.tabLabel)
+                        .font(.system(size: 9, weight: .medium))
+                        .lineLimit(1)
+                        .foregroundStyle(isSelected ? .primary : .tertiary)
+                }
+            }
+            .frame(width: 34, height: 44)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color.white.opacity(
+                        isSelected ? 0.14 : (isHovered ? 0.07 : 0)
+                    ))
+                    .padding(.horizontal, 2)
+                    .padding(.vertical, 6)
+            )
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }

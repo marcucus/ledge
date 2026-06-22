@@ -59,11 +59,12 @@ public final class NotchWindow: NSPanel {
         withObservationTracking {
             applyCollectionBehavior(for: controller.fullscreenBehavior)
             _ = controller.expandedWidth
+            _ = controller.targetScreenName
         } onChange: { [weak self] in
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.applyCollectionBehavior(for: self.controller.fullscreenBehavior)
-                self.updateFrame(for: self.controller.state, from: self.controller.state, animated: true)
+                self.positionOnNotch()
                 self.startObservingSettings()
             }
         }
@@ -107,7 +108,17 @@ public final class NotchWindow: NSPanel {
     }
 
     private func positionOnNotch() {
-        guard let geometry = NSScreen.withNotch?.notchGeometry() else { return }
+        let screen = NSScreen.screen(named: controller.targetScreenName)
+            ?? NSScreen.withNotch
+            ?? NSScreen.main
+        guard let geometry = screen?.notchGeometry() ?? screen.map({ s in
+            // Écran sans encoche : ancre au centre du bord supérieur
+            let r = s.frame
+            let notchW: CGFloat = 190
+            let notchH: CGFloat = 32
+            let rect = CGRect(x: r.midX - notchW / 2, y: r.maxY - notchH, width: notchW, height: notchH)
+            return NotchGeometry(notchRect: rect, screenFrame: r)
+        }) else { return }
         currentGeometry = geometry
         updateFrame(for: controller.state, from: .collapsed, animated: false)
     }
@@ -154,13 +165,15 @@ public final class NotchWindow: NSPanel {
         updateTrackingArea()
         // Si le curseur a quitté la fenêtre pendant l'animation d'ouverture (window.frame était déjà
         // à la taille expanded dès le début → mouseExited filtré), on déclenche la fermeture ici.
-        if !frame.contains(NSEvent.mouseLocation) {
+        let mouse = NSEvent.mouseLocation
+        let containsMouse = mouse.x >= frame.minX && mouse.x <= frame.maxX && 
+                            mouse.y >= frame.minY && mouse.y <= frame.maxY
+        if !containsMouse {
             controller.cursorExited()
         }
     }
 
     private func applyExpanded(geometry: NotchGeometry, animated: Bool) {
-        backgroundColor = .black
         let size = CGSize(width: controller.expandedWidth, height: Layout.navbarHeight + Layout.contentHeight)
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
@@ -173,7 +186,6 @@ public final class NotchWindow: NSPanel {
     }
 
     private func applyPeeking(geometry: NotchGeometry, animated: Bool) {
-        backgroundColor = .black
         let size = CGSize(width: controller.expandedWidth, height: Layout.navbarHeight)
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
@@ -186,7 +198,6 @@ public final class NotchWindow: NSPanel {
 
     private func applyHUD(geometry: NotchGeometry, animated: Bool) {
         // Fenêtre qui entoure l'encoche (plus large des deux côtés), barre fine en dessous.
-        backgroundColor = .black
         let size = CGSize(
             width: max(Layout.hudMinWidth, controller.notchWidth + Layout.hudSideMargin),
             height: controller.notchHeight + Layout.hudBottomMargin
@@ -210,9 +221,7 @@ public final class NotchWindow: NSPanel {
         }
         let frame = makeFrame(size: size, geometry: geometry)
         if from == .expanded {
-            // Fermeture symétrique à l'ouverture : fond noir couvre le contenu SwiftUI,
-            // la fenêtre se rétracte avec la même animation, puis redevient transparente.
-            backgroundColor = .black
+            // Fermeture symétrique à l'ouverture : la fenêtre se rétracte, puis redevient transparente.
             transitionFrame(to: frame, duration: Layout.closeDuration, animated: true) { [weak self] in
                 self?.revealClearBackground()
             }

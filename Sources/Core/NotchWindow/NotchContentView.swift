@@ -33,6 +33,7 @@ struct NotchContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .padding(.horizontal, state == .collapsed ? 0 : 12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(background)
         // Ouverture : contenu apparaît 0.28 s après le début (pendant que la fenêtre s'agrandit).
@@ -47,14 +48,13 @@ struct NotchContentView: View {
 
     @ViewBuilder
     private var background: some View {
-        if state != .collapsed {
-            Color.black
-                .clipShape(NotchPanelShape(
-                    topEar: 12,
-                    bottomRadius: state == .expanded ? controller.panelCornerRadius : 10
-                ))
-                .animation(.easeOut(duration: 0.15), value: state)
-        }
+        Color.black
+            .opacity(state == .collapsed ? 0 : 1)
+            .clipShape(NotchPanelShape(
+                topEar: state == .collapsed ? 0 : 12,
+                bottomRadius: state == .expanded ? controller.panelCornerRadius : 10
+            ))
+            .animation(.easeOut(duration: 0.15), value: state)
     }
 }
 

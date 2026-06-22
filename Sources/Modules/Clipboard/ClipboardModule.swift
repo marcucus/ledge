@@ -10,10 +10,9 @@ import SwiftUI
 public final class ClipboardModule: NotchModule {
     public let id = "clipboard"
 
-    /// Ordered from newest to oldest; capped at `maxItems`.
+    /// Ordered from newest to oldest; capped at `clipboardMaxItems` from SettingsStore (0 = unlimited).
     private(set) var items: [ClipboardItem] = []
 
-    @ObservationIgnored private let maxItems = 50
     @ObservationIgnored private let source = ClipboardSource()
 
     /// nonisolated(unsafe) so deinit (non-isolated) can reach it
@@ -21,11 +20,6 @@ public final class ClipboardModule: NotchModule {
 
     public init() {
         _source = source
-        source.maxItems = maxItems
-        source.onNewItem = { [weak self] item in
-            guard let self else { return }
-            Task { @MainActor in self.append(item) }
-        }
     }
 
     deinit {
@@ -35,7 +29,14 @@ public final class ClipboardModule: NotchModule {
     // MARK: — NotchModule
 
     public func start() {
+        let max = SettingsStore.shared.clipboardMaxItems
+        source.maxItems = max > 0 ? max : Int.max
+        source.onNewItem = { [weak self] item in
+            guard let self else { return }
+            Task { @MainActor in self.append(item) }
+        }
         source.start()
+        observeMaxItems()
     }
 
     public func stop() {
@@ -44,24 +45,44 @@ public final class ClipboardModule: NotchModule {
 
     // MARK: — Public API
 
-    /// Re-places `item` into the pasteboard and simulates Cmd+V in the frontmost app.
     func paste(item: ClipboardItem) {
         writeToPasteboard(item)
         simulatePaste()
     }
 
-    /// Clears the history.
     func clearHistory() {
         items.removeAll()
+    }
+
+    // MARK: — Settings observation
+
+    private func observeMaxItems() {
+        withObservationTracking {
+            _ = SettingsStore.shared.clipboardMaxItems
+        } onChange: { [weak self] in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                let max = SettingsStore.shared.clipboardMaxItems
+                self.source.maxItems = max > 0 ? max : Int.max
+                if max > 0 { self.trim(to: max) }
+                self.observeMaxItems()
+            }
+        }
     }
 
     // MARK: — Private helpers
 
     private func append(_ item: ClipboardItem) {
         items.insert(item, at: 0)
-        if items.count > maxItems {
-            items.removeLast(items.count - maxItems)
+        let max = SettingsStore.shared.clipboardMaxItems
+        if max > 0, items.count > max {
+            items.removeLast(items.count - max)
         }
+    }
+
+    private func trim(to max: Int) {
+        guard items.count > max else { return }
+        items.removeLast(items.count - max)
     }
 
     private func writeToPasteboard(_ item: ClipboardItem) {
@@ -81,7 +102,6 @@ public final class ClipboardModule: NotchModule {
     }
 
     private func simulatePaste() {
-        // Post Cmd+V key-down / key-up via CGEvent to trigger paste in the active app.
         let src = CGEventSource(stateID: .hidSystemState)
         let keyDown = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: true)
         let keyUp = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: false)
