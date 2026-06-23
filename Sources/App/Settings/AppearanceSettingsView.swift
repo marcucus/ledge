@@ -26,6 +26,10 @@ struct AppearanceSettingsView: View {
                     Text("settings.appearance.showModuleLabels", bundle: localizationBundle)
                 }
             }
+
+            Section {
+                hudColorRows
+            }
         }
         .formStyle(.grouped)
         .navigationTitle(Text("settings.section.appearance", bundle: localizationBundle))
@@ -83,6 +87,42 @@ struct AppearanceSettingsView: View {
                 Text(String(format: "%.0f pt", store.cornerRadius))
                     .monospacedDigit()
                     .frame(width: 48, alignment: .trailing)
+            }
+        }
+    }
+
+    // MARK: — HUD accent color
+
+    @ViewBuilder
+    private var hudColorRows: some View {
+        Toggle(isOn: Binding(
+            get: { store.hudUseSystemAccent },
+            set: { store.hudUseSystemAccent = $0 }
+        )) {
+            Text("settings.appearance.hud.systemAccent", bundle: localizationBundle)
+        }
+
+        if !store.hudUseSystemAccent {
+            ColorPicker(selection: Binding(
+                get: {
+                    guard store.hudAccentColorComponents.count >= 3 else { return Color.accentColor }
+                    return Color(
+                        red: store.hudAccentColorComponents[0],
+                        green: store.hudAccentColorComponents[1],
+                        blue: store.hudAccentColorComponents[2]
+                    )
+                },
+                set: { newColor in
+                    if let ns = NSColor(newColor).usingColorSpace(.sRGB) {
+                        store.hudAccentColorComponents = [
+                            Double(ns.redComponent),
+                            Double(ns.greenComponent),
+                            Double(ns.blueComponent),
+                        ]
+                    }
+                }
+            ), supportsOpacity: false) {
+                Text("settings.appearance.hud.color", bundle: localizationBundle)
             }
         }
     }

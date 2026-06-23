@@ -17,8 +17,8 @@ public final class SystemObserver {
         didSet { updateEventTap() }
     }
 
-    // Accès depuis le callback C (non-isolé)
-    private nonisolated(unsafe) weak static var shared: SystemObserver?
+    // Accès depuis le callback C (non-isolé) — fort pour survivre à l'owner qui l'a créé.
+    private nonisolated(unsafe) static var shared: SystemObserver?
     private nonisolated(unsafe) static var activeTap: CFMachPort?
 
     private nonisolated(unsafe) var pollTimer: Timer?
@@ -54,9 +54,9 @@ public final class SystemObserver {
         globalMonitor.map { NSEvent.removeMonitor($0) }
         globalMonitor = nil
         removeEventTap()
-        // Un observateur à base de bloc se retire via son jeton (pas removeObserver(self)).
         settingObserver.map { NotificationCenter.default.removeObserver($0) }
         settingObserver = nil
+        SystemObserver.shared = nil
     }
 
     // MARK: — Observation (monitor clavier + réglage)

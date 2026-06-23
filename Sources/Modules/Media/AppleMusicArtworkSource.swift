@@ -26,7 +26,10 @@ final class AppleMusicArtworkSource {
         let path = NSTemporaryDirectory() + "ledge-artwork.dat"
         let succeeded = await runScript(artworkScript(toPath: path)).contains("ok")
         guard succeeded else { return nil }
-        return try? Data(contentsOf: URL(fileURLWithPath: path))
+        let url = URL(fileURLWithPath: path)
+        let data = try? Data(contentsOf: url)
+        try? FileManager.default.removeItem(at: url)
+        return data
     }
 
     private nonisolated static func artworkScript(toPath path: String) -> String {

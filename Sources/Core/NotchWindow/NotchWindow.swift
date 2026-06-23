@@ -104,7 +104,16 @@ public final class NotchWindow: NSPanel {
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in self?.positionOnNotch() }
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let name = controller.targetScreenName
+                if !name.isEmpty, NSScreen.screen(named: name) == nil {
+                    SettingsStore.shared.targetScreenName = ""
+                }
+                positionOnNotch()
+            }
+        }
     }
 
     private func positionOnNotch() {
@@ -131,9 +140,10 @@ public final class NotchWindow: NSPanel {
         controller.notchHeight = geometry.notchRect.height
 
         switch state {
-        case .expanded: applyExpanded(geometry: geometry, animated: animated)
+        case .expanded: applyExpanded(geometry: geometry, from: from, animated: animated)
         case .peeking: applyPeeking(geometry: geometry, animated: animated)
         case .hud: applyHUD(geometry: geometry, animated: animated)
+        case .ambient: applyAmbient(geometry: geometry, animated: animated)
         case .collapsed: applyCollapsed(geometry: geometry, from: from, animated: animated)
         }
         orderFrontRegardless()
@@ -173,8 +183,13 @@ public final class NotchWindow: NSPanel {
         }
     }
 
-    private func applyExpanded(geometry: NotchGeometry, animated: Bool) {
+    private func applyExpanded(geometry: NotchGeometry, from: NotchState, animated: Bool) {
         let size = CGSize(width: controller.expandedWidth, height: Layout.navbarHeight + Layout.contentHeight)
+        // Depuis ambient : le fond SwiftUI changerait de forme abruptement pendant l'animation
+        // → on pose un fond noir opaque pour masquer la transition, révélé à la fin comme d'habitude.
+        if animated && from == .ambient {
+            backgroundColor = .black
+        }
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
             duration: Layout.openDuration,
@@ -211,9 +226,30 @@ public final class NotchWindow: NSPanel {
         }
     }
 
+    private func applyAmbient(geometry: NotchGeometry, animated: Bool) {
+        // Pills latérales : même hauteur que l'encoche, plus large des deux côtés.
+        let pillWidth = NotchController.ambientPillWidth
+        let pillGap = NotchController.ambientPillGap
+        let size = CGSize(
+            width: controller.notchWidth + (pillWidth + pillGap) * 2,
+            height: controller.notchHeight
+        )
+        transitionFrame(
+            to: makeFrame(size: size, geometry: geometry),
+            duration: Layout.ambientDuration,
+            animated: animated
+        ) { [weak self] in
+            self?.revealClearBackground()
+        }
+    }
+
     private func applyCollapsed(geometry: NotchGeometry, from: NotchState, animated: Bool) {
         removeGlobalClickMonitor()
-        let size = CGSize(width: geometry.notchRect.width, height: geometry.notchRect.height)
+        let ringInset = controller.timerRingActive ? NotchController.timerRingInset : 0
+        let size = CGSize(
+            width: geometry.notchRect.width + ringInset * 2,
+            height: geometry.notchRect.height + ringInset
+        )
         guard animated else {
             backgroundColor = .clear
             applyFrame(size: size, geometry: geometry)
@@ -226,7 +262,7 @@ public final class NotchWindow: NSPanel {
                 self?.revealClearBackground()
             }
         } else {
-            // Depuis peek / hud : rétrécir directement, fond déjà transparent.
+            // Depuis peek / hud / ambient : rétrécir directement, fond déjà transparent.
             transitionFrame(to: frame, duration: Layout.peekDuration, animated: true) { [weak self] in
                 self?.updateTrackingArea()
             }
@@ -337,6 +373,7 @@ private enum Layout {
     static let openDuration: TimeInterval = 0.40
     static let closeDuration: TimeInterval = 0.34
     static let peekDuration: TimeInterval = 0.20
+    static let ambientDuration: TimeInterval = 0.30
     // HUD : la fenêtre déborde de chaque côté de l'encoche, barre fine en dessous.
     static let hudMinWidth: CGFloat = 280
     static let hudSideMargin: CGFloat = 170

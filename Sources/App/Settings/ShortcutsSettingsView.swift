@@ -16,7 +16,7 @@ struct ShortcutsSettingsView: View {
             }
 
             Section {
-                shortcutRow(nameKey: "settings.shortcuts.openClose")
+                shortcutRow(nameKey: "settings.shortcuts.openClose", shortcut: "⌥ Space")
                 shortcutRow(nameKey: "settings.shortcuts.paste")
                 shortcutRow(nameKey: "settings.shortcuts.newTimer")
             }
@@ -32,13 +32,20 @@ struct ShortcutsSettingsView: View {
         .navigationTitle(Text("settings.section.shortcuts", bundle: localizationBundle))
     }
 
-    private func shortcutRow(nameKey: String) -> some View {
+    private func shortcutRow(nameKey: String, shortcut: String = "") -> some View {
         HStack {
             Text(LocalizedStringKey(nameKey), bundle: localizationBundle)
             Spacer()
-            Text("—")
-                .foregroundStyle(.tertiary)
-                .monospacedDigit()
+            if shortcut.isEmpty {
+                Text("—").foregroundStyle(.tertiary)
+            } else {
+                Text(shortcut)
+                    .font(.system(.callout, design: .monospaced))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.secondary.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
         }
         .opacity(store.globalShortcutEnabled ? 1 : 0.4)
     }

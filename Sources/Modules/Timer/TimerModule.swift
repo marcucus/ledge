@@ -19,8 +19,10 @@ public final class TimerModule: NotchModule {
 
     public private(set) var entries: [TimerEntry] = []
     public private(set) var pomodoroState: PomodoroState = .init()
+    public var onAmbientUpdate: ((AmbientContent?) -> Void)?
 
     @ObservationIgnored private nonisolated(unsafe) var dispatchTimers: [UUID: DispatchSourceTimer] = [:]
+    @ObservationIgnored private var pomodoroEntryID: UUID?
 
     public init() {
         requestNotificationPermission()
@@ -75,10 +77,11 @@ public final class TimerModule: NotchModule {
     }
 
     public func startPomodoro() {
+        if let old = pomodoroEntryID { removeTimer(id: old) }
         pomodoroState.reset()
-        let duration = pomodoroState.currentPhaseDuration
-        addTimer(label: pomodoroState.currentPhaseLabel, duration: duration)
+        addTimer(label: pomodoroState.currentPhaseLabel, duration: pomodoroState.currentPhaseDuration)
         guard let entry = entries.last else { return }
+        pomodoroEntryID = entry.id
         startEntry(entry.id)
     }
 
@@ -90,6 +93,7 @@ public final class TimerModule: NotchModule {
         entries[index].isRunning = true
         entries[index].isPaused = false
         scheduleDispatchTimer(for: id)
+        updateAmbient()
     }
 
     private func pauseEntry(_ id: UUID) {
@@ -98,6 +102,7 @@ public final class TimerModule: NotchModule {
         entries[index].isRunning = false
         entries[index].isPaused = true
         stopDispatchTimer(for: id)
+        updateAmbient()
     }
 
     private func stopEntry(_ id: UUID) {
@@ -106,6 +111,7 @@ public final class TimerModule: NotchModule {
         entries[index].isPaused = false
         entries[index].remaining = 0
         stopDispatchTimer(for: id)
+        updateAmbient()
     }
 
     private func resetEntry(_ id: UUID) {
@@ -114,6 +120,16 @@ public final class TimerModule: NotchModule {
         entries[index].isRunning = false
         entries[index].isPaused = false
         entries[index].remaining = entries[index].duration
+        updateAmbient()
+    }
+
+    private func updateAmbient() {
+        if let running = entries.first(where: { $0.isRunning }) {
+            let progress = running.duration > 0 ? running.remaining / running.duration : 0
+            onAmbientUpdate?(.init(kind: .timer(label: running.label, progress: progress), accentColor: .orange))
+        } else {
+            onAmbientUpdate?(nil)
+        }
     }
 
     // MARK: — DispatchSourceTimer
@@ -143,7 +159,24 @@ public final class TimerModule: NotchModule {
             entries[index].isRunning = false
             stopDispatchTimer(for: id)
             sendFinishedNotification(for: entries[index])
+            if id == pomodoroEntryID {
+                advancePomodoro()
+            } else {
+                updateAmbient()
+            }
+        } else {
+            updateAmbient()
         }
+    }
+
+    private func advancePomodoro() {
+        entries.removeAll { $0.id == pomodoroEntryID }
+        pomodoroEntryID = nil
+        pomodoroState.advance()
+        addTimer(label: pomodoroState.currentPhaseLabel, duration: pomodoroState.currentPhaseDuration)
+        guard let entry = entries.last else { return }
+        pomodoroEntryID = entry.id
+        startEntry(entry.id)
     }
 
     // MARK: — Notifications

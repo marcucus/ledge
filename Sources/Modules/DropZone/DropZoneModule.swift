@@ -10,7 +10,11 @@ public final class DropZoneModule: NotchModule {
     public let tabLabel: LocalizedStringKey = "module.dropzone.label"
 
     public private(set) var items: [ShelfItem] = []
-    public var isDragActive = false
+    public var isDragActive = false {
+        didSet { updateAmbient() }
+    }
+
+    public var onAmbientUpdate: ((AmbientContent?) -> Void)?
 
     public init() {}
 
@@ -33,14 +37,27 @@ public final class DropZoneModule: NotchModule {
             guard !items.contains(where: { $0.url == url }) else { continue }
             items.append(ShelfItem(url: url))
         }
+        updateAmbient()
     }
 
     public func removeItem(id: UUID) {
         items.removeAll { $0.id == id }
+        updateAmbient()
     }
 
     public func clearAll() {
         items.removeAll()
+        updateAmbient()
+    }
+
+    // MARK: — Ambient
+
+    private func updateAmbient() {
+        if isDragActive || !items.isEmpty {
+            onAmbientUpdate?(.init(kind: .dropzone(count: items.count), accentColor: .blue))
+        } else {
+            onAmbientUpdate?(nil)
+        }
     }
 
     // MARK: — AirDrop

@@ -36,6 +36,7 @@ public final class ClipboardModule: NotchModule {
             Task { @MainActor in self.append(item) }
         }
         source.start()
+        if max > 0 { trim(to: max) }
         observeMaxItems()
     }
 

@@ -47,7 +47,7 @@ enum ModuleCatalog {
             icon: "cpu",
             nameKey: "module.system.label",
             descriptionKey: "module.system.description",
-            settingsBuilder: nil
+            settingsBuilder: { store in AnyView(SystemModuleSettingsView(store: store)) }
         ),
     ]
 

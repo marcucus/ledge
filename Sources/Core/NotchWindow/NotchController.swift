@@ -15,9 +15,19 @@ import Foundation
     public var onDragHoverChange: ((Bool) -> Void)?
     /// Contenu HUD courant (volume / luminosité). Nil = pas de HUD.
     public private(set) var hudContent: HUDContent?
+    /// Contenu ambient actif (musique, timer…). Nil = pas d'état ambient.
+    public private(set) var ambientContent: AmbientContent?
+    private var ambientSources: [String: (priority: Int, content: AmbientContent)] = [:]
     private var collapseTask: Task<Void, Never>?
     private var hudTask: Task<Void, Never>?
     @ObservationIgnored private var isDragHovering = false
+
+    /// Largeur d'une pill ambient (pixel, même dans NotchWindow Layout).
+    public static let ambientPillWidth: CGFloat = 44
+    /// Espace entre la pill et le bord de l'encoche.
+    public static let ambientPillGap: CGFloat = 4
+    /// Inset du ring timer autour de l'encoche.
+    public static let timerRingInset: CGFloat = 6
 
     private let settings: SettingsStore
 
@@ -46,6 +56,15 @@ import Foundation
     /// Rayon des coins bas du panneau.
     public var panelCornerRadius: CGFloat { CGFloat(settings.cornerRadius) }
 
+    /// Vrai si le timer ring doit être affiché (timer actif + réglage activé).
+    public var timerRingActive: Bool {
+        guard settings.showRingWhenTimerActive else { return false }
+        return ambientSources.values.contains { pair in
+            if case .timer = pair.content.kind { return true }
+            return false
+        }
+    }
+
     /// Comportement plein écran courant.
     public var fullscreenBehavior: FullscreenBehavior { settings.fullscreenBehavior }
 
@@ -70,13 +89,41 @@ import Foundation
         selectedModuleID = id
     }
 
+    // MARK: — Ambient
+
+    /// Enregistre ou retire un contributeur ambient. La source avec la priorité la plus haute gagne.
+    public func setAmbient(_ content: AmbientContent?, sourceID: String, priority: Int) {
+        if let content {
+            ambientSources[sourceID] = (priority: priority, content: content)
+        } else {
+            ambientSources.removeValue(forKey: sourceID)
+        }
+        let best = ambientSources.values.max(by: { $0.priority < $1.priority })
+        ambientContent = best?.content
+
+        let bestIsTimerInRingMode: Bool
+        if let c = ambientContent, case .timer = c.kind, settings.showRingWhenTimerActive {
+            bestIsTimerInRingMode = true
+        } else {
+            bestIsTimerInRingMode = false
+        }
+
+        if ambientContent != nil && !bestIsTimerInRingMode {
+            if state == .collapsed { transition(to: .ambient) }
+        } else if state == .ambient {
+            transition(to: .collapsed)
+        } else if ambientContent == nil && state == .collapsed {
+            // reste collapsed
+        }
+    }
+
     // MARK: — HUD
 
     public func showHUD(_ content: HUDContent) {
-        hudContent = content
         hudTask?.cancel()
         guard state != .expanded else { return }
-        if state == .collapsed || state == .hud {
+        hudContent = content
+        if state == .collapsed || state == .hud || state == .ambient {
             transition(to: .hud)
         }
         hudTask = Task { [weak self] in
@@ -84,7 +131,7 @@ import Foundation
             guard let self, !Task.isCancelled else { return }
             hudContent = nil
             if state == .hud {
-                transition(to: .collapsed)
+                transition(to: ambientContent != nil ? .ambient : .collapsed)
             }
         }
     }
@@ -93,8 +140,7 @@ import Foundation
         collapseTask?.cancel()
         hudTask?.cancel()
         hudContent = nil
-        guard state == .collapsed || state == .peeking || state == .hud else { return }
-
+        guard state == .collapsed || state == .peeking || state == .hud || state == .ambient else { return }
         transition(to: .expanded)
     }
 
@@ -106,8 +152,7 @@ import Foundation
         isDragHovering = true
         collapseTask?.cancel()
         selectModule(id: preferredModuleID)
-        if state == .collapsed {
-    
+        if state == .collapsed || state == .ambient {
             transition(to: .expanded)
         }
         onDragHoverChange?(true)
@@ -122,24 +167,24 @@ import Foundation
         collapseTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
             guard let self, !Task.isCancelled else { return }
-            transition(to: .collapsed)
+            transition(to: ambientContent != nil ? .ambient : .collapsed)
         }
     }
 
     public func cursorExited() {
-        guard state != .collapsed, !isDragHovering else { return }
+        // Le HUD se ferme via son propre hudTask, pas via le tracking curseur.
+        guard state != .collapsed, state != .ambient, state != .hud, !isDragHovering else { return }
         collapseTask?.cancel()
         collapseTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(self?.settings.collapseDelay ?? 0.6))
             guard let self, !Task.isCancelled else { return }
-            transition(to: .collapsed)
+            transition(to: ambientContent != nil ? .ambient : .collapsed)
         }
     }
 
     public func panelClicked() {
         collapseTask?.cancel()
-        if state == .collapsed {
-    
+        if state == .collapsed || state == .ambient {
             transition(to: .expanded)
         } else {
             dismiss()
@@ -148,7 +193,7 @@ import Foundation
 
     public func dismiss() {
         collapseTask?.cancel()
-        transition(to: .collapsed)
+        transition(to: ambientContent != nil ? .ambient : .collapsed)
     }
 
     private func transition(to newState: NotchState) {

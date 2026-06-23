@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notchWindow: NotchWindow?
     private var settingsWindowController: SettingsWindowController?
     private var systemObserver: SystemObserver?
+    private var shortcutManager: GlobalShortcutManager?
     private(set) var updaterController: SPUStandardUpdaterController?
     private var statusItem: NSStatusItem?
 
@@ -36,6 +37,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.controller.statusModule = systemModule
 
         let dropZoneModule = DropZoneModule()
+        dropZoneModule.onAmbientUpdate = { [weak window] content in
+            window?.controller.setAmbient(content, sourceID: "dropzone", priority: 1)
+        }
         window.controller.onDragHoverChange = { [weak dropZoneModule] active in
             dropZoneModule?.isDragActive = active
         }
@@ -44,28 +48,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mediaModule.onBecameActive = { [weak window] in
             window?.controller.selectModule(id: "media")
         }
+        mediaModule.onAmbientUpdate = { [weak window] content in
+            window?.controller.setAmbient(content, sourceID: "media", priority: 3)
+        }
+
+        let timerModule = TimerModule()
+        timerModule.onAmbientUpdate = { [weak window] content in
+            window?.controller.setAmbient(content, sourceID: "timers", priority: 2)
+        }
 
         window.register(modules: [
             mediaModule,
-            TimerModule(),
+            timerModule,
             dropZoneModule,
             ClipboardModule(),
             systemModule,
         ])
 
         systemObserver = makeSystemObserver(for: window)
+        shortcutManager = makeShortcutManager(for: window)
         notchWindow = window
         settingsWindowController = settingsWC
+    }
+
+    /// Raccourci global ⌥ Space pour ouvrir/fermer le panneau.
+    @MainActor private func makeShortcutManager(for window: NotchWindow) -> GlobalShortcutManager {
+        let manager = GlobalShortcutManager()
+        manager.onActivated = { [weak window] in window?.controller.panelClicked() }
+        applyShortcutSetting(manager)
+        return manager
+    }
+
+    @MainActor
+    private func applyShortcutSetting(_ manager: GlobalShortcutManager) {
+        if SettingsStore.shared.globalShortcutEnabled {
+            manager.enable()
+        } else {
+            manager.disable()
+        }
+        withObservationTracking {
+            _ = SettingsStore.shared.globalShortcutEnabled
+        } onChange: { [weak manager] in
+            Task { @MainActor [weak manager] in
+                guard let manager else { return }
+                if SettingsStore.shared.globalShortcutEnabled {
+                    manager.enable()
+                } else {
+                    manager.disable()
+                }
+            }
+        }
     }
 
     /// Branche le HUD volume/luminosité sur la fenêtre encoche.
     @MainActor private func makeSystemObserver(for window: NotchWindow) -> SystemObserver {
         let observer = SystemObserver(settings: .shared)
         observer.onVolumeChange = { [weak window] value, isMuted in
-            window?.controller.showHUD(HUDContent(kind: .volume, value: value, isMuted: isMuted))
+            let tint = SettingsStore.shared.hudAccentColor
+            window?.controller.showHUD(HUDContent(kind: .volume, value: value, isMuted: isMuted, tint: tint))
         }
         observer.onBrightnessChange = { [weak window] value in
-            window?.controller.showHUD(HUDContent(kind: .brightness, value: value))
+            let tint = SettingsStore.shared.hudAccentColor
+            window?.controller.showHUD(HUDContent(kind: .brightness, value: value, tint: tint))
         }
         observer.start()
         return observer

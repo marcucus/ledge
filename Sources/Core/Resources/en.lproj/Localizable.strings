@@ -31,6 +31,8 @@
 "settings.appearance.panelWidth.standard" = "Standard";
 "settings.appearance.panelWidth.large" = "Large";
 "settings.appearance.showModuleLabels" = "Show module labels";
+"settings.appearance.hud.systemAccent" = "Use system accent color";
+"settings.appearance.hud.color" = "HUD accent color";
 "settings.display.fullscreen" = "Full Screen behavior";
 "settings.display.fullscreen.accessible" = "Stay accessible (appears on hover)";
 "settings.display.fullscreen.hidden" = "Hide automatically";
@@ -73,7 +75,9 @@
 "settings.section.modules" = "Modules";
 "settings.section.permissions" = "Permissions";
 "settings.section.shortcuts" = "Shortcuts";
-"settings.shortcuts.comingSoon" = "Keyboard shortcuts are coming in a future update.";
+"settings.modules.system.launcher.add" = "Add App…";
+"settings.modules.system.launcher.empty" = "No apps pinned yet";
+"settings.shortcuts.comingSoon" = "Additional shortcuts coming in a future update.";
 "settings.shortcuts.dropzone" = "Drop Zone";
 "settings.shortcuts.globalEnabled" = "Enable global shortcuts";
 "settings.shortcuts.media" = "Media";

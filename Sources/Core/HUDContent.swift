@@ -6,11 +6,13 @@ public struct HUDContent {
     public let kind: Kind
     public let value: Double // 0.0 – 1.0
     public let isMuted: Bool
+    public let tint: Color
 
-    public init(kind: Kind, value: Double, isMuted: Bool = false) {
+    public init(kind: Kind, value: Double, isMuted: Bool = false, tint: Color = .accentColor) {
         self.kind = kind
         self.value = max(0, min(1, value))
         self.isMuted = isMuted
+        self.tint = tint
     }
 
     public var icon: String {
@@ -23,13 +25,6 @@ public struct HUDContent {
             return "speaker.wave.3.fill"
         case .brightness:
             return value < 0.5 ? "sun.min.fill" : "sun.max.fill"
-        }
-    }
-
-    public var tint: Color {
-        switch kind {
-        case .volume: .white
-        case .brightness: Color(red: 1.0, green: 0.85, blue: 0.2)
         }
     }
 }

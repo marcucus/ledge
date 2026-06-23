@@ -66,6 +66,8 @@ public final class SystemModule: NotchModule {
         pollingSource.onRAM = { [weak self] stats in Task { @MainActor [weak self] in self?.ram = stats } }
         pollingSource.onNetwork = { [weak self] stats in Task { @MainActor [weak self] in self?.network = stats } }
         batterySource.start()
+        loadLauncherItems()
+        observeLauncherApps()
     }
 
     public func stop() {
@@ -132,17 +134,25 @@ public final class SystemModule: NotchModule {
         toggles[idx].icon = isOn ? "speaker.slash" : "speaker.wave.2"
     }
 
-    private func buildDefaultLauncher() {
-        // Pre-populate with a handful of common apps (skips if bundle doesn't exist)
-        let candidates: [(String, String)] = [
-            ("Safari", "/Applications/Safari.app"),
-            ("Terminal", "/System/Applications/Utilities/Terminal.app"),
-            ("Finder", "/System/Library/CoreServices/Finder.app"),
-        ]
-        launcherItems = candidates.compactMap { name, path in
-            let url = URL(fileURLWithPath: path)
+    private func buildDefaultLauncher() {}
+
+    private func loadLauncherItems() {
+        launcherItems = SettingsStore.shared.launcherApps.compactMap { path in
             guard FileManager.default.fileExists(atPath: path) else { return nil }
+            let url = URL(fileURLWithPath: path)
+            let name = url.deletingPathExtension().lastPathComponent
             return AppLauncherItem(bundleURL: url, name: name)
+        }
+    }
+
+    private func observeLauncherApps() {
+        withObservationTracking {
+            _ = SettingsStore.shared.launcherApps
+        } onChange: { [weak self] in
+            DispatchQueue.main.async {
+                self?.loadLauncherItems()
+                self?.observeLauncherApps()
+            }
         }
     }
 }

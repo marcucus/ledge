@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 @Observable public final class SettingsStore {
     public static let shared = SettingsStore()
@@ -34,6 +35,25 @@ import Foundation
     }
 
     // MARK: — Appearance
+
+    public var hudUseSystemAccent: Bool {
+        didSet { defaults.set(hudUseSystemAccent, forKey: Keys.hudUseSystemAccent) }
+    }
+
+    public var hudAccentColorComponents: [Double] {
+        didSet { defaults.set(hudAccentColorComponents, forKey: Keys.hudAccentColorComponents) }
+    }
+
+    public var hudAccentColor: Color {
+        if hudUseSystemAccent || hudAccentColorComponents.count < 3 {
+            return Color.accentColor
+        }
+        return Color(
+            red: hudAccentColorComponents[0],
+            green: hudAccentColorComponents[1],
+            blue: hudAccentColorComponents[2]
+        )
+    }
 
     public var panelWidth: PanelWidth {
         didSet { defaults.set(panelWidth.rawValue, forKey: Keys.panelWidth) }
@@ -95,12 +115,20 @@ import Foundation
         didSet { defaults.set(targetScreenName, forKey: Keys.targetScreenName) }
     }
 
+    // MARK: — System launcher
+
+    public var launcherApps: [String] {
+        didSet { defaults.set(launcherApps, forKey: Keys.launcherApps) }
+    }
+
     private init() {
         collapseDelay = defaults.double(forKey: Keys.collapseDelay).nonZero ?? 0.6
         launchAtLogin = defaults.bool(forKey: Keys.launchAtLogin)
         moduleOrder = (defaults.array(forKey: Keys.moduleOrder) as? [String]) ?? Self.defaultModuleOrder
         disabledModuleIDs = Set(defaults.stringArray(forKey: Keys.disabledModules) ?? [])
         hudReplaceSystem = defaults.object(forKey: Keys.hudReplaceSystem) as? Bool ?? true
+        hudUseSystemAccent = defaults.object(forKey: Keys.hudUseSystemAccent) as? Bool ?? true
+        hudAccentColorComponents = (defaults.array(forKey: Keys.hudAccentColorComponents) as? [Double]) ?? []
         panelWidth = PanelWidth(rawValue: defaults.integer(forKey: Keys.panelWidth)) ?? .standard
         cornerRadius = defaults.double(forKey: Keys.cornerRadius).nonZero ?? 12.0
         notchDetectionMode = NotchDetectionMode(rawValue: defaults.integer(forKey: Keys.notchDetectionMode)) ?? .automatic
@@ -113,7 +141,17 @@ import Foundation
         pomodoroShortBreakDuration = defaults.double(forKey: Keys.pomodoroShortBreakDuration).nonZero ?? 5
         pomodoroLongBreakDuration = defaults.double(forKey: Keys.pomodoroLongBreakDuration).nonZero ?? 15
         targetScreenName = defaults.string(forKey: Keys.targetScreenName) ?? ""
+        launcherApps = (defaults.stringArray(forKey: Keys.launcherApps)) ?? Self.defaultLauncherApps
     }
+
+    private static let defaultLauncherApps: [String] = {
+        let candidates = [
+            "/Applications/Safari.app",
+            "/System/Applications/Utilities/Terminal.app",
+            "/System/Library/CoreServices/Finder.app",
+        ]
+        return candidates.filter { FileManager.default.fileExists(atPath: $0) }
+    }()
 
     // MARK: — Module helpers
 
@@ -134,6 +172,8 @@ private enum Keys {
     static let moduleOrder = "moduleOrder"
     static let disabledModules = "disabledModules"
     static let hudReplaceSystem = "hudReplaceSystem"
+    static let hudUseSystemAccent = "hudUseSystemAccent"
+    static let hudAccentColorComponents = "hudAccentColorComponents"
     static let panelWidth = "panelWidth"
     static let cornerRadius = "cornerRadius"
     static let notchDetectionMode = "notchDetectionMode"
@@ -146,6 +186,7 @@ private enum Keys {
     static let pomodoroShortBreakDuration = "pomodoroShortBreakDuration"
     static let pomodoroLongBreakDuration = "pomodoroLongBreakDuration"
     static let targetScreenName = "targetScreenName"
+    static let launcherApps = "launcherApps"
 }
 
 // MARK: — Helpers

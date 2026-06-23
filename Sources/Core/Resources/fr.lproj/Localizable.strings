@@ -31,6 +31,8 @@
 "settings.appearance.panelWidth.standard" = "Standard";
 "settings.appearance.panelWidth.large" = "Grand";
 "settings.appearance.showModuleLabels" = "Afficher les libellés des modules";
+"settings.appearance.hud.systemAccent" = "Utiliser la couleur d'accentuation système";
+"settings.appearance.hud.color" = "Couleur du HUD";
 "settings.display.fullscreen" = "Comportement plein écran";
 "settings.display.fullscreen.accessible" = "Rester accessible (au survol)";
 "settings.display.fullscreen.hidden" = "Masquer automatiquement";
@@ -73,7 +75,9 @@
 "settings.section.modules" = "Modules";
 "settings.section.permissions" = "Permissions";
 "settings.section.shortcuts" = "Raccourcis";
-"settings.shortcuts.comingSoon" = "Les raccourcis clavier arriveront dans une prochaine mise à jour.";
+"settings.modules.system.launcher.add" = "Ajouter une app…";
+"settings.modules.system.launcher.empty" = "Aucune app épinglée";
+"settings.shortcuts.comingSoon" = "D'autres raccourcis arriveront dans une prochaine mise à jour.";
 "settings.shortcuts.dropzone" = "Drop Zone";
 "settings.shortcuts.globalEnabled" = "Activer les raccourcis globaux";
 "settings.shortcuts.media" = "Média";

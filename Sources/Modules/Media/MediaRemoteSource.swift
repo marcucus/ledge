@@ -29,10 +29,13 @@ final class MediaRemoteSource: MediaSource {
                 let isPlaying = (info["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double ?? 0) > 0
                 let artwork = (info["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data)
                     .flatMap(NSImage.init(data:))
+                let shuffleMode = info["kMRMediaRemoteNowPlayingInfoShuffleMode"] as? Int ?? 0
+                let repeatMode = info["kMRMediaRemoteNowPlayingInfoRepeatMode"] as? Int ?? 0
                 continuation.resume(returning: MediaState(
                     title: title, artist: artist, album: album,
                     artwork: artwork, isPlaying: isPlaying,
-                    elapsed: elapsed, duration: duration
+                    elapsed: elapsed, duration: duration,
+                    shuffleMode: shuffleMode, repeatMode: repeatMode
                 ))
             }
         }
@@ -61,6 +64,8 @@ private extension MediaCommand {
         case .nextTrack: 4
         case .previousTrack: 5
         case .seek: 45
+        case .toggleShuffle: 6
+        case .toggleRepeat: 7
         }
     }
 }
