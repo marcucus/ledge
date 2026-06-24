@@ -129,9 +129,16 @@ public final class SystemObserver {
         if volume >= 0, abs(volume - lastVolume) > HUDTuning.volumeThreshold {
             emitVolume(volume, muted: SystemObserver.isMuted())
         }
-        let brightness = SystemObserver.currentBrightness()
-        if brightness >= 0, abs(brightness - lastBrightness) > HUDTuning.brightnessThreshold {
-            emitBrightness(brightness)
+        if !settings.hudBrightnessManualOnly {
+            let brightness = SystemObserver.currentBrightness()
+            if brightness >= 0, abs(brightness - lastBrightness) > HUDTuning.brightnessThreshold {
+                emitBrightness(brightness)
+            }
+        } else {
+            // En mode manuel, on met à jour lastBrightness sans déclencher le HUD
+            // pour éviter un faux-positif au prochain changement clavier.
+            let brightness = SystemObserver.currentBrightness()
+            if brightness >= 0 { lastBrightness = brightness }
         }
     }
 
@@ -272,7 +279,10 @@ private enum HUDTuning {
     static let volumeStep: Float = 1.0 / 16.0
     static let fineStep: Float = 1.0 / 64.0 // Maj+Option : incrément plus fin
     static let volumeThreshold = 0.02
-    static let brightnessThreshold = 0.015
+    // 5 % : filtre les ajustements automatiques (True Tone, capteur ambiant) qui sont
+    // typiquement < 3 % par intervalle de 200 ms. Les touches clavier passent toujours
+    // par le chemin direct (emitBrightness) sans passer par ce seuil.
+    static let brightnessThreshold = 0.05
     static let defaultBrightness: Float = 0.5 // repli si la lecture échoue
 }
 

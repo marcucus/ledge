@@ -26,10 +26,12 @@ DMG_NAME      := $(BINARY_NAME)-$(VERSION).dmg
 BUILD_DIR     := .build/release
 
 # Sparkle XCFramework (SPM le place dans .build/artifacts)
+RELEASE_URL   := https://TODO
+
 SPARKLE_XCF   := $(shell find .build/artifacts -name "Sparkle.xcframework" 2>/dev/null | head -1)
 SPARKLE_FW    := $(SPARKLE_XCF)/macos-arm64_x86_64/Sparkle.framework
 
-.PHONY: all app sign dmg notarize clean
+.PHONY: all app sign dmg notarize release clean
 
 all: app
 
@@ -135,6 +137,31 @@ endif
 	  --wait
 	xcrun stapler staple $(DIST_DIR)/$(DMG_NAME)
 	@echo "✓ Notarisé et agrafé : $(DIST_DIR)/$(DMG_NAME)"
+
+# ─── 5. Publication ────────────────────────────────────────────────────────────
+# Prérequis : toutes les variables de notarize + RELEASE_URL (+ RELEASE_TOKEN optionnel)
+#
+# Usage :
+#   make release CHANGELOG="Fix timer ring, improve ambient"
+#   make release CHANGELOG="$(cat CHANGELOG.md)"
+#
+# Variables :
+#   RELEASE_TOKEN  Bearer token (optionnel)
+#   CHANGELOG      Texte du changelog (obligatoire)
+
+release: dmg
+ifndef CHANGELOG
+	$(error Définir CHANGELOG, ex: make release CHANGELOG="Fix timer ring")
+endif
+	@echo "▸ Publication de la release v$(VERSION)…"
+	@curl --fail --silent --show-error \
+	  -X POST \
+	  $(if $(RELEASE_TOKEN),-H "Authorization: Bearer $(RELEASE_TOKEN)") \
+	  -F "version=$(VERSION)" \
+	  -F "changelog=$(CHANGELOG)" \
+	  -F "file=@$(DIST_DIR)/$(DMG_NAME)" \
+	  "$(RELEASE_URL)"
+	@echo "✓ Release v$(VERSION) publiée → $(RELEASE_URL)"
 
 # ─── Nettoyage ─────────────────────────────────────────────────────────────────
 

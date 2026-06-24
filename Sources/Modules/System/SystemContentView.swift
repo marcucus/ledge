@@ -6,6 +6,7 @@ import SwiftUI
 
 struct SystemContentView: View {
     var module: SystemModule
+    private var settings: SettingsStore { SettingsStore.shared }
 
     var body: some View {
         ScrollView(.vertical) {
@@ -27,10 +28,10 @@ struct SystemContentView: View {
     private var gaugesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             sectionHeader("system.section.gauges")
-            batteryRow
-            cpuRow
-            ramRow
-            networkRow
+            if settings.systemShowBattery { batteryRow }
+            if settings.systemShowCPU { cpuRow }
+            if settings.systemShowRAM { ramRow }
+            if settings.systemShowNetwork { networkRow }
         }
     }
 

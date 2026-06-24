@@ -17,35 +17,25 @@ struct ShortcutsSettingsView: View {
 
             Section {
                 shortcutRow(nameKey: "settings.shortcuts.openClose", shortcut: "⌥ Space")
-                shortcutRow(nameKey: "settings.shortcuts.paste")
-                shortcutRow(nameKey: "settings.shortcuts.newTimer")
-            }
-
-            Section {
-                Text("settings.shortcuts.comingSoon", bundle: localizationBundle)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 4)
+                shortcutRow(nameKey: "settings.shortcuts.paste",     shortcut: "⌥ V")
+                shortcutRow(nameKey: "settings.shortcuts.newTimer",  shortcut: "⌥ T")
+                shortcutRow(nameKey: "settings.shortcuts.openMedia", shortcut: "⌥ M")
             }
         }
         .formStyle(.grouped)
         .navigationTitle(Text("settings.section.shortcuts", bundle: localizationBundle))
     }
 
-    private func shortcutRow(nameKey: String, shortcut: String = "") -> some View {
+    private func shortcutRow(nameKey: String, shortcut: String) -> some View {
         HStack {
             Text(LocalizedStringKey(nameKey), bundle: localizationBundle)
             Spacer()
-            if shortcut.isEmpty {
-                Text("—").foregroundStyle(.tertiary)
-            } else {
-                Text(shortcut)
-                    .font(.system(.callout, design: .monospaced))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.secondary.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-            }
+            Text(shortcut)
+                .font(.system(.callout, design: .monospaced))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.secondary.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
         }
         .opacity(store.globalShortcutEnabled ? 1 : 0.4)
     }

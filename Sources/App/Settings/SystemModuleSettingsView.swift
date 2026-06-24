@@ -9,6 +9,23 @@ struct SystemModuleSettingsView: View {
     var body: some View {
         Form {
             Section {
+                Toggle(isOn: Binding(get: { store.systemShowCPU }, set: { store.systemShowCPU = $0 })) {
+                    Text("settings.modules.system.showCPU", bundle: localizationBundle)
+                }
+                Toggle(isOn: Binding(get: { store.systemShowRAM }, set: { store.systemShowRAM = $0 })) {
+                    Text("settings.modules.system.showRAM", bundle: localizationBundle)
+                }
+                Toggle(isOn: Binding(get: { store.systemShowBattery }, set: { store.systemShowBattery = $0 })) {
+                    Text("settings.modules.system.showBattery", bundle: localizationBundle)
+                }
+                Toggle(isOn: Binding(get: { store.systemShowNetwork }, set: { store.systemShowNetwork = $0 })) {
+                    Text("settings.modules.system.showNetwork", bundle: localizationBundle)
+                }
+            } header: {
+                Text("settings.modules.system.gauges", bundle: localizationBundle)
+            }
+
+            Section {
                 if paths.isEmpty {
                     Text("settings.modules.system.launcher.empty", bundle: localizationBundle)
                         .foregroundStyle(.secondary)

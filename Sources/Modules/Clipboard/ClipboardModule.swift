@@ -51,6 +51,11 @@ public final class ClipboardModule: NotchModule {
         simulatePaste()
     }
 
+    public func pasteLatest() {
+        guard let first = items.first else { return }
+        paste(item: first)
+    }
+
     func clearHistory() {
         items.removeAll()
     }

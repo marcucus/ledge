@@ -14,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var shortcutManager: GlobalShortcutManager?
     private(set) var updaterController: SPUStandardUpdaterController?
     private var statusItem: NSStatusItem?
+    private var timerModule: TimerModule?
+    private var clipboardModule: ClipboardModule?
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
@@ -56,12 +58,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         timerModule.onAmbientUpdate = { [weak window] content in
             window?.controller.setAmbient(content, sourceID: "timers", priority: 2)
         }
+        self.timerModule = timerModule
+
+        let clipboardModule = ClipboardModule()
+        self.clipboardModule = clipboardModule
 
         window.register(modules: [
             mediaModule,
             timerModule,
             dropZoneModule,
-            ClipboardModule(),
+            clipboardModule,
             systemModule,
         ])
 
@@ -71,10 +77,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindowController = settingsWC
     }
 
-    /// Raccourci global ⌥ Space pour ouvrir/fermer le panneau.
+    /// Raccourcis globaux : ⌥Space (ouvrir), ⌥V (coller), ⌥T (timer), ⌥M (média).
     @MainActor private func makeShortcutManager(for window: NotchWindow) -> GlobalShortcutManager {
         let manager = GlobalShortcutManager()
-        manager.onActivated = { [weak window] in window?.controller.panelClicked() }
+
+        manager.onOpenClose = { [weak window] in window?.controller.panelClicked() }
+
+        manager.onPaste = { [weak self] in self?.clipboardModule?.pasteLatest() }
+
+        manager.onNewTimer = { [weak window] in
+            window?.controller.selectModule(id: "timers")
+            if window?.controller.state == .collapsed || window?.controller.state == .ambient {
+                window?.controller.cursorEntered()
+            }
+        }
+
+        manager.onOpenMedia = { [weak window] in
+            window?.controller.selectModule(id: "media")
+            if window?.controller.state == .collapsed || window?.controller.state == .ambient {
+                window?.controller.cursorEntered()
+            }
+        }
+
         applyShortcutSetting(manager)
         return manager
     }

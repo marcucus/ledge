@@ -159,7 +159,12 @@ import SwiftUI
                 cachedArtworkColor = artwork?.dominantColor ?? .white
             }
             onAmbientUpdate?(.init(
-                kind: .music(artwork: artwork, isPlaying: nowPlaying.isPlaying),
+                kind: .music(
+                    artwork: artwork,
+                    isPlaying: nowPlaying.isPlaying,
+                    elapsed: nowPlaying.elapsed,
+                    duration: nowPlaying.duration
+                ),
                 accentColor: cachedArtworkColor
             ))
         } else {

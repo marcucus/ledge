@@ -31,6 +31,20 @@ struct TimerModuleSettingsView: View {
                 )) {
                     Text("settings.modules.timer.timerRing", bundle: localizationBundle)
                 }
+
+                Toggle(isOn: Binding(
+                    get: { store.timerSoundEnabled },
+                    set: { store.timerSoundEnabled = $0 }
+                )) {
+                    Text("settings.modules.timer.sound", bundle: localizationBundle)
+                }
+
+                Toggle(isOn: Binding(
+                    get: { store.timerAlertVisualOnly },
+                    set: { store.timerAlertVisualOnly = $0 }
+                )) {
+                    Text("settings.modules.timer.visualOnly", bundle: localizationBundle)
+                }
             }
         }
         .formStyle(.grouped)

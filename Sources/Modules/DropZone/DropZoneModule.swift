@@ -33,7 +33,17 @@ public final class DropZoneModule: NotchModule {
     // MARK: — Shelf operations
 
     public func addURLs(_ urls: [URL]) {
-        for url in urls {
+        let filtered: [URL]
+        if SettingsStore.shared.dropZoneAcceptFolders {
+            filtered = urls
+        } else {
+            filtered = urls.filter { url in
+                var isDir: ObjCBool = false
+                FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+                return !isDir.boolValue
+            }
+        }
+        for url in filtered {
             guard !items.contains(where: { $0.url == url }) else { continue }
             items.append(ShelfItem(url: url))
         }

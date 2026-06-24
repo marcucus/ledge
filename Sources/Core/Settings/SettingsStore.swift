@@ -34,6 +34,11 @@ import SwiftUI
         didSet { defaults.set(hudReplaceSystem, forKey: Keys.hudReplaceSystem) }
     }
 
+    /// Si vrai, le HUD de luminosité n'apparaît que pour les touches clavier (pas l'auto-ajustement).
+    public var hudBrightnessManualOnly: Bool {
+        didSet { defaults.set(hudBrightnessManualOnly, forKey: Keys.hudBrightnessManualOnly) }
+    }
+
     // MARK: — Appearance
 
     public var hudUseSystemAccent: Bool {
@@ -63,6 +68,10 @@ import SwiftUI
         didSet { defaults.set(cornerRadius, forKey: Keys.cornerRadius) }
     }
 
+    public var panelOpacity: Double {
+        didSet { defaults.set(panelOpacity, forKey: Keys.panelOpacity) }
+    }
+
     // MARK: — Display
 
     public var notchDetectionMode: NotchDetectionMode {
@@ -75,6 +84,18 @@ import SwiftUI
 
     public var showRingWhenTimerActive: Bool {
         didSet { defaults.set(showRingWhenTimerActive, forKey: Keys.showRingWhenTimerActive) }
+    }
+
+    // MARK: — Animations
+
+    public var animationSpeed: AnimationSpeed {
+        didSet { defaults.set(animationSpeed.rawValue, forKey: Keys.animationSpeed) }
+    }
+
+    // MARK: — Click behavior
+
+    public var clickBehavior: ClickBehavior {
+        didSet { defaults.set(clickBehavior.rawValue, forKey: Keys.clickBehavior) }
     }
 
     // MARK: — Shortcuts
@@ -96,6 +117,14 @@ import SwiftUI
     }
 
     // MARK: — Timer / Pomodoro
+
+    public var timerSoundEnabled: Bool {
+        didSet { defaults.set(timerSoundEnabled, forKey: Keys.timerSoundEnabled) }
+    }
+
+    public var timerAlertVisualOnly: Bool {
+        didSet { defaults.set(timerAlertVisualOnly, forKey: Keys.timerAlertVisualOnly) }
+    }
 
     public var pomodoroWorkDuration: Double {
         didSet { defaults.set(pomodoroWorkDuration, forKey: Keys.pomodoroWorkDuration) }
@@ -121,19 +150,59 @@ import SwiftUI
         didSet { defaults.set(launcherApps, forKey: Keys.launcherApps) }
     }
 
+    // MARK: — Ambient / Media
+
+    public var ambientShowArtwork: Bool {
+        didSet { defaults.set(ambientShowArtwork, forKey: Keys.ambientShowArtwork) }
+    }
+
+    public var ambientShowProgress: Bool {
+        didSet { defaults.set(ambientShowProgress, forKey: Keys.ambientShowProgress) }
+    }
+
+    // MARK: — System gauges
+
+    public var systemShowCPU: Bool {
+        didSet { defaults.set(systemShowCPU, forKey: Keys.systemShowCPU) }
+    }
+
+    public var systemShowRAM: Bool {
+        didSet { defaults.set(systemShowRAM, forKey: Keys.systemShowRAM) }
+    }
+
+    public var systemShowBattery: Bool {
+        didSet { defaults.set(systemShowBattery, forKey: Keys.systemShowBattery) }
+    }
+
+    public var systemShowNetwork: Bool {
+        didSet { defaults.set(systemShowNetwork, forKey: Keys.systemShowNetwork) }
+    }
+
+    // MARK: — DropZone
+
+    public var dropZoneAcceptFolders: Bool {
+        didSet { defaults.set(dropZoneAcceptFolders, forKey: Keys.dropZoneAcceptFolders) }
+    }
+
     private init() {
         collapseDelay = defaults.double(forKey: Keys.collapseDelay).nonZero ?? 0.6
         launchAtLogin = defaults.bool(forKey: Keys.launchAtLogin)
         moduleOrder = (defaults.array(forKey: Keys.moduleOrder) as? [String]) ?? Self.defaultModuleOrder
         disabledModuleIDs = Set(defaults.stringArray(forKey: Keys.disabledModules) ?? [])
         hudReplaceSystem = defaults.object(forKey: Keys.hudReplaceSystem) as? Bool ?? true
+        hudBrightnessManualOnly = defaults.object(forKey: Keys.hudBrightnessManualOnly) as? Bool ?? true
         hudUseSystemAccent = defaults.object(forKey: Keys.hudUseSystemAccent) as? Bool ?? true
         hudAccentColorComponents = (defaults.array(forKey: Keys.hudAccentColorComponents) as? [Double]) ?? []
         panelWidth = PanelWidth(rawValue: defaults.integer(forKey: Keys.panelWidth)) ?? .standard
         cornerRadius = defaults.double(forKey: Keys.cornerRadius).nonZero ?? 12.0
+        panelOpacity = defaults.object(forKey: Keys.panelOpacity) as? Double ?? 1.0
         notchDetectionMode = NotchDetectionMode(rawValue: defaults.integer(forKey: Keys.notchDetectionMode)) ?? .automatic
         fullscreenBehavior = FullscreenBehavior(rawValue: defaults.integer(forKey: Keys.fullscreenBehavior)) ?? .accessible
         showRingWhenTimerActive = defaults.object(forKey: Keys.showRingWhenTimerActive) as? Bool ?? true
+        animationSpeed = AnimationSpeed(rawValue: defaults.object(forKey: Keys.animationSpeed) as? Int ?? -1) ?? .normal
+        clickBehavior = ClickBehavior(rawValue: defaults.object(forKey: Keys.clickBehavior) as? Int ?? -1) ?? .expand
+        timerSoundEnabled = defaults.object(forKey: Keys.timerSoundEnabled) as? Bool ?? true
+        timerAlertVisualOnly = defaults.object(forKey: Keys.timerAlertVisualOnly) as? Bool ?? false
         globalShortcutEnabled = defaults.object(forKey: Keys.globalShortcutEnabled) as? Bool ?? true
         showModuleLabels = defaults.object(forKey: Keys.showModuleLabels) as? Bool ?? false
         clipboardMaxItems = defaults.object(forKey: Keys.clipboardMaxItems) as? Int ?? 50
@@ -142,6 +211,13 @@ import SwiftUI
         pomodoroLongBreakDuration = defaults.double(forKey: Keys.pomodoroLongBreakDuration).nonZero ?? 15
         targetScreenName = defaults.string(forKey: Keys.targetScreenName) ?? ""
         launcherApps = (defaults.stringArray(forKey: Keys.launcherApps)) ?? Self.defaultLauncherApps
+        ambientShowArtwork = defaults.object(forKey: Keys.ambientShowArtwork) as? Bool ?? true
+        ambientShowProgress = defaults.object(forKey: Keys.ambientShowProgress) as? Bool ?? false
+        systemShowCPU = defaults.object(forKey: Keys.systemShowCPU) as? Bool ?? true
+        systemShowRAM = defaults.object(forKey: Keys.systemShowRAM) as? Bool ?? true
+        systemShowBattery = defaults.object(forKey: Keys.systemShowBattery) as? Bool ?? true
+        systemShowNetwork = defaults.object(forKey: Keys.systemShowNetwork) as? Bool ?? true
+        dropZoneAcceptFolders = defaults.object(forKey: Keys.dropZoneAcceptFolders) as? Bool ?? true
     }
 
     private static let defaultLauncherApps: [String] = {
@@ -172,13 +248,19 @@ private enum Keys {
     static let moduleOrder = "moduleOrder"
     static let disabledModules = "disabledModules"
     static let hudReplaceSystem = "hudReplaceSystem"
+    static let hudBrightnessManualOnly = "hudBrightnessManualOnly"
     static let hudUseSystemAccent = "hudUseSystemAccent"
     static let hudAccentColorComponents = "hudAccentColorComponents"
     static let panelWidth = "panelWidth"
     static let cornerRadius = "cornerRadius"
+    static let panelOpacity = "panelOpacity"
     static let notchDetectionMode = "notchDetectionMode"
     static let fullscreenBehavior = "fullscreenBehavior"
     static let showRingWhenTimerActive = "showRingWhenTimerActive"
+    static let animationSpeed = "animationSpeed"
+    static let clickBehavior = "clickBehavior"
+    static let timerSoundEnabled = "timerSoundEnabled"
+    static let timerAlertVisualOnly = "timerAlertVisualOnly"
     static let globalShortcutEnabled = "globalShortcutEnabled"
     static let showModuleLabels = "showModuleLabels"
     static let clipboardMaxItems = "clipboardMaxItems"
@@ -187,6 +269,13 @@ private enum Keys {
     static let pomodoroLongBreakDuration = "pomodoroLongBreakDuration"
     static let targetScreenName = "targetScreenName"
     static let launcherApps = "launcherApps"
+    static let ambientShowArtwork = "ambientShowArtwork"
+    static let ambientShowProgress = "ambientShowProgress"
+    static let systemShowCPU = "systemShowCPU"
+    static let systemShowRAM = "systemShowRAM"
+    static let systemShowBattery = "systemShowBattery"
+    static let systemShowNetwork = "systemShowNetwork"
+    static let dropZoneAcceptFolders = "dropZoneAcceptFolders"
 }
 
 // MARK: — Helpers

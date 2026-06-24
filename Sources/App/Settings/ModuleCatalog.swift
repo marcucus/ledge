@@ -19,7 +19,7 @@ enum ModuleCatalog {
             icon: "music.note",
             nameKey: "module.media.label",
             descriptionKey: "module.media.description",
-            settingsBuilder: nil
+            settingsBuilder: { store in AnyView(MediaModuleSettingsView(store: store)) }
         ),
         Entry(
             id: "timers",
@@ -33,7 +33,7 @@ enum ModuleCatalog {
             icon: "arrow.down.to.line",
             nameKey: "module.dropzone.label",
             descriptionKey: "module.dropzone.description",
-            settingsBuilder: nil
+            settingsBuilder: { store in AnyView(DropZoneModuleSettingsView(store: store)) }
         ),
         Entry(
             id: "clipboard",

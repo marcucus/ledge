@@ -58,7 +58,7 @@ struct NotchContentView: View {
     @ViewBuilder
     private var background: some View {
         Color.black
-            .opacity(state == .collapsed ? 0 : 1)
+            .opacity(state == .collapsed ? 0 : controller.panelBackgroundOpacity)
             .clipShape(NotchPanelShape(
                 topEar: state == .collapsed ? 0 : 12,
                 bottomRadius: state == .expanded ? controller.panelCornerRadius : 10
@@ -123,13 +123,13 @@ struct TimerRingView: View {
 
     var body: some View {
         if controller.timerRingActive {
-            TimelineView(.animation) { ctx in
+            TimelineView(.animation) { (ctx: TimelineViewDefaultContext) in
                 let t = ctx.date.timeIntervalSinceReferenceDate
                 let alpha = 0.5 + 0.4 * sin(t * .pi * 0.8)
                 NotchPanelShape(topEar: 0, bottomRadius: 10)
-                    .stroke(Color.orange.opacity(alpha), lineWidth: 1.5)
-                    .padding(.horizontal, NotchController.timerRingInset - 1)
-                    .padding(.bottom, NotchController.timerRingInset - 1)
+                    .stroke(controller.appAccentColor.opacity(alpha), lineWidth: 1.5)
+                    .padding(.horizontal, NotchController.timerRingInset)
+                    .padding(.bottom, NotchController.timerRingInset)
             }
         }
     }

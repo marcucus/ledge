@@ -1,3 +1,4 @@
+import SwiftUI
 import Foundation
 
 @MainActor @Observable public final class NotchController {
@@ -56,6 +57,21 @@ import Foundation
     /// Rayon des coins bas du panneau.
     public var panelCornerRadius: CGFloat { CGFloat(settings.cornerRadius) }
 
+    /// Couleur principale de l'app (HUD + timer ring + accents).
+    public var appAccentColor: Color { settings.hudAccentColor }
+
+    /// Facteur de vitesse pour toutes les animations.
+    public var animationScale: Double { settings.animationSpeed.scale }
+
+    /// Opacité du fond du panneau (hors état collapsed).
+    public var panelBackgroundOpacity: Double { settings.panelOpacity }
+
+    /// Afficher la pochette dans l'ambient.
+    public var ambientShowArtwork: Bool { settings.ambientShowArtwork }
+
+    /// Afficher la barre de progression dans l'ambient.
+    public var ambientShowProgress: Bool { settings.ambientShowProgress }
+
     /// Vrai si le timer ring doit être affiché (timer actif + réglage activé).
     public var timerRingActive: Bool {
         guard settings.showRingWhenTimerActive else { return false }
@@ -93,6 +109,8 @@ import Foundation
 
     /// Enregistre ou retire un contributeur ambient. La source avec la priorité la plus haute gagne.
     public func setAmbient(_ content: AmbientContent?, sourceID: String, priority: Int) {
+        let wasRingActive = timerRingActive
+
         if let content {
             ambientSources[sourceID] = (priority: priority, content: content)
         } else {
@@ -112,8 +130,13 @@ import Foundation
             if state == .collapsed { transition(to: .ambient) }
         } else if state == .ambient {
             transition(to: .collapsed)
-        } else if ambientContent == nil && state == .collapsed {
-            // reste collapsed
+        }
+
+        // Quand timerRingActive change en état collapsed, la fenêtre doit se redimensionner
+        // (s'agrandir pour afficher le ring, ou rétrécir quand il s'arrête). Comme il n'y a
+        // pas de transition d'état, on notifie NotchWindow directement via onTransition.
+        if state == .collapsed && timerRingActive != wasRingActive {
+            onTransition?(state)
         }
     }
 
@@ -185,7 +208,8 @@ import Foundation
     public func panelClicked() {
         collapseTask?.cancel()
         if state == .collapsed || state == .ambient {
-            transition(to: .expanded)
+            let target: NotchState = settings.clickBehavior == .peek ? .peeking : .expanded
+            transition(to: target)
         } else {
             dismiss()
         }
@@ -202,4 +226,3 @@ import Foundation
         onTransition?(newState)
     }
 }
-

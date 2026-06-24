@@ -33,8 +33,8 @@ struct AmbientView: View {
     private var leftContent: some View {
         if let ambient = controller.ambientContent {
             switch ambient.kind {
-            case .music(let artwork, _):
-                if let artwork {
+            case .music(let artwork, _, _, _):
+                if controller.ambientShowArtwork, let artwork {
                     Image(nsImage: artwork)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
@@ -73,9 +73,29 @@ struct AmbientView: View {
     private var rightContent: some View {
         if let ambient = controller.ambientContent {
             switch ambient.kind {
-            case .music(_, let isPlaying):
-                MusicVisualizerView(color: ambient.accentColor, isPlaying: isPlaying)
-                    .frame(width: 34, height: 18)
+            case .music(_, let isPlaying, let elapsed, let duration):
+                VStack(spacing: 2) {
+                    MusicVisualizerView(color: ambient.accentColor, isPlaying: isPlaying)
+                        .frame(width: 34, height: 14)
+                    if controller.ambientShowProgress && duration > 0 {
+                        TimelineView(.animation) { ctx in
+                            let live = elapsed + (isPlaying ? ctx.date.timeIntervalSince(ambient.timestamp) : 0)
+                            let progress = min(1.0, live / duration)
+                            Capsule()
+                                .fill(ambient.accentColor.opacity(0.5))
+                                .frame(height: 2)
+                                .overlay(
+                                    GeometryReader { geo in
+                                        Capsule()
+                                            .fill(ambient.accentColor)
+                                            .frame(width: geo.size.width * progress)
+                                    },
+                                    alignment: .leading
+                                )
+                        }
+                        .frame(width: 34, height: 2)
+                    }
+                }
             case .timer(_, let progress):
                 CircularProgressView(progress: progress, color: ambient.accentColor)
                     .frame(width: 22, height: 22)

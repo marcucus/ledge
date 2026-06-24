@@ -35,10 +35,28 @@ struct GeneralSettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                if store.hudReplaceSystem {
+                    Toggle(isOn: Binding(
+                        get: { store.hudBrightnessManualOnly },
+                        set: { store.hudBrightnessManualOnly = $0 }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("settings.general.hudBrightnessManualOnly", bundle: localizationBundle)
+                            Text("settings.general.hudBrightnessManualOnlyDetail", bundle: localizationBundle)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             }
 
             Section {
                 collapseDelayRow
+            }
+
+            Section {
+                clickBehaviorRow
             }
 
             Section {
@@ -66,6 +84,19 @@ struct GeneralSettingsView: View {
                     .frame(width: 48, alignment: .trailing)
             }
         }
+    }
+
+    private var clickBehaviorRow: some View {
+        Picker(selection: Binding(
+            get: { store.clickBehavior },
+            set: { store.clickBehavior = $0 }
+        )) {
+            Text("settings.general.clickBehavior.expand", bundle: localizationBundle).tag(ClickBehavior.expand)
+            Text("settings.general.clickBehavior.peek", bundle: localizationBundle).tag(ClickBehavior.peek)
+        } label: {
+            Text("settings.general.clickBehavior", bundle: localizationBundle)
+        }
+        .pickerStyle(.segmented)
     }
 
     private var languageRow: some View {

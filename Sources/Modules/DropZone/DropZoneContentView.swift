@@ -128,6 +128,13 @@ public struct DropZoneContentView: View {
         return handled
     }
 
+    private func shouldAccept(url: URL) -> Bool {
+        if SettingsStore.shared.dropZoneAcceptFolders { return true }
+        var isDir: ObjCBool = false
+        FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+        return !isDir.boolValue
+    }
+
     /// Finds the underlying NSView to anchor NSSharingServicePicker
     private func findNSView() -> NSView? {
         NSApplication.shared.keyWindow?.contentView

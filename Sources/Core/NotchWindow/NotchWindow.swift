@@ -192,7 +192,7 @@ public final class NotchWindow: NSPanel {
         }
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
-            duration: Layout.openDuration,
+            duration: Layout.openDuration * controller.animationScale,
             animated: animated
         ) { [weak self] in
             self?.revealClearBackground()
@@ -204,7 +204,7 @@ public final class NotchWindow: NSPanel {
         let size = CGSize(width: controller.expandedWidth, height: Layout.navbarHeight)
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
-            duration: Layout.peekDuration,
+            duration: Layout.peekDuration * controller.animationScale,
             animated: animated
         ) { [weak self] in
             self?.revealClearBackground()
@@ -219,7 +219,7 @@ public final class NotchWindow: NSPanel {
         )
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
-            duration: Layout.peekDuration,
+            duration: Layout.peekDuration * controller.animationScale,
             animated: animated
         ) { [weak self] in
             self?.revealClearBackground()
@@ -236,7 +236,7 @@ public final class NotchWindow: NSPanel {
         )
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
-            duration: Layout.ambientDuration,
+            duration: Layout.ambientDuration * controller.animationScale,
             animated: animated
         ) { [weak self] in
             self?.revealClearBackground()
@@ -258,12 +258,12 @@ public final class NotchWindow: NSPanel {
         let frame = makeFrame(size: size, geometry: geometry)
         if from == .expanded {
             // Fermeture symétrique à l'ouverture : la fenêtre se rétracte, puis redevient transparente.
-            transitionFrame(to: frame, duration: Layout.closeDuration, animated: true) { [weak self] in
+            transitionFrame(to: frame, duration: Layout.closeDuration * controller.animationScale, animated: true) { [weak self] in
                 self?.revealClearBackground()
             }
         } else {
             // Depuis peek / hud / ambient : rétrécir directement, fond déjà transparent.
-            transitionFrame(to: frame, duration: Layout.peekDuration, animated: true) { [weak self] in
+            transitionFrame(to: frame, duration: Layout.peekDuration * controller.animationScale, animated: true) { [weak self] in
                 self?.updateTrackingArea()
             }
         }

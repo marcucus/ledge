@@ -38,6 +38,7 @@ public final class TimerModule: NotchModule {
         }
         dispatchTimers.removeAll()
         entries.removeAll()
+        updateAmbient()
     }
 
     public func makePeekView() -> AnyView {
@@ -74,6 +75,7 @@ public final class TimerModule: NotchModule {
     public func removeTimer(id: UUID) {
         stopDispatchTimer(for: id)
         entries.removeAll { $0.id == id }
+        updateAmbient()
     }
 
     public func startPomodoro() {
@@ -126,7 +128,10 @@ public final class TimerModule: NotchModule {
     private func updateAmbient() {
         if let running = entries.first(where: { $0.isRunning }) {
             let progress = running.duration > 0 ? running.remaining / running.duration : 0
-            onAmbientUpdate?(.init(kind: .timer(label: running.label, progress: progress), accentColor: .orange))
+            onAmbientUpdate?(.init(
+                kind: .timer(label: running.label, progress: progress),
+                accentColor: SettingsStore.shared.hudAccentColor
+            ))
         } else {
             onAmbientUpdate?(nil)
         }
@@ -191,10 +196,16 @@ public final class TimerModule: NotchModule {
 
     private func sendFinishedNotification(for entry: TimerEntry) {
         guard Bundle.main.bundleIdentifier != nil else { return }
+        let settings = SettingsStore.shared
+        if settings.timerAlertVisualOnly { return }
         let content = UNMutableNotificationContent()
         content.title = entry.label
         content.body = NSLocalizedString("timer.notification.body", bundle: localizationBundle, comment: "")
-        content.sound = .default
+        if !settings.timerSoundEnabled {
+            content.sound = nil
+        } else {
+            content.sound = .default
+        }
         let request = UNNotificationRequest(
             identifier: entry.id.uuidString,
             content: content,
