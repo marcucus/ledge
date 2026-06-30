@@ -7,11 +7,37 @@ import SwiftUI
 struct ClipboardContentView: View {
     var module: ClipboardModule
 
+    @State private var searchText: String = ""
+
     var body: some View {
         VStack(spacing: 0) {
             toolbar
+            searchField
             Divider().opacity(0.4)
             itemList
+        }
+    }
+
+    // MARK: — Displayed items
+
+    /// `module.items` filtered by `searchText` (when non-empty) with pinned items first,
+    /// then the rest ordered newest to oldest (as already provided by the module).
+    private var displayedItems: [ClipboardItem] {
+        let filtered = filteredItems
+        let pinned = filtered.filter(\.isPinned)
+        let unpinned = filtered.filter { !$0.isPinned }
+        return pinned + unpinned
+    }
+
+    private var filteredItems: [ClipboardItem] {
+        guard !searchText.isEmpty else { return module.items }
+        return module.items.filter { item in
+            switch item.content {
+            case .text, .url:
+                item.content.previewText.localizedCaseInsensitiveContains(searchText)
+            case .image:
+                false
+            }
         }
     }
 
@@ -40,18 +66,42 @@ struct ClipboardContentView: View {
         .padding(.vertical, 6)
     }
 
+    // MARK: — Search field
+
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .imageScale(.small)
+                .foregroundStyle(.secondary)
+            TextField(
+                "clipboard.search.placeholder",
+                text: $searchText,
+                prompt: Text("clipboard.search.placeholder", bundle: localizationBundle)
+            )
+            .textFieldStyle(.plain)
+            .font(.caption)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 6))
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
+    }
+
     // MARK: — Item list
 
     @ViewBuilder
     private var itemList: some View {
-        if module.items.isEmpty {
+        if displayedItems.isEmpty {
             emptyState
         } else {
             ScrollView(.vertical) {
                 LazyVStack(spacing: 0) {
-                    ForEach(module.items) { item in
+                    ForEach(displayedItems) { item in
                         ClipboardRowView(item: item) {
                             module.paste(item: item)
+                        } onTogglePin: {
+                            module.togglePin(item)
                         }
                         Divider().opacity(0.2)
                     }
@@ -78,23 +128,43 @@ struct ClipboardContentView: View {
 private struct ClipboardRowView: View {
     let item: ClipboardItem
     let onTap: () -> Void
+    let onTogglePin: () -> Void
 
     var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 10) {
-                icon
-                    .frame(width: 20)
-                preview
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text(relativeDate)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+        HStack(spacing: 10) {
+            Button(action: onTap) {
+                HStack(spacing: 10) {
+                    icon
+                        .frame(width: 20)
+                    preview
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(relativeDate)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            pinButton
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+    }
+
+    // MARK: — Pin button
+
+    private var pinButton: some View {
+        Button(action: onTogglePin) {
+            Image(systemName: item.isPinned ? "pin.fill" : "pin")
+                .imageScale(.small)
+                .foregroundStyle(item.isPinned ? Color.accentColor : .secondary)
         }
         .buttonStyle(.plain)
+        .help(
+            item.isPinned
+                ? Text("clipboard.action.unpin", bundle: localizationBundle)
+                : Text("clipboard.action.pin", bundle: localizationBundle)
+        )
     }
 
     // MARK: — Icon

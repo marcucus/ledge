@@ -1,0 +1,2 @@
+"NSAppleEventsUsageDescription" = "Ledge utilise les évènements Apple pour contrôler la lecture (position, recherche) dans Music et Spotify.";
+"NSCalendarsFullAccessUsageDescription" = "Ledge a besoin d'accéder à votre calendrier pour afficher votre prochain évènement dans l'encoche.";

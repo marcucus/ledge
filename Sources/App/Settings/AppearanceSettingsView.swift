@@ -27,12 +27,9 @@ struct AppearanceSettingsView: View {
             }
 
             Section {
-                Toggle(isOn: Binding(
-                    get: { store.showModuleLabels },
-                    set: { store.showModuleLabels = $0 }
-                )) {
-                    Text("settings.appearance.showModuleLabels", bundle: localizationBundle)
-                }
+                ThemePresetRow(store: store)
+            } header: {
+                Text("settings.appearance.themes", bundle: localizationBundle)
             }
 
             Section {
@@ -144,6 +141,71 @@ struct AppearanceSettingsView: View {
                 set: { store.hudAccentColorComponents = $0 }
             )
         )
+    }
+}
+
+// MARK: — Named theme presets
+
+/// Rangée de cartes de thèmes nommés. Un clic applique couleur + opacité + rayon d'un coup.
+private struct ThemePresetRow: View {
+    var store: SettingsStore
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 10) {
+            ForEach(Theme.all) { theme in
+                ThemeCard(theme: theme, isSelected: store.activeThemeID == theme.id) {
+                    store.apply(theme)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct ThemeCard: View {
+    let theme: Theme
+    let isSelected: Bool
+    let action: () -> Void
+
+    private var accentColor: Color {
+        Color(red: theme.accent[0], green: theme.accent[1], blue: theme.accent[2])
+    }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                swatch
+                Text(LocalizedStringKey(theme.nameKey), bundle: localizationBundle)
+                    .font(.caption2)
+                    .lineLimit(1)
+                    .foregroundStyle(isSelected ? .primary : .secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(
+                        isSelected ? accentColor : Color.primary.opacity(0.1),
+                        lineWidth: isSelected ? 2 : 0.5
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.15), value: isSelected)
+    }
+
+    /// Aperçu miniature du thème : un panneau dont l'opacité et le rayon reflètent le preset.
+    private var swatch: some View {
+        RoundedRectangle(cornerRadius: theme.cornerRadius * 0.4)
+            .fill(accentColor.opacity(theme.panelOpacity))
+            .frame(width: 52, height: 28)
+            .overlay(
+                Circle()
+                    .fill(.white.opacity(0.85))
+                    .frame(width: 8, height: 8)
+            )
     }
 }
 

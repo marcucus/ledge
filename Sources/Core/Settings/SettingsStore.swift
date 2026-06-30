@@ -4,18 +4,16 @@ import SwiftUI
 @Observable public final class SettingsStore {
     public static let shared = SettingsStore()
 
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
 
-    public static let defaultModuleOrder = ["media", "timers", "dropzone", "clipboard", "system"]
+    public static let defaultModuleOrder = [
+        "media", "timers", "dropzone", "clipboard", "system", "shortcuts", "calendar", "notes",
+    ]
 
     // MARK: — General
 
     public var collapseDelay: Double {
         didSet { defaults.set(collapseDelay, forKey: Keys.collapseDelay) }
-    }
-
-    public var launchAtLogin: Bool {
-        didSet { defaults.set(launchAtLogin, forKey: Keys.launchAtLogin) }
     }
 
     // MARK: — Modules
@@ -104,6 +102,22 @@ import SwiftUI
         didSet { defaults.set(globalShortcutEnabled, forKey: Keys.globalShortcutEnabled) }
     }
 
+    public var shortcutOpenClose: GlobalKeyboardShortcut {
+        didSet { defaults.setShortcut(shortcutOpenClose, forKey: Keys.shortcutOpenClose) }
+    }
+
+    public var shortcutPaste: GlobalKeyboardShortcut {
+        didSet { defaults.setShortcut(shortcutPaste, forKey: Keys.shortcutPaste) }
+    }
+
+    public var shortcutNewTimer: GlobalKeyboardShortcut {
+        didSet { defaults.setShortcut(shortcutNewTimer, forKey: Keys.shortcutNewTimer) }
+    }
+
+    public var shortcutOpenMedia: GlobalKeyboardShortcut {
+        didSet { defaults.setShortcut(shortcutOpenMedia, forKey: Keys.shortcutOpenMedia) }
+    }
+
     // MARK: — NavBar
 
     public var showModuleLabels: Bool {
@@ -114,6 +128,12 @@ import SwiftUI
 
     public var clipboardMaxItems: Int {
         didSet { defaults.set(clipboardMaxItems, forKey: Keys.clipboardMaxItems) }
+    }
+
+    /// Persister l'historique du presse-papiers sur disque entre les lancements.
+    /// Désactivé par défaut : l'historique ne vit qu'en RAM (cf. doc 03, confidentialité).
+    public var clipboardPersistEnabled: Bool {
+        didSet { defaults.set(clipboardPersistEnabled, forKey: Keys.clipboardPersistEnabled) }
     }
 
     // MARK: — Timer / Pomodoro
@@ -178,15 +198,34 @@ import SwiftUI
         didSet { defaults.set(systemShowNetwork, forKey: Keys.systemShowNetwork) }
     }
 
+    /// Indicateur de confidentialité : micro en cours d'utilisation.
+    public var systemShowMicrophoneIndicator: Bool {
+        didSet { defaults.set(systemShowMicrophoneIndicator, forKey: Keys.systemShowMicrophoneIndicator) }
+    }
+
+    /// Jauge batterie des accessoires Bluetooth (AirPods, souris, clavier…).
+    public var systemShowAccessoryBattery: Bool {
+        didSet { defaults.set(systemShowAccessoryBattery, forKey: Keys.systemShowAccessoryBattery) }
+    }
+
     // MARK: — DropZone
 
     public var dropZoneAcceptFolders: Bool {
         didSet { defaults.set(dropZoneAcceptFolders, forKey: Keys.dropZoneAcceptFolders) }
     }
 
-    private init() {
+    // MARK: — App profiles
+
+    /// Profils de visibilité des modules par application au premier plan. Voir `AppProfile`.
+    public var appProfiles: [AppProfile] {
+        didSet { defaults.setCodable(appProfiles, forKey: Keys.appProfiles) }
+    }
+
+    /// `defaults` injectable pour les tests (instance isolée, ex. `UserDefaults(suiteName:)`) —
+    /// en production, utiliser `SettingsStore.shared` plutôt que d'instancier directement.
+    public init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         collapseDelay = defaults.double(forKey: Keys.collapseDelay).nonZero ?? 0.6
-        launchAtLogin = defaults.bool(forKey: Keys.launchAtLogin)
         moduleOrder = (defaults.array(forKey: Keys.moduleOrder) as? [String]) ?? Self.defaultModuleOrder
         disabledModuleIDs = Set(defaults.stringArray(forKey: Keys.disabledModules) ?? [])
         hudReplaceSystem = defaults.object(forKey: Keys.hudReplaceSystem) as? Bool ?? true
@@ -198,14 +237,19 @@ import SwiftUI
         panelOpacity = defaults.object(forKey: Keys.panelOpacity) as? Double ?? 1.0
         notchDetectionMode = NotchDetectionMode(rawValue: defaults.integer(forKey: Keys.notchDetectionMode)) ?? .automatic
         fullscreenBehavior = FullscreenBehavior(rawValue: defaults.integer(forKey: Keys.fullscreenBehavior)) ?? .accessible
-        showRingWhenTimerActive = defaults.object(forKey: Keys.showRingWhenTimerActive) as? Bool ?? true
+        showRingWhenTimerActive = defaults.object(forKey: Keys.showRingWhenTimerActive) as? Bool ?? false
         animationSpeed = AnimationSpeed(rawValue: defaults.object(forKey: Keys.animationSpeed) as? Int ?? -1) ?? .normal
         clickBehavior = ClickBehavior(rawValue: defaults.object(forKey: Keys.clickBehavior) as? Int ?? -1) ?? .expand
         timerSoundEnabled = defaults.object(forKey: Keys.timerSoundEnabled) as? Bool ?? true
         timerAlertVisualOnly = defaults.object(forKey: Keys.timerAlertVisualOnly) as? Bool ?? false
         globalShortcutEnabled = defaults.object(forKey: Keys.globalShortcutEnabled) as? Bool ?? true
+        shortcutOpenClose = defaults.shortcut(forKey: Keys.shortcutOpenClose) ?? .defaultOpenClose
+        shortcutPaste = defaults.shortcut(forKey: Keys.shortcutPaste) ?? .defaultPaste
+        shortcutNewTimer = defaults.shortcut(forKey: Keys.shortcutNewTimer) ?? .defaultNewTimer
+        shortcutOpenMedia = defaults.shortcut(forKey: Keys.shortcutOpenMedia) ?? .defaultOpenMedia
         showModuleLabels = defaults.object(forKey: Keys.showModuleLabels) as? Bool ?? false
         clipboardMaxItems = defaults.object(forKey: Keys.clipboardMaxItems) as? Int ?? 50
+        clipboardPersistEnabled = defaults.object(forKey: Keys.clipboardPersistEnabled) as? Bool ?? false
         pomodoroWorkDuration = defaults.double(forKey: Keys.pomodoroWorkDuration).nonZero ?? 25
         pomodoroShortBreakDuration = defaults.double(forKey: Keys.pomodoroShortBreakDuration).nonZero ?? 5
         pomodoroLongBreakDuration = defaults.double(forKey: Keys.pomodoroLongBreakDuration).nonZero ?? 15
@@ -217,7 +261,10 @@ import SwiftUI
         systemShowRAM = defaults.object(forKey: Keys.systemShowRAM) as? Bool ?? true
         systemShowBattery = defaults.object(forKey: Keys.systemShowBattery) as? Bool ?? true
         systemShowNetwork = defaults.object(forKey: Keys.systemShowNetwork) as? Bool ?? true
+        systemShowMicrophoneIndicator = defaults.object(forKey: Keys.systemShowMicrophoneIndicator) as? Bool ?? true
+        systemShowAccessoryBattery = defaults.object(forKey: Keys.systemShowAccessoryBattery) as? Bool ?? true
         dropZoneAcceptFolders = defaults.object(forKey: Keys.dropZoneAcceptFolders) as? Bool ?? true
+        appProfiles = defaults.codable([AppProfile].self, forKey: Keys.appProfiles) ?? []
     }
 
     private static let defaultLauncherApps: [String] = {
@@ -228,6 +275,30 @@ import SwiftUI
         ]
         return candidates.filter { FileManager.default.fileExists(atPath: $0) }
     }()
+
+    // MARK: — Themes
+
+    /// Applique un thème nommé : couleur d'accent + opacité + rayon des coins en une fois.
+    public func apply(_ theme: Theme) {
+        hudUseSystemAccent = false
+        hudAccentColorComponents = theme.accent
+        panelOpacity = theme.panelOpacity
+        cornerRadius = theme.cornerRadius
+    }
+
+    /// `id` du thème dont tous les réglages correspondent à l'état courant, sinon `nil`
+    /// (couleur système active ou réglages personnalisés ne correspondant à aucun thème).
+    public var activeThemeID: String? {
+        guard !hudUseSystemAccent, hudAccentColorComponents.count >= 3 else { return nil }
+        let tolerance = 0.005
+        return Theme.all.first { theme in
+            abs(hudAccentColorComponents[0] - theme.accent[0]) < tolerance &&
+                abs(hudAccentColorComponents[1] - theme.accent[1]) < tolerance &&
+                abs(hudAccentColorComponents[2] - theme.accent[2]) < tolerance &&
+                abs(panelOpacity - theme.panelOpacity) < tolerance &&
+                abs(cornerRadius - theme.cornerRadius) < tolerance
+        }?.id
+    }
 
     // MARK: — Module helpers
 
@@ -244,7 +315,6 @@ import SwiftUI
 
 private enum Keys {
     static let collapseDelay = "collapseDelay"
-    static let launchAtLogin = "launchAtLogin"
     static let moduleOrder = "moduleOrder"
     static let disabledModules = "disabledModules"
     static let hudReplaceSystem = "hudReplaceSystem"
@@ -262,8 +332,13 @@ private enum Keys {
     static let timerSoundEnabled = "timerSoundEnabled"
     static let timerAlertVisualOnly = "timerAlertVisualOnly"
     static let globalShortcutEnabled = "globalShortcutEnabled"
+    static let shortcutOpenClose = "shortcutOpenClose"
+    static let shortcutPaste = "shortcutPaste"
+    static let shortcutNewTimer = "shortcutNewTimer"
+    static let shortcutOpenMedia = "shortcutOpenMedia"
     static let showModuleLabels = "showModuleLabels"
     static let clipboardMaxItems = "clipboardMaxItems"
+    static let clipboardPersistEnabled = "clipboardPersistEnabled"
     static let pomodoroWorkDuration = "pomodoroWorkDuration"
     static let pomodoroShortBreakDuration = "pomodoroShortBreakDuration"
     static let pomodoroLongBreakDuration = "pomodoroLongBreakDuration"
@@ -275,7 +350,10 @@ private enum Keys {
     static let systemShowRAM = "systemShowRAM"
     static let systemShowBattery = "systemShowBattery"
     static let systemShowNetwork = "systemShowNetwork"
+    static let systemShowMicrophoneIndicator = "systemShowMicrophoneIndicator"
+    static let systemShowAccessoryBattery = "systemShowAccessoryBattery"
     static let dropZoneAcceptFolders = "dropZoneAcceptFolders"
+    static let appProfiles = "appProfiles"
 }
 
 // MARK: — Helpers
@@ -283,5 +361,27 @@ private enum Keys {
 private extension Double {
     var nonZero: Double? {
         self == 0 ? nil : self
+    }
+}
+
+private extension UserDefaults {
+    func shortcut(forKey key: String) -> GlobalKeyboardShortcut? {
+        guard let data = data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(GlobalKeyboardShortcut.self, from: data)
+    }
+
+    func setShortcut(_ shortcut: GlobalKeyboardShortcut, forKey key: String) {
+        guard let data = try? JSONEncoder().encode(shortcut) else { return }
+        set(data, forKey: key)
+    }
+
+    func setCodable<T: Encodable>(_ value: T, forKey key: String) {
+        guard let data = try? JSONEncoder().encode(value) else { return }
+        set(data, forKey: key)
+    }
+
+    func codable<T: Decodable>(_ type: T.Type, forKey key: String) -> T? {
+        guard let data = data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
     }
 }

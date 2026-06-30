@@ -16,27 +16,47 @@ struct ShortcutsSettingsView: View {
             }
 
             Section {
-                shortcutRow(nameKey: "settings.shortcuts.openClose", shortcut: "⌥ Space")
-                shortcutRow(nameKey: "settings.shortcuts.paste",     shortcut: "⌥ V")
-                shortcutRow(nameKey: "settings.shortcuts.newTimer",  shortcut: "⌥ T")
-                shortcutRow(nameKey: "settings.shortcuts.openMedia", shortcut: "⌥ M")
+                shortcutRow(
+                    nameKey: "settings.shortcuts.openClose",
+                    shortcut: store.shortcutOpenClose,
+                    onChange: { store.shortcutOpenClose = $0 }
+                )
+                shortcutRow(
+                    nameKey: "settings.shortcuts.paste",
+                    shortcut: store.shortcutPaste,
+                    onChange: { store.shortcutPaste = $0 }
+                )
+                shortcutRow(
+                    nameKey: "settings.shortcuts.newTimer",
+                    shortcut: store.shortcutNewTimer,
+                    onChange: { store.shortcutNewTimer = $0 }
+                )
+                shortcutRow(
+                    nameKey: "settings.shortcuts.openMedia",
+                    shortcut: store.shortcutOpenMedia,
+                    onChange: { store.shortcutOpenMedia = $0 }
+                )
+            } footer: {
+                Text("settings.shortcuts.recorderHint", bundle: localizationBundle)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
         .navigationTitle(Text("settings.section.shortcuts", bundle: localizationBundle))
     }
 
-    private func shortcutRow(nameKey: String, shortcut: String) -> some View {
+    private func shortcutRow(
+        nameKey: String,
+        shortcut: GlobalKeyboardShortcut,
+        onChange: @escaping (GlobalKeyboardShortcut) -> Void
+    ) -> some View {
         HStack {
             Text(LocalizedStringKey(nameKey), bundle: localizationBundle)
             Spacer()
-            Text(shortcut)
-                .font(.system(.callout, design: .monospaced))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color.secondary.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+            ShortcutRecorderView(shortcut: shortcut, onChange: onChange)
         }
+        .disabled(!store.globalShortcutEnabled)
         .opacity(store.globalShortcutEnabled ? 1 : 0.4)
     }
 }

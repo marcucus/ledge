@@ -108,8 +108,8 @@ et **remplacer** l'overlay natif de macOS.
 |---|---|---|
 | **Pochette d'album** | ⚠️ Partiel | MediaRemote est bloqué pour Apple Music sur macOS 15 (run non-bundlé) ; la notification distribuée `com.apple.Music.playerInfo` ne fournit pas d'image. Piste : `iTunesLibrary` via « Persistent ID ». |
 | **Seek Apple Music** | ✅ Contourné | MediaRemote bloqué → on passe par **AppleScript** (`set player position`) pour Music, MediaRemote (`MRMediaRemoteSetElapsedTime`) pour les autres lecteurs. Demande la permission **Automation** au 1er usage. |
-| **Suppression HUD natif en `swift run`** | ⚠️ Fragile | Le `CGEventTap` exige l'Accessibilité accordée au binaire `.build/.../notchy`. Plus fiable avec un vrai `.app` signé. La barre Ledge elle-même (polling) marche sans permission. |
-| **Distribution** | ⏳ À faire | Pas encore de bundle `.app` signé/notarisé ni de mécanisme de mise à jour (Sparkle). |
+| **Suppression HUD natif** | ✅ OK (bundle signé) | Le `CGEventTap` consomme les touches volume/luminosité **si l'Accessibilité est accordée**. Tester via `dist/Ledge.app` (`make app`), pas `swift run` (pas de bundle = pas de permission). `make app` signe avec une identité Apple Development **stable** → l'autorisation persiste entre les rebuilds. La barre Ledge (volume événementiel) marche sans permission. |
+| **Distribution** | ✅ En place | Bundle `.app` signé (ad-hoc dev / Developer ID via `make sign`), DMG (`make dmg`), notarisation (`make notarize`), mises à jour Sparkle (`make appcast`). `SUFeedURL` reste un placeholder tant que le domaine n'est pas choisi. |
 
 ## Permissions requises (récapitulatif)
 

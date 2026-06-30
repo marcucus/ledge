@@ -67,9 +67,20 @@ public final class TimerModule: NotchModule {
         }
     }
 
-    public func addTimer(label: String, duration: TimeInterval) {
+    @discardableResult
+    public func addTimer(label: String, duration: TimeInterval) -> UUID {
         let entry = TimerEntry(label: label, duration: duration)
         entries.append(entry)
+        return entry.id
+    }
+
+    /// Crée un timer et le démarre immédiatement. Retourne `nil` si la durée est nulle.
+    @discardableResult
+    public func addAndStart(label: String, duration: TimeInterval) -> UUID? {
+        guard duration > 0 else { return nil }
+        let id = addTimer(label: label, duration: duration)
+        send(.start(id: id))
+        return id
     }
 
     public func removeTimer(id: UUID) {
@@ -129,12 +140,18 @@ public final class TimerModule: NotchModule {
         if let running = entries.first(where: { $0.isRunning }) {
             let progress = running.duration > 0 ? running.remaining / running.duration : 0
             onAmbientUpdate?(.init(
-                kind: .timer(label: running.label, progress: progress),
+                kind: .timer(label: remainingLabel(running.remaining), progress: progress),
                 accentColor: SettingsStore.shared.hudAccentColor
             ))
         } else {
             onAmbientUpdate?(nil)
         }
+    }
+
+    /// Décompte vivant « m:ss » affiché dans la pill ambient (mis à jour à chaque tick).
+    private func remainingLabel(_ remaining: TimeInterval) -> String {
+        let total = max(0, Int(remaining))
+        return String(format: "%d:%02d", total / 60, total % 60)
     }
 
     // MARK: — DispatchSourceTimer

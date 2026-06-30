@@ -14,6 +14,7 @@ public final class ClipboardModule: NotchModule {
     private(set) var items: [ClipboardItem] = []
 
     @ObservationIgnored private let source = ClipboardSource()
+    @ObservationIgnored private let historyStore = ClipboardHistoryStore()
 
     /// nonisolated(unsafe) so deinit (non-isolated) can reach it
     @ObservationIgnored private nonisolated(unsafe) var _source: ClipboardSource
@@ -29,6 +30,9 @@ public final class ClipboardModule: NotchModule {
     // MARK: — NotchModule
 
     public func start() {
+        if SettingsStore.shared.clipboardPersistEnabled {
+            items = historyStore.load()
+        }
         let max = SettingsStore.shared.clipboardMaxItems
         source.maxItems = max > 0 ? max : Int.max
         source.onNewItem = { [weak self] item in
@@ -37,7 +41,7 @@ public final class ClipboardModule: NotchModule {
         }
         source.start()
         if max > 0 { trim(to: max) }
-        observeMaxItems()
+        observeSettings()
     }
 
     public func stop() {
@@ -58,20 +62,39 @@ public final class ClipboardModule: NotchModule {
 
     func clearHistory() {
         items.removeAll()
+        // Toujours effacer le fichier, même si la persistance est désormais désactivée :
+        // une session précédente peut avoir laissé un historique sur disque.
+        historyStore.clear()
+    }
+
+    /// Toggles the pinned state of `item`. Pinned items are kept first in the list
+    /// and are never removed when the history is trimmed to `clipboardMaxItems`.
+    func togglePin(_ item: ClipboardItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        items[index].isPinned.toggle()
+        if SettingsStore.shared.clipboardPersistEnabled {
+            historyStore.save(items)
+        }
     }
 
     // MARK: — Settings observation
 
-    private func observeMaxItems() {
+    private func observeSettings() {
         withObservationTracking {
             _ = SettingsStore.shared.clipboardMaxItems
+            _ = SettingsStore.shared.clipboardPersistEnabled
         } onChange: { [weak self] in
             DispatchQueue.main.async {
                 guard let self else { return }
                 let max = SettingsStore.shared.clipboardMaxItems
                 self.source.maxItems = max > 0 ? max : Int.max
                 if max > 0 { self.trim(to: max) }
-                self.observeMaxItems()
+                if SettingsStore.shared.clipboardPersistEnabled {
+                    self.historyStore.save(self.items)
+                } else {
+                    self.historyStore.clear()
+                }
+                self.observeSettings()
             }
         }
     }
@@ -81,14 +104,23 @@ public final class ClipboardModule: NotchModule {
     private func append(_ item: ClipboardItem) {
         items.insert(item, at: 0)
         let max = SettingsStore.shared.clipboardMaxItems
-        if max > 0, items.count > max {
-            items.removeLast(items.count - max)
+        if max > 0 { trim(to: max) }
+        if SettingsStore.shared.clipboardPersistEnabled {
+            historyStore.save(items)
         }
     }
 
+    /// Removes the oldest non-pinned items until at most `max` non-pinned items remain.
+    /// Pinned items never count toward the limit and are never removed here.
     private func trim(to max: Int) {
-        guard items.count > max else { return }
-        items.removeLast(items.count - max)
+        let unpinnedCount = items.filter { !$0.isPinned }.count
+        guard unpinnedCount > max else { return }
+        var overflow = unpinnedCount - max
+        for index in items.indices.reversed() where overflow > 0 {
+            guard !items[index].isPinned else { continue }
+            items.remove(at: index)
+            overflow -= 1
+        }
     }
 
     private func writeToPasteboard(_ item: ClipboardItem) {

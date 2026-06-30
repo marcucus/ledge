@@ -9,8 +9,9 @@ Une app **ultra-légère** (Swift natif, aucun runtime tiers) qui dort tant que 
 n'interagit pas, et qui étend l'encoche en un panneau riche au survol / au clic.
 
 **Principe de légèreté :** la conso ne vient pas du langage seul, mais du fait de
-**ne rien faire au repos** — on s'abonne aux événements système, on ne fait pas de polling,
-et les jauges ne se rafraîchissent que panneau ouvert.
+**ne presque rien faire au repos** — on privilégie l'événementiel (listeners CoreAudio pour le
+volume, observateurs système), le polling restant est borné/à intervalle large, et les jauges ne
+se rafraîchissent que panneau ouvert.
 
 ## Stack retenue
 
@@ -18,7 +19,7 @@ et les jauges ne se rafraîchissent que panneau ouvert.
 - **SwiftUI** → le contenu des panneaux et widgets.
 - **`LSUIElement`** → agent en arrière-plan, pas d'icône dans le Dock.
 - **Multilingue** → suit la langue du Mac par défaut, sélecteur de langue dans les Paramètres (String Catalog, aucun texte en dur).
-- Cible : Apple Silicon, macOS 13+ (encoche = MacBook Pro/Air 2021+).
+- Cible : Apple Silicon, macOS 14+ (encoche = MacBook Pro/Air 2021+).
 
 ## Les 4 modules
 
@@ -56,9 +57,10 @@ et les jauges ne se rafraîchissent que panneau ouvert.
 
 ## Statut
 
-📐 **Conception** Toute la spécification est posée : concept & interaction, les 4 modules,
-l'écran Paramètres (avec les 4 choix utilisateur : multi-écran, plein écran, permissions, détection
-dynamique de l'encoche), l'architecture technique, et les **conventions de code** ([doc 08](docs/08-conventions-de-code.md)).
+🛠️ **Implémentation avancée** — la fenêtre encoche (5 états), les modules (Média, Timers, Drop
+Zone, Presse-papiers, Système, Raccourcis, Calendrier, Notes), l'écran Paramètres et la
+distribution (DMG signé/notarisé + Sparkle) sont en place. Détail de l'avancée et du contexte
+technique : [doc 09](docs/09-avancement-et-contexte.md) · plan & suivi : [doc 10](docs/10-audit-et-plan.md).
 
 ## Licence
 

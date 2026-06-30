@@ -4,6 +4,7 @@
 # make sign     → signe avec Developer ID (nécessite DEVELOPER_ID_APP)
 # make dmg      → crée dist/Ledge-<VERSION>.dmg prêt à distribuer
 # make notarize → envoie à Apple pour notarisation (nécessite APPLE_ID + TEAM_ID)
+# make appcast  → signe le(s) .dmg et génère dist/appcast.xml (Sparkle)
 # make clean    → supprime dist/ et .build/
 #
 # Variables à définir (via env ou CLI) :
@@ -25,11 +26,19 @@ BINARY        := $(MACOS_DIR)/$(BINARY_NAME)
 DMG_NAME      := $(BINARY_NAME)-$(VERSION).dmg
 BUILD_DIR     := .build/release
 
+# Identité de signature pour le build de DEV (`make app`). Une identité stable (certificat
+# Apple Development) garde le même "designated requirement" entre les rebuilds → l'autorisation
+# Accessibilité accordée à Ledge.app PERSISTE (contrairement à l'ad-hoc dont le hash change).
+# Auto-détecte le 1er certificat Apple Development ; sinon repli sur ad-hoc ("-").
+DEV_IDENTITY  := $(shell security find-identity -v -p codesigning 2>/dev/null | grep -m1 "Apple Development" | sed -E 's/.*"(.*)"/\1/')
+DEV_SIGN      := $(if $(DEV_IDENTITY),$(DEV_IDENTITY),-)
+
 # Sparkle XCFramework (SPM le place dans .build/artifacts)
 RELEASE_URL   := https://TODO
 
 SPARKLE_XCF   := $(shell find .build/artifacts -name "Sparkle.xcframework" 2>/dev/null | head -1)
 SPARKLE_FW    := $(SPARKLE_XCF)/macos-arm64_x86_64/Sparkle.framework
+GENERATE_APPCAST := $(shell find .build/artifacts -path "*/bin/generate_appcast" 2>/dev/null | head -1)
 
 .PHONY: all app sign dmg notarize release clean
 
@@ -52,6 +61,17 @@ app:
 	# Info.plist
 	cp Sources/App/Info.plist $(CONTENTS)/Info.plist
 
+	# Localisation des clés Info.plist (NSAppleEventsUsageDescription, etc.) :
+	# macOS ne lit InfoPlist.strings qu'à la racine de Resources/<lang>.lproj/,
+	# pas dans un sous-bundle SPM — on les copie donc directement ici.
+	@for lang in en fr; do \
+	  src="Sources/App/Resources/$$lang.lproj/InfoPlist.strings"; \
+	  if [ -f "$$src" ]; then \
+	    mkdir -p "$(RES_DIR)/$$lang.lproj"; \
+	    cp "$$src" "$(RES_DIR)/$$lang.lproj/InfoPlist.strings"; \
+	  fi; \
+	done
+
 	# Bundles de ressources SPM (localisation…)
 	@for b in $(BUILD_DIR)/*.bundle; do \
 	  [ -d "$$b" ] && cp -r "$$b" $(RES_DIR)/ && echo "  ressources: $$b" || true; \
@@ -66,15 +86,16 @@ app:
 	  echo "  ⚠  Sparkle.framework non trouvé (exécuter swift build d'abord)"; \
 	fi
 
-	# Signature ad-hoc : binaires internes Sparkle en premier, puis l'app
+	# Binaires internes Sparkle (ad-hoc, pas concernés par TCC) en premier…
 	@if [ -d "$(FRAMEWORKS)/Sparkle.framework" ]; then \
 	  codesign --force --sign - $(FRAMEWORKS)/Sparkle.framework/Autoupdate 2>/dev/null || true; \
 	  codesign --force --sign - --identifier org.sparkle-project.Sparkle \
 	    $(FRAMEWORKS)/Sparkle.framework 2>/dev/null || true; \
 	fi
-	codesign --force --sign - $(BINARY)
-	codesign --force --sign - $(BUNDLE)
-	@echo "✓ $(BUNDLE) — signature ad-hoc"
+	# …puis l'app avec l'identité DEV stable (→ autorisation Accessibilité persistante).
+	codesign --force --sign "$(DEV_SIGN)" $(BINARY)
+	codesign --force --sign "$(DEV_SIGN)" $(BUNDLE)
+	@echo "✓ $(BUNDLE) — signé avec : $(DEV_SIGN)"
 
 # ─── 2. Signature Developer ID ─────────────────────────────────────────────────
 
@@ -138,7 +159,21 @@ endif
 	xcrun stapler staple $(DIST_DIR)/$(DMG_NAME)
 	@echo "✓ Notarisé et agrafé : $(DIST_DIR)/$(DMG_NAME)"
 
-# ─── 5. Publication ────────────────────────────────────────────────────────────
+# ─── 5. Appcast Sparkle ────────────────────────────────────────────────────────
+# Signe le(s) .dmg de dist/ avec la clé EdDSA du Keychain (générée via
+# generate_keys, cf. Sources/App/Info.plist → SUPublicEDKey) et écrit/met à jour
+# dist/appcast.xml. À uploader avec le(s) .dmg vers l'hébergement choisi pour
+# SUFeedURL (cf. docs/10-audit-et-plan.md).
+
+appcast: notarize
+ifeq ($(strip $(GENERATE_APPCAST)),)
+	$(error generate_appcast introuvable — exécuter `swift build` au moins une fois)
+endif
+	@echo "▸ Génération de l'appcast Sparkle…"
+	$(GENERATE_APPCAST) $(DIST_DIR)
+	@echo "✓ $(DIST_DIR)/appcast.xml"
+
+# ─── 6. Publication ────────────────────────────────────────────────────────────
 # Prérequis : toutes les variables de notarize + RELEASE_URL (+ RELEASE_TOKEN optionnel)
 #
 # Usage :

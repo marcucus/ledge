@@ -5,8 +5,8 @@ import Foundation
     public private(set) var state: NotchState = .collapsed
     public private(set) var modules: [any NotchModule] = []
     public private(set) var selectedModuleID: String = ""
-    public var notchWidth: CGFloat = 190
-    public var notchHeight: CGFloat = 32
+    public var notchWidth: CGFloat = NotchGeometry.fallbackSize.width
+    public var notchHeight: CGFloat = NotchGeometry.fallbackSize.height
 
     public var onTransition: ((NotchState) -> Void)?
     public var openSettings: (() -> Void)?
@@ -31,14 +31,28 @@ import Foundation
     public static let timerRingInset: CGFloat = 6
 
     private let settings: SettingsStore
+    /// Bundle ID de l'app au premier plan, fournie par `updateActiveProfile`. Nil = aucune app
+    /// suivie ou aucun profil ne s'applique : le comportement global (réglages) prévaut.
+    private var activeBundleID: String?
 
-    /// Modules réellement affichés : catalogue filtré (activés) et trié selon les réglages.
+    /// Modules réellement affichés : catalogue filtré (activés) et trié selon les réglages,
+    /// ou selon le profil d'app actif s'il y en a un (voir `updateActiveProfile`).
     /// Recalculé à la lecture → la NavBar réagit à chaud aux changements de `SettingsStore`.
     public var visibleModules: [any NotchModule] {
-        let order = settings.moduleOrder
+        let (order, isEnabled) = moduleVisibilityRules()
         return modules
-            .filter { settings.isModuleEnabled($0.id) }
+            .filter(isEnabled)
             .sorted { (order.firstIndex(of: $0.id) ?? .max) < (order.firstIndex(of: $1.id) ?? .max) }
+    }
+
+    /// Ordre et règle d'activation à appliquer : ceux du profil actif si un `AppProfile`
+    /// correspond à `activeBundleID`, sinon les réglages globaux (`SettingsStore`).
+    private func moduleVisibilityRules() -> (order: [String], isEnabled: (any NotchModule) -> Bool) {
+        if let bundleID = activeBundleID,
+           let profile = settings.appProfiles.first(where: { $0.bundleID == bundleID }) {
+            return (profile.moduleOrder, { !profile.disabledModuleIDs.contains($0.id) })
+        }
+        return (settings.moduleOrder, { [settings] module in settings.isModuleEnabled(module.id) })
     }
 
     public var selectedModule: (any NotchModule)? {
@@ -105,6 +119,16 @@ import Foundation
         selectedModuleID = id
     }
 
+    /// Met à jour la bundle ID de l'app au premier plan, utilisée pour résoudre un éventuel
+    /// `AppProfile` dans `visibleModules`. À appeler depuis `FrontmostAppObserver.onActiveAppChange`.
+    public func updateActiveProfile(bundleID: String?) {
+        guard bundleID != activeBundleID else { return }
+        activeBundleID = bundleID
+        if !visibleModules.contains(where: { $0.id == selectedModuleID }) {
+            selectedModuleID = visibleModules.first?.id ?? ""
+        }
+    }
+
     // MARK: — Ambient
 
     /// Enregistre ou retire un contributeur ambient. La source avec la priorité la plus haute gagne.
@@ -154,7 +178,7 @@ import Foundation
             guard let self, !Task.isCancelled else { return }
             hudContent = nil
             if state == .hud {
-                transition(to: ambientContent != nil ? .ambient : .collapsed)
+                transition(to: fallbackState)
             }
         }
     }
@@ -190,7 +214,7 @@ import Foundation
         collapseTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
             guard let self, !Task.isCancelled else { return }
-            transition(to: ambientContent != nil ? .ambient : .collapsed)
+            transition(to: fallbackState)
         }
     }
 
@@ -201,7 +225,7 @@ import Foundation
         collapseTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(self?.settings.collapseDelay ?? 0.6))
             guard let self, !Task.isCancelled else { return }
-            transition(to: ambientContent != nil ? .ambient : .collapsed)
+            transition(to: fallbackState)
         }
     }
 
@@ -217,7 +241,15 @@ import Foundation
 
     public func dismiss() {
         collapseTask?.cancel()
-        transition(to: ambientContent != nil ? .ambient : .collapsed)
+        transition(to: fallbackState)
+    }
+
+    /// État de repli en quittant expanded/peek/hud : ambient si un contenu doit y être montré,
+    /// sinon collapsed. Un timer en mode anneau ne compte pas (il reste collapsed, l'anneau suffit).
+    private var fallbackState: NotchState {
+        guard let content = ambientContent else { return .collapsed }
+        if case .timer = content.kind, settings.showRingWhenTimerActive { return .collapsed }
+        return .ambient
     }
 
     private func transition(to newState: NotchState) {

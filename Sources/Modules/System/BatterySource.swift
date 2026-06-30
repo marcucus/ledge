@@ -23,7 +23,9 @@ final class BatterySource {
         let ctx = Unmanaged.passUnretained(self).toOpaque()
         runLoopSource = IOPSNotificationCreateRunLoopSource(batteryCallback, ctx)?.takeRetainedValue()
         if let source = runLoopSource {
-            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .defaultMode)
+            // Toujours la run loop principale (pas `Current`) : `stop()` peut être appelé depuis
+            // un deinit non-isolé sur un autre thread, et doit retirer la MÊME source.
+            CFRunLoopAddSource(CFRunLoopGetMain(), source, .defaultMode)
         }
         // Deliver initial value immediately
         notifyUpdate()
@@ -31,7 +33,7 @@ final class BatterySource {
 
     func stop() {
         guard let source = runLoopSource else { return }
-        CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .defaultMode)
+        CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .defaultMode)
         runLoopSource = nil
     }
 

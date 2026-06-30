@@ -12,14 +12,17 @@ struct SystemPeekView: View {
             if let pct = module.battery.percentage {
                 Text("\(pct)%")
                     .font(.caption.monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.9))
+                    .lineLimit(1)
+                    .fixedSize()
                 if module.battery.isCharging {
                     Image(systemName: "bolt.fill")
-                        .imageScale(.small)
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.green)
                 }
             }
         }
-        .imageScale(.small)
+        .fixedSize()
         .padding(.trailing, 4)
     }
 
@@ -27,7 +30,7 @@ struct SystemPeekView: View {
 
     private var batteryIcon: some View {
         Image(systemName: batteryIconName)
-            .imageScale(.small)
+            .font(.system(size: 13, weight: .medium))
             .foregroundStyle(batteryColor)
     }
 
@@ -42,9 +45,9 @@ struct SystemPeekView: View {
     }
 
     private var batteryColor: Color {
-        guard let pct = module.battery.percentage else { return .secondary }
+        guard let pct = module.battery.percentage else { return .white.opacity(0.6) }
         if module.battery.isCharging { return .green }
-        return pct < 20 ? .red : .primary
+        return pct < 20 ? .red : .white.opacity(0.9)
     }
 
     // MARK: — CPU badge

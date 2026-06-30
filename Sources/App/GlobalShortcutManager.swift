@@ -1,8 +1,11 @@
 import Carbon.HIToolbox
+import Core
 import Foundation
 
 /// Gestionnaire de raccourcis globaux via Carbon RegisterEventHotKey.
 /// Aucune permission supplémentaire requise (pas d'Input Monitoring).
+/// Les combinaisons sont lues depuis `SettingsStore` — `refresh()` les ré-enregistre
+/// après une modification dans les réglages.
 final class GlobalShortcutManager {
     var onOpenClose: (() -> Void)?
     var onPaste: (() -> Void)?
@@ -12,37 +15,59 @@ final class GlobalShortcutManager {
     private nonisolated(unsafe) static var shared: GlobalShortcutManager?
     private nonisolated(unsafe) static var handlerRef: EventHandlerRef?
     private nonisolated(unsafe) var hotKeyRefs: [UInt32: EventHotKeyRef] = [:]
+    private let settings: SettingsStore
+    private var isEnabled = false
 
-    private enum HK: UInt32 {
+    private enum HK: UInt32, CaseIterable {
         case openClose = 1
         case paste     = 2
         case newTimer  = 3
         case openMedia = 4
+
+        func shortcut(in settings: SettingsStore) -> GlobalKeyboardShortcut {
+            switch self {
+            case .openClose: settings.shortcutOpenClose
+            case .paste: settings.shortcutPaste
+            case .newTimer: settings.shortcutNewTimer
+            case .openMedia: settings.shortcutOpenMedia
+            }
+        }
     }
 
-    init() {
+    init(settings: SettingsStore) {
+        self.settings = settings
         GlobalShortcutManager.shared = self
         installEventHandler()
     }
 
     func enable() {
-        register(.openClose, keyCode: UInt32(kVK_Space),    modifiers: UInt32(optionKey))
-        register(.paste,     keyCode: UInt32(kVK_ANSI_V),   modifiers: UInt32(optionKey))
-        register(.newTimer,  keyCode: UInt32(kVK_ANSI_T),   modifiers: UInt32(optionKey))
-        register(.openMedia, keyCode: UInt32(kVK_ANSI_M),   modifiers: UInt32(optionKey))
+        isEnabled = true
+        for id in HK.allCases { register(id, id.shortcut(in: settings)) }
     }
 
     func disable() {
-        for id in [HK.openClose, .paste, .newTimer, .openMedia] { unregister(id) }
+        isEnabled = false
+        for id in HK.allCases { unregister(id) }
+    }
+
+    /// Réconcilie l'état (activé + combinaisons) avec `SettingsStore` actuel — à appeler à
+    /// chaque changement dans Réglages → Raccourcis.
+    func applySettings() {
+        guard settings.globalShortcutEnabled else {
+            disable()
+            return
+        }
+        if isEnabled { disable() }
+        enable()
     }
 
     // MARK: — Private
 
-    private func register(_ id: HK, keyCode: UInt32, modifiers: UInt32) {
-        guard hotKeyRefs[id.rawValue] == nil else { return }
+    private func register(_ id: HK, _ shortcut: GlobalKeyboardShortcut) {
+        guard hotKeyRefs[id.rawValue] == nil, shortcut.hasModifier else { return }
         let hkID = EventHotKeyID(signature: 0x4C475348, id: id.rawValue)
         var ref: EventHotKeyRef?
-        let err = RegisterEventHotKey(keyCode, modifiers, hkID, GetApplicationEventTarget(), 0, &ref)
+        let err = RegisterEventHotKey(shortcut.keyCode, shortcut.modifiers, hkID, GetApplicationEventTarget(), 0, &ref)
         if err == noErr, let ref { hotKeyRefs[id.rawValue] = ref }
     }
 

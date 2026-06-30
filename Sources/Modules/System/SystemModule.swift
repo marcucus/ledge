@@ -29,6 +29,8 @@ public final class SystemModule: NotchModule {
     private(set) var cpu = CPUStats.zero
     private(set) var ram = RAMStats.zero
     private(set) var network = NetworkStats.zero
+    private(set) var isMicrophoneActive = false
+    private(set) var accessoryBatteries: [AccessoryBattery] = []
 
     var toggles: [QuickToggle] = []
     var launcherItems: [AppLauncherItem] = []
@@ -37,16 +39,22 @@ public final class SystemModule: NotchModule {
 
     @ObservationIgnored private let batterySource = BatterySource()
     @ObservationIgnored private let pollingSource = PollingSource()
+    @ObservationIgnored private let microphoneSource = MicrophoneSource()
+    @ObservationIgnored private let accessoryBatterySource = AccessoryBatterySource()
     @ObservationIgnored private let caffeineManager = CaffeineManager()
 
     @ObservationIgnored private nonisolated(unsafe) var _batterySource: BatterySource
     @ObservationIgnored private nonisolated(unsafe) var _pollingSource: PollingSource
+    @ObservationIgnored private nonisolated(unsafe) var _microphoneSource: MicrophoneSource
+    @ObservationIgnored private nonisolated(unsafe) var _accessoryBatterySource: AccessoryBatterySource
 
     // MARK: — Init
 
     public init() {
         _batterySource = batterySource
         _pollingSource = pollingSource
+        _microphoneSource = microphoneSource
+        _accessoryBatterySource = accessoryBatterySource
         buildToggles()
         buildDefaultLauncher()
     }
@@ -54,6 +62,8 @@ public final class SystemModule: NotchModule {
     deinit {
         _batterySource.stop()
         _pollingSource.endPolling()
+        _microphoneSource.stop()
+        _accessoryBatterySource.endPolling()
     }
 
     // MARK: — NotchModule
@@ -65,7 +75,14 @@ public final class SystemModule: NotchModule {
         pollingSource.onCPU = { [weak self] stats in Task { @MainActor [weak self] in self?.cpu = stats } }
         pollingSource.onRAM = { [weak self] stats in Task { @MainActor [weak self] in self?.ram = stats } }
         pollingSource.onNetwork = { [weak self] stats in Task { @MainActor [weak self] in self?.network = stats } }
+        microphoneSource.onUpdate = { [weak self] active in
+            Task { @MainActor [weak self] in self?.isMicrophoneActive = active }
+        }
+        accessoryBatterySource.onUpdate = { [weak self] batteries in
+            Task { @MainActor [weak self] in self?.accessoryBatteries = batteries }
+        }
         batterySource.start()
+        microphoneSource.start()
         loadLauncherItems()
         observeLauncherApps()
     }
@@ -73,6 +90,8 @@ public final class SystemModule: NotchModule {
     public func stop() {
         batterySource.stop()
         pollingSource.endPolling()
+        microphoneSource.stop()
+        accessoryBatterySource.endPolling()
     }
 
     // MARK: — Polling lifecycle (called by the content view)
@@ -80,11 +99,13 @@ public final class SystemModule: NotchModule {
     /// Call from the content view's `onAppear`.
     func beginPolling() {
         pollingSource.beginPolling()
+        accessoryBatterySource.beginPolling()
     }
 
     /// Call from the content view's `onDisappear`.
     func endPolling() {
         pollingSource.endPolling()
+        accessoryBatterySource.endPolling()
     }
 
     // MARK: — Launcher

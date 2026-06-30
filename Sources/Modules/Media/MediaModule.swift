@@ -18,6 +18,7 @@ import SwiftUI
     @ObservationIgnored private nonisolated(unsafe) var pollTimer: Timer?
     @ObservationIgnored private nonisolated(unsafe) var elapsedTimer: Timer?
     @ObservationIgnored private nonisolated(unsafe) var resyncTimer: Timer?
+    @ObservationIgnored private var startupPollAttemptsRemaining = MediaModule.maxStartupPollAttempts
     @ObservationIgnored private var wasActive = false
     @ObservationIgnored private var cachedArtwork: NSImage?
     @ObservationIgnored private var cachedArtworkColor: Color = .white
@@ -47,12 +48,24 @@ import SwiftUI
             suspensionBehavior: .deliverImmediately
         )
 
-        // Polling de secours toutes les 3 s (utile si la musique joue déjà au lancement)
-        pollTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
-            Task { [weak self] in await self?.refresh() }
-        }
-
+        scheduleStartupPoll()
         Task { await refresh() }
+    }
+
+    /// Sonde de démarrage à intervalles espacés (utile si la musique joue déjà au lancement —
+    /// les notifications ne couvrent que les changements survenant après l'abonnement).
+    /// Nombre de tentatives borné : aucun polling au repos une fois la fenêtre passée.
+    private static let maxStartupPollAttempts = 3
+
+    private func scheduleStartupPoll() {
+        guard startupPollAttemptsRemaining > 0 else { return }
+        startupPollAttemptsRemaining -= 1
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.refresh()
+                self?.scheduleStartupPoll()
+            }
+        }
     }
 
     @objc private func handleMusicPlayerInfo(_ notif: Notification) {
@@ -70,7 +83,9 @@ import SwiftUI
             // If the title changed, clear it so fetchAppleMusicArtworkIfNeeded() fetches the new one.
             artwork: isActive && newTitle == nowPlaying.title ? nowPlaying.artwork : nil,
             isPlaying: isPlaying,
-            elapsed: (info["Current Position"] as? Double) ?? 0,
+            // La notif Apple Music ne contient souvent pas « Current Position » : sur le même
+            // morceau on conserve l'elapsed courant (sinon la barre saute à 0 à chaque play/pause).
+            elapsed: (info["Current Position"] as? Double) ?? (newTitle == nowPlaying.title ? nowPlaying.elapsed : 0),
             duration: (info["Total Time"] as? Double ?? 0) / 1000,
             shuffleMode: isActive ? (info["Shuffle Mode"] as? Int ?? nowPlaying.shuffleMode) : 0,
             repeatMode: isActive ? (info["Repeat Mode"] as? Int ?? nowPlaying.repeatMode) : 0
@@ -91,23 +106,7 @@ import SwiftUI
 
     private func refresh() async {
         let state = await source.fetchNowPlayingInfo()
-        // Merge : si la distributed notification a déjà le titre, garde-le si MediaRemote est vide
-        var merged = state.isActive ? state : nowPlaying
-        // Preserve elapsed from distributed-notification timer if MediaRemote doesn't provide it
-        if state.isActive, state.elapsed == 0, nowPlaying.elapsed > 0, nowPlaying.title == merged.title {
-            merged.elapsed = nowPlaying.elapsed
-        }
-        // Conserve la pochette déjà récupérée si MediaRemote n'en fournit pas (cas Apple Music).
-        if merged.artwork == nil, nowPlaying.artwork != nil, nowPlaying.title == merged.title {
-            merged.artwork = nowPlaying.artwork
-        }
-        // Préserve shuffle/repeat depuis la notification Apple Music si MediaRemote ne les expose pas.
-        if merged.shuffleMode == 0, nowPlaying.shuffleMode != 0, nowPlaying.title == merged.title {
-            merged.shuffleMode = nowPlaying.shuffleMode
-        }
-        if merged.repeatMode == 0, nowPlaying.repeatMode != 0, nowPlaying.title == merged.title {
-            merged.repeatMode = nowPlaying.repeatMode
-        }
+        let merged = MediaState.merging(incoming: state, previous: nowPlaying)
         let becameActive = !wasActive && merged.isActive
         let playStateChanged = merged.isPlaying != nowPlaying.isPlaying
         wasActive = merged.isActive
@@ -217,22 +216,11 @@ import SwiftUI
             nowPlaying.elapsed = previousElapsed
             return
         }
-        let script = "tell application \"Music\" to set player position to \(Int(position))"
         Task.detached { [weak self] in
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            process.arguments = ["-e", script]
-            let revert: () async -> Void = { [weak self] in
-                let ref = self
-                await MainActor.run { ref?.nowPlaying.elapsed = previousElapsed }
-            }
-            do {
-                try process.run()
-                process.waitUntilExit()
-                if process.terminationStatus != 0 { await revert() }
-            } catch {
-                await revert()
-            }
+            let succeeded = AppleMusicScriptingBridge.setPlayerPosition(position)
+            guard !succeeded else { return }
+            let ref = self
+            await MainActor.run { ref?.nowPlaying.elapsed = previousElapsed }
         }
     }
 
@@ -266,21 +254,7 @@ import SwiftUI
     }
 
     private nonisolated func appleMusicPlayerPosition() async -> Double? {
-        await withCheckedContinuation { continuation in
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            process.arguments = ["-e", "tell application \"Music\" to get player position"]
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = Pipe()
-            process.terminationHandler = { _ in
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                let str = (String(data: data, encoding: .utf8) ?? "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                continuation.resume(returning: Double(str))
-            }
-            do { try process.run() } catch { continuation.resume(returning: nil) }
-        }
+        await Task.detached { AppleMusicScriptingBridge.playerPosition() }.value
     }
 
     public func stop() {

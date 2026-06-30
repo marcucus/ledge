@@ -1,8 +1,11 @@
 import AppKit
+import CalendarModule
 import ClipboardModule
 import Core
 import DropZoneModule
 import MediaModule
+import NotesModule
+import ShortcutsModule
 import Sparkle
 import SystemModule
 import TimerModule
@@ -16,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var timerModule: TimerModule?
     private var clipboardModule: ClipboardModule?
+    private var frontmostAppObserver: FrontmostAppObserver?
 
     func applicationDidFinishLaunching(_: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
@@ -35,8 +39,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         setupStatusItem()
 
+        // Module Système masqué pour le moment : conservé comme source de statut (batterie dans
+        // la NavBar) et démarré manuellement, mais retiré des onglets (absent de register()).
         let systemModule = SystemModule()
         window.controller.statusModule = systemModule
+        systemModule.start()
 
         let dropZoneModule = DropZoneModule()
         dropZoneModule.onAmbientUpdate = { [weak window] content in
@@ -63,23 +70,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let clipboardModule = ClipboardModule()
         self.clipboardModule = clipboardModule
 
+        let shortcutsModule = ShortcutsModule()
+        let calendarModule = CalendarModule()
+        let notesModule = NotesModule()
+
         window.register(modules: [
             mediaModule,
             timerModule,
             dropZoneModule,
             clipboardModule,
-            systemModule,
+            shortcutsModule,
+            calendarModule,
+            notesModule,
         ])
 
         systemObserver = makeSystemObserver(for: window)
         shortcutManager = makeShortcutManager(for: window)
+        frontmostAppObserver = makeFrontmostAppObserver(for: window)
         notchWindow = window
         settingsWindowController = settingsWC
     }
 
-    /// Raccourcis globaux : ⌥Space (ouvrir), ⌥V (coller), ⌥T (timer), ⌥M (média).
+    /// Bascule les modules visibles selon l'app au premier plan (profils par app).
+    @MainActor private func makeFrontmostAppObserver(for window: NotchWindow) -> FrontmostAppObserver {
+        let observer = FrontmostAppObserver()
+        observer.onActiveAppChange = { [weak window] bundleID in
+            window?.controller.updateActiveProfile(bundleID: bundleID)
+        }
+        window.controller.updateActiveProfile(bundleID: observer.currentBundleID)
+        observer.start()
+        return observer
+    }
+
+    /// Raccourcis globaux, personnalisables depuis Réglages → Raccourcis.
     @MainActor private func makeShortcutManager(for window: NotchWindow) -> GlobalShortcutManager {
-        let manager = GlobalShortcutManager()
+        let manager = GlobalShortcutManager(settings: .shared)
 
         manager.onOpenClose = { [weak window] in window?.controller.panelClicked() }
 
@@ -105,21 +130,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     private func applyShortcutSetting(_ manager: GlobalShortcutManager) {
-        if SettingsStore.shared.globalShortcutEnabled {
-            manager.enable()
-        } else {
-            manager.disable()
-        }
+        manager.applySettings()
+        observeShortcutSettings(manager)
+    }
+
+    /// Réagit aux changements du toggle global et des 4 combinaisons (Réglages → Raccourcis).
+    @MainActor
+    private func observeShortcutSettings(_ manager: GlobalShortcutManager) {
         withObservationTracking {
             _ = SettingsStore.shared.globalShortcutEnabled
-        } onChange: { [weak manager] in
-            Task { @MainActor [weak manager] in
+            _ = SettingsStore.shared.shortcutOpenClose
+            _ = SettingsStore.shared.shortcutPaste
+            _ = SettingsStore.shared.shortcutNewTimer
+            _ = SettingsStore.shared.shortcutOpenMedia
+        } onChange: { [weak self, weak manager] in
+            Task { @MainActor [weak self, weak manager] in
                 guard let manager else { return }
-                if SettingsStore.shared.globalShortcutEnabled {
-                    manager.enable()
-                } else {
-                    manager.disable()
-                }
+                manager.applySettings()
+                self?.observeShortcutSettings(manager)
             }
         }
     }

@@ -10,6 +10,7 @@ struct SettingsDetailView: View {
         case .general: GeneralSettingsView(store: store)
         case .appearance: AppearanceSettingsView(store: store)
         case .modules: ModulesSettingsView(store: store)
+        case .appProfiles: AppProfilesSettingsView(store: store)
         case .display: DisplaySettingsView(store: store)
         case .permissions: PermissionsSettingsView()
         case .shortcuts: ShortcutsSettingsView(store: store)

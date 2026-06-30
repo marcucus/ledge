@@ -120,13 +120,13 @@ public final class NotchWindow: NSPanel {
         let screen = NSScreen.screen(named: controller.targetScreenName)
             ?? NSScreen.withNotch
             ?? NSScreen.main
-        guard let geometry = screen?.notchGeometry() ?? screen.map({ s in
-            // Écran sans encoche : ancre au centre du bord supérieur
-            let r = s.frame
-            let notchW: CGFloat = 190
-            let notchH: CGFloat = 32
-            let rect = CGRect(x: r.midX - notchW / 2, y: r.maxY - notchH, width: notchW, height: notchH)
-            return NotchGeometry(notchRect: rect, screenFrame: r)
+        guard let geometry = screen?.notchGeometry() ?? screen.map({ scr in
+            // Écran sans encoche : ancre une encoche simulée au centre du bord supérieur.
+            let bounds = scr.frame
+            let size = NotchGeometry.fallbackSize
+            let rect = CGRect(x: bounds.midX - size.width / 2, y: bounds.maxY - size.height,
+                              width: size.width, height: size.height)
+            return NotchGeometry(notchRect: rect, screenFrame: bounds)
         }) else { return }
         currentGeometry = geometry
         updateFrame(for: controller.state, from: .collapsed, animated: false)
@@ -201,6 +201,7 @@ public final class NotchWindow: NSPanel {
     }
 
     private func applyPeeking(geometry: NotchGeometry, animated: Bool) {
+        removeGlobalClickMonitor()
         let size = CGSize(width: controller.expandedWidth, height: Layout.navbarHeight)
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
@@ -212,6 +213,7 @@ public final class NotchWindow: NSPanel {
     }
 
     private func applyHUD(geometry: NotchGeometry, animated: Bool) {
+        removeGlobalClickMonitor()
         // Fenêtre qui entoure l'encoche (plus large des deux côtés), barre fine en dessous.
         let size = CGSize(
             width: max(Layout.hudMinWidth, controller.notchWidth + Layout.hudSideMargin),
@@ -227,6 +229,7 @@ public final class NotchWindow: NSPanel {
     }
 
     private func applyAmbient(geometry: NotchGeometry, animated: Bool) {
+        removeGlobalClickMonitor()
         // Pills latérales : même hauteur que l'encoche, plus large des deux côtés.
         let pillWidth = NotchController.ambientPillWidth
         let pillGap = NotchController.ambientPillGap
@@ -369,7 +372,7 @@ public final class NotchWindow: NSPanel {
 
 private enum Layout {
     static let navbarHeight: CGFloat = 44
-    static let contentHeight: CGFloat = 180
+    static let contentHeight: CGFloat = 200
     static let openDuration: TimeInterval = 0.40
     static let closeDuration: TimeInterval = 0.34
     static let peekDuration: TimeInterval = 0.20

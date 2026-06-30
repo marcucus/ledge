@@ -49,6 +49,27 @@ enum ModuleCatalog {
             descriptionKey: "module.system.description",
             settingsBuilder: { store in AnyView(SystemModuleSettingsView(store: store)) }
         ),
+        Entry(
+            id: "shortcuts",
+            icon: "bolt.fill",
+            nameKey: "module.shortcuts.label",
+            descriptionKey: "module.shortcuts.description",
+            settingsBuilder: nil
+        ),
+        Entry(
+            id: "calendar",
+            icon: "calendar",
+            nameKey: "module.calendar.label",
+            descriptionKey: "module.calendar.description",
+            settingsBuilder: nil
+        ),
+        Entry(
+            id: "notes",
+            icon: "note.text",
+            nameKey: "module.notes.label",
+            descriptionKey: "module.notes.description",
+            settingsBuilder: nil
+        ),
     ]
 
     static func entry(for id: String) -> Entry? {

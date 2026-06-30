@@ -147,6 +147,10 @@ private struct ShelfItemView: View {
     let item: ShelfItem
     let onRemove: () -> Void
 
+    /// Délai avant l'apparition de l'aperçu QuickLook, annulé si le survol s'arrête avant.
+    @State private var hoverPreviewTask: Task<Void, Never>?
+    @State private var isPreviewVisible = false
+
     var body: some View {
         VStack(spacing: 4) {
             ZStack(alignment: .topTrailing) {
@@ -167,9 +171,14 @@ private struct ShelfItemView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(width: 64)
-        .onDrag {
-            NSItemProvider(contentsOf: item.url) ?? NSItemProvider()
+        .draggable(item.url)
+        .help(item.displayName)
+        .onHover(perform: handleHover)
+        .popover(isPresented: $isPreviewVisible, arrowEdge: .top) {
+            QuickLookPreview(url: item.url)
+                .padding(12)
         }
+        .onDisappear { hoverPreviewTask?.cancel() }
     }
 
     private var iconView: some View {
@@ -185,5 +194,20 @@ private struct ShelfItemView: View {
             }
         }
         .frame(width: 40, height: 40)
+    }
+
+    /// Programme l'ouverture de l'aperçu après un court délai, annulé si le survol cesse
+    /// ou change de cible avant l'expiration (pattern collapseTask/hudTask de NotchController).
+    private func handleHover(isHovering: Bool) {
+        hoverPreviewTask?.cancel()
+        guard isHovering else {
+            isPreviewVisible = false
+            return
+        }
+        hoverPreviewTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
+            isPreviewVisible = true
+        }
     }
 }

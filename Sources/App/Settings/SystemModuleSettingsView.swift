@@ -21,6 +21,22 @@ struct SystemModuleSettingsView: View {
                 Toggle(isOn: Binding(get: { store.systemShowNetwork }, set: { store.systemShowNetwork = $0 })) {
                     Text("settings.modules.system.showNetwork", bundle: localizationBundle)
                 }
+                Toggle(
+                    isOn: Binding(
+                        get: { store.systemShowMicrophoneIndicator },
+                        set: { store.systemShowMicrophoneIndicator = $0 }
+                    )
+                ) {
+                    Text("settings.modules.system.showMicrophoneIndicator", bundle: localizationBundle)
+                }
+                Toggle(
+                    isOn: Binding(
+                        get: { store.systemShowAccessoryBattery },
+                        set: { store.systemShowAccessoryBattery = $0 }
+                    )
+                ) {
+                    Text("settings.modules.system.showAccessoryBattery", bundle: localizationBundle)
+                }
             } header: {
                 Text("settings.modules.system.gauges", bundle: localizationBundle)
             }
