@@ -24,21 +24,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
         setAppIcon()
-        // Sparkle nécessite un vrai .app bundle — ne pas démarrer depuis swift run
-        if Bundle.main.bundlePath.hasSuffix(".app") {
-            updaterController = SPUStandardUpdaterController(
-                startingUpdater: true,
-                updaterDelegate: nil,
-                userDriverDelegate: nil
-            )
-        }
+        setupUpdater()
 
         let window = NotchWindow()
         let settingsWC = SettingsWindowController()
         window.controller.openSettings = { settingsWC.show() }
 
         setupStatusItem()
+        buildAndRegisterModules(in: window)
+        installObservers(for: window)
+        notchWindow = window
+        settingsWindowController = settingsWC
+    }
 
+    /// Instancie les modules, câble leurs contributions ambient, et les enregistre dans la fenêtre.
+    @MainActor private func buildAndRegisterModules(in window: NotchWindow) {
         // Module Système masqué pour le moment : conservé comme source de statut (batterie dans
         // la NavBar) et démarré manuellement, mais retiré des onglets (absent de register()).
         let systemModule = SystemModule()
@@ -70,25 +70,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let clipboardModule = ClipboardModule()
         self.clipboardModule = clipboardModule
 
-        let shortcutsModule = ShortcutsModule()
-        let calendarModule = CalendarModule()
-        let notesModule = NotesModule()
-
         window.register(modules: [
-            mediaModule,
-            timerModule,
-            dropZoneModule,
-            clipboardModule,
-            shortcutsModule,
-            calendarModule,
-            notesModule,
+            mediaModule, timerModule, dropZoneModule, clipboardModule,
+            ShortcutsModule(), CalendarModule(), NotesModule(),
         ])
+    }
 
+    /// Sparkle nécessite un vrai `.app` bundle — ne pas démarrer depuis `swift run`.
+    private func setupUpdater() {
+        guard Bundle.main.bundlePath.hasSuffix(".app") else { return }
+        updaterController = SPUStandardUpdaterController(
+            startingUpdater: true,
+            updaterDelegate: nil,
+            userDriverDelegate: nil
+        )
+    }
+
+    /// Branche les observateurs système (HUD, raccourcis globaux, app active).
+    @MainActor private func installObservers(for window: NotchWindow) {
         systemObserver = makeSystemObserver(for: window)
         shortcutManager = makeShortcutManager(for: window)
         frontmostAppObserver = makeFrontmostAppObserver(for: window)
-        notchWindow = window
-        settingsWindowController = settingsWC
     }
 
     /// Bascule les modules visibles selon l'app au premier plan (profils par app).
