@@ -1,8 +1,8 @@
+@testable import Core
 import CoreGraphics
 import Testing
-@testable import Core
 
-@Suite struct NotchGeometryTests {
+struct NotchGeometryTests {
     // Valeurs fictives réalistes (MacBook Pro 14", résolution logique)
     private let screenFrame = CGRect(x: 0, y: 0, width: 1512, height: 982)
     private let safeAreaTop: CGFloat = 32
@@ -41,15 +41,15 @@ import Testing
         #expect(geo == nil)
     }
 
-    @Test func anchorPointBelowNotchCenter() {
+    @Test func anchorPointAtNotchTop() {
         let geo = NotchGeometry.from(
             screenFrame: screenFrame,
             safeAreaInsetsTop: safeAreaTop,
             auxiliaryTopLeftArea: leftArea,
             auxiliaryTopRightArea: rightArea
         )
-        // midX = 200 + 180/2 = 290 ; minY = 982 - 32 = 950
-        #expect(geo?.anchorPoint == CGPoint(x: 290, y: 950))
+        // midX = 200 + 180/2 = 290 ; maxY = 982 (haut de l'écran)
+        #expect(geo?.anchorPoint == CGPoint(x: 290, y: 982))
     }
 
     @Test func notDetectedWhenAreasIncoherent() {

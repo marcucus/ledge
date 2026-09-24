@@ -1,7 +1,7 @@
-# Notchy — app d'encoche pour macOS
+# Ledge — app d'encoche pour macOS
 
-> Nom de travail. Une app qui transforme l'encoche du MacBook en menu interactif léger,
-> façon Dynamic Island, avec des modules pluggables.
+> Une app qui transforme l'encoche du MacBook en menu interactif léger, façon Dynamic Island,
+> avec des modules pluggables.
 
 ## Objectif
 
@@ -9,8 +9,9 @@ Une app **ultra-légère** (Swift natif, aucun runtime tiers) qui dort tant que 
 n'interagit pas, et qui étend l'encoche en un panneau riche au survol / au clic.
 
 **Principe de légèreté :** la conso ne vient pas du langage seul, mais du fait de
-**ne rien faire au repos** — on s'abonne aux événements système, on ne fait pas de polling,
-et les jauges ne se rafraîchissent que panneau ouvert.
+**ne presque rien faire au repos** — on privilégie l'événementiel (listeners CoreAudio pour le
+volume, observateurs système), le polling restant est borné/à intervalle large, et les jauges ne
+se rafraîchissent que panneau ouvert.
 
 ## Stack retenue
 
@@ -18,16 +19,22 @@ et les jauges ne se rafraîchissent que panneau ouvert.
 - **SwiftUI** → le contenu des panneaux et widgets.
 - **`LSUIElement`** → agent en arrière-plan, pas d'icône dans le Dock.
 - **Multilingue** → suit la langue du Mac par défaut, sélecteur de langue dans les Paramètres (String Catalog, aucun texte en dur).
-- Cible : Apple Silicon, macOS 13+ (encoche = MacBook Pro/Air 2021+).
+- Cible : Apple Silicon, macOS 14+ (encoche = MacBook Pro/Air 2021+).
 
-## Les 4 modules
+## Les modules
 
 | Module | Résumé |
 |---|---|
-| 🎵 Média | Pochette qui déborde de l'encoche, contrôles, scrubbing. Via `MediaRemote`. |
-| 📋 Presse-papiers + Drop Zone | Historique de copies + étagère de fichiers + partage rapide. |
-| ⚙️ Système | Jauges (batterie/CPU/RAM), toggles rapides, lanceur d'apps. |
-| ⏱️ Timers & notifs | Minuteurs/Pomodoro (anneau autour de l'encoche), rappels, agrégation de notifs. |
+| 🎵 Média | Pochette qui déborde de l'encoche, contrôles, scrubbing, mode ambient. Apple Music (ScriptingBridge), autres lecteurs (`MediaRemote`), pochette Spotify. |
+| 📋 Presse-papiers | Historique de copies, **épinglage** (favoris hors purge) + **recherche**, persistance disque optionnelle (RAM par défaut). |
+| 📥 Drop Zone | Étagère de fichiers, glisser-déposer **entrant et sortant**, **aperçu QuickLook** au survol, partage AirDrop. |
+| ⚙️ Système | Jauges (batterie/CPU/RAM/réseau, **micro en cours**, **batterie des accessoires Bluetooth**), toggles rapides, lanceur d'apps. |
+| ⏱️ Timers | **Molette H:M:S** + presets, Pomodoro, décompte en direct dans l'ambient. |
+| ⚡ Raccourcis | Lister et lancer les raccourcis de Shortcuts.app. |
+| 📅 Calendrier | Prochain événement à venir (EventKit). |
+| 📝 Notes | Note texte libre éphémère sous l'encoche. |
+
+**Transverses :** HUD volume/luminosité (remplace l'OSD système), **thèmes** nommés (couleur + opacité + rayon), **profils de modules par app active**. Extensibilité interne via le contrat `NotchModule` ([doc 11](docs/11-extensibilite-modules.md)).
 
 ## Documentation
 
@@ -41,23 +48,30 @@ et les jauges ne se rafraîchissent que panneau ouvert.
 | [06 — Écran Paramètres](docs/06-ecran-parametres.md) | Réglages globaux + par module + les 4 choix critiques. |
 | [07 — Architecture technique](docs/07-architecture-technique.md) | Légèreté, détection dynamique de l'encoche, multi-écran, plein écran, permissions. |
 | [08 — Conventions de code](docs/08-conventions-de-code.md) | Standards Swift/SwiftUI : structure, style, qualité, outillage. La constitution du code. |
+| [09 — Avancement & contexte](docs/09-avancement-et-contexte.md) | État réel du code : ce qui est implémenté par module, le HUD volume/luminosité, limites connues, prochaines étapes. |
+| [10 — Audit & plan](docs/10-audit-et-plan.md) | Audit qualité/sécurité/perf + plan jalonné et suivi des développements. |
+| [11 — Extensibilité des modules](docs/11-extensibilite-modules.md) | Le contrat `NotchModule` : anatomie d'un module, 3 points d'assemblage, et pourquoi pas de plugins tiers dynamiques. |
 
 
 ## Roadmap
 
-| Phase | Contenu |
-|---|---|
-| **V0** | Fenêtre ancrée sous l'encoche + 3 états (repos/survol/ouvert) + animation. 80 % de la difficulté technique. |
-| **V1** | Module Média. |
-| **V2** | Timers + Drop Zone. |
-| **V3** | Presse-papiers + Système. |
-| **V4** | Écran Paramètres complet + personnalisation des modules. |
+| Phase | Contenu | État |
+|---|---|---|
+| **V0** | Fenêtre ancrée sous l'encoche + états (repos/survol/ouvert/ambient/HUD) + animations. | ✅ |
+| **V1** | Module Média. | ✅ |
+| **V2** | Timers + Drop Zone. | ✅ |
+| **V3** | Presse-papiers + Système. | ✅ |
+| **V4** | Écran Paramètres complet + personnalisation des modules. | ✅ |
+| **V5** | Modules additionnels (Raccourcis, Calendrier, Notes), thèmes, profils par app, HUD système, distribution signée + Sparkle. | ✅ |
+
+> Suivi détaillé et prochaines pistes : [doc 10 — Audit & plan](docs/10-audit-et-plan.md).
 
 ## Statut
 
-📐 **Conception** Toute la spécification est posée : concept & interaction, les 4 modules,
-l'écran Paramètres (avec les 4 choix utilisateur : multi-écran, plein écran, permissions, détection
-dynamique de l'encoche), l'architecture technique, et les **conventions de code** ([doc 08](docs/08-conventions-de-code.md)).
+🛠️ **Implémentation avancée** — la fenêtre encoche (5 états), les modules (Média, Timers, Drop
+Zone, Presse-papiers, Système, Raccourcis, Calendrier, Notes), l'écran Paramètres et la
+distribution (DMG signé/notarisé + Sparkle) sont en place. Détail de l'avancée et du contexte
+technique : [doc 09](docs/09-avancement-et-contexte.md) · plan & suivi : [doc 10](docs/10-audit-et-plan.md).
 
 ## Licence
 

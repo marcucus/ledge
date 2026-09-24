@@ -19,6 +19,15 @@ opt_in_rules:
 disabled_rules:
   - trailing_whitespace
   - todo
+  # swiftformat ajoute les virgules terminales multilignes ; on lui laisse la main.
+  - trailing_comma
+  # swiftformat place l'accolade des conditions multilignes sur sa propre ligne ; idem.
+  - opening_brace
+
+identifier_name:
+  excluded:
+    - id # idiomatique (Identifiable)
+    - to # label d'argument idiomatique (seek(to:))
 
 line_length:
   warning: 120

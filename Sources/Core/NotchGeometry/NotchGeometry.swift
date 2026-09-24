@@ -2,13 +2,17 @@ import CoreGraphics
 
 /// Représentation calculée de la géométrie de l'encoche d'un écran.
 struct NotchGeometry: Equatable {
+    /// Dimensions de repli quand l'écran n'a pas d'encoche physique (écran externe) : on simule
+    /// une petite encoche centrée pour ancrer le panneau. Source unique de ces valeurs.
+    static let fallbackSize = CGSize(width: 190, height: 32)
+
     /// Rect de l'encoche en coordonnées écran (y vers le haut, origine bas-gauche).
     let notchRect: CGRect
     let screenFrame: CGRect
 
-    /// Point juste sous le centre de l'encoche — ancre du panneau Notchy.
+    /// Bord supérieur du centre de l'encoche — ancre haute du panneau Ledge.
     var anchorPoint: CGPoint {
-        CGPoint(x: notchRect.midX, y: notchRect.minY)
+        CGPoint(x: notchRect.midX, y: notchRect.maxY)
     }
 
     /// Calcule la géométrie depuis les valeurs brutes de NSScreen.

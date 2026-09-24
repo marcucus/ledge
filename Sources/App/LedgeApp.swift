@@ -1,8 +1,8 @@
 import AppKit
 
 @main
-struct NotchyApp {
-    // static let assure que le delegate reste en vie (NSApplicationDelegate est weak)
+struct LedgeApp {
+    /// static let assure que le delegate reste en vie (NSApplicationDelegate est weak)
     static let delegate = AppDelegate()
 
     static func main() {
