@@ -24,7 +24,6 @@ public final class NotchWindow: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         level = .init(rawValue: NSWindow.Level.statusBar.rawValue + 1)
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isMovable = false
         hasShadow = false
         hidesOnDeactivate = false
@@ -44,6 +43,7 @@ public final class NotchWindow: NSPanel {
         observeScreenChanges()
         positionOnNotch()
         startFileDragMonitoring()
+        startObservingSettings()
     }
 
     deinit {
@@ -51,6 +51,34 @@ public final class NotchWindow: NSPanel {
         globalClickMonitor.map { NSEvent.removeMonitor($0) }
         globalFileDragMonitor.map { NSEvent.removeMonitor($0) }
         globalFileUpMonitor.map { NSEvent.removeMonitor($0) }
+    }
+
+    // MARK: — Observation des réglages
+
+    private func startObservingSettings() {
+        withObservationTracking {
+            applyCollectionBehavior(for: controller.fullscreenBehavior)
+            _ = controller.expandedWidth
+            _ = controller.targetScreenName
+        } onChange: { [weak self] in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.applyCollectionBehavior(for: self.controller.fullscreenBehavior)
+                self.positionOnNotch()
+                self.startObservingSettings()
+            }
+        }
+    }
+
+    private func applyCollectionBehavior(for behavior: FullscreenBehavior) {
+        switch behavior {
+        case .accessible:
+            collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        case .hidden:
+            collectionBehavior = [.canJoinAllSpaces]
+        case .overlay:
+            collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        }
     }
 
     // MARK: — Événements souris
@@ -76,11 +104,30 @@ public final class NotchWindow: NSPanel {
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in self?.positionOnNotch() }
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let name = controller.targetScreenName
+                if !name.isEmpty, NSScreen.screen(named: name) == nil {
+                    SettingsStore.shared.targetScreenName = ""
+                }
+                positionOnNotch()
+            }
+        }
     }
 
     private func positionOnNotch() {
-        guard let geometry = NSScreen.withNotch?.notchGeometry() else { return }
+        let screen = NSScreen.screen(named: controller.targetScreenName)
+            ?? NSScreen.withNotch
+            ?? NSScreen.main
+        guard let geometry = screen?.notchGeometry() ?? screen.map({ scr in
+            // Écran sans encoche : ancre une encoche simulée au centre du bord supérieur.
+            let bounds = scr.frame
+            let size = NotchGeometry.fallbackSize
+            let rect = CGRect(x: bounds.midX - size.width / 2, y: bounds.maxY - size.height,
+                              width: size.width, height: size.height)
+            return NotchGeometry(notchRect: rect, screenFrame: bounds)
+        }) else { return }
         currentGeometry = geometry
         updateFrame(for: controller.state, from: .collapsed, animated: false)
     }
@@ -93,9 +140,10 @@ public final class NotchWindow: NSPanel {
         controller.notchHeight = geometry.notchRect.height
 
         switch state {
-        case .expanded: applyExpanded(geometry: geometry, animated: animated)
+        case .expanded: applyExpanded(geometry: geometry, from: from, animated: animated)
         case .peeking: applyPeeking(geometry: geometry, animated: animated)
         case .hud: applyHUD(geometry: geometry, animated: animated)
+        case .ambient: applyAmbient(geometry: geometry, animated: animated)
         case .collapsed: applyCollapsed(geometry: geometry, from: from, animated: animated)
         }
         orderFrontRegardless()
@@ -125,14 +173,26 @@ public final class NotchWindow: NSPanel {
     private func revealClearBackground() {
         backgroundColor = .clear
         updateTrackingArea()
+        // Si le curseur a quitté la fenêtre pendant l'animation d'ouverture (window.frame était déjà
+        // à la taille expanded dès le début → mouseExited filtré), on déclenche la fermeture ici.
+        let mouse = NSEvent.mouseLocation
+        let containsMouse = mouse.x >= frame.minX && mouse.x <= frame.maxX && 
+                            mouse.y >= frame.minY && mouse.y <= frame.maxY
+        if !containsMouse {
+            controller.cursorExited()
+        }
     }
 
-    private func applyExpanded(geometry: NotchGeometry, animated: Bool) {
-        backgroundColor = .black
-        let size = CGSize(width: Layout.expandedWidth, height: Layout.navbarHeight + Layout.contentHeight)
+    private func applyExpanded(geometry: NotchGeometry, from: NotchState, animated: Bool) {
+        let size = CGSize(width: controller.expandedWidth, height: Layout.navbarHeight + Layout.contentHeight)
+        // Depuis ambient : le fond SwiftUI changerait de forme abruptement pendant l'animation
+        // → on pose un fond noir opaque pour masquer la transition, révélé à la fin comme d'habitude.
+        if animated && from == .ambient {
+            backgroundColor = .black
+        }
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
-            duration: Layout.openDuration,
+            duration: Layout.openDuration * controller.animationScale,
             animated: animated
         ) { [weak self] in
             self?.revealClearBackground()
@@ -141,11 +201,11 @@ public final class NotchWindow: NSPanel {
     }
 
     private func applyPeeking(geometry: NotchGeometry, animated: Bool) {
-        backgroundColor = .black
-        let size = CGSize(width: Layout.expandedWidth, height: Layout.navbarHeight)
+        removeGlobalClickMonitor()
+        let size = CGSize(width: controller.expandedWidth, height: Layout.navbarHeight)
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
-            duration: Layout.peekDuration,
+            duration: Layout.peekDuration * controller.animationScale,
             animated: animated
         ) { [weak self] in
             self?.revealClearBackground()
@@ -153,15 +213,33 @@ public final class NotchWindow: NSPanel {
     }
 
     private func applyHUD(geometry: NotchGeometry, animated: Bool) {
+        removeGlobalClickMonitor()
         // Fenêtre qui entoure l'encoche (plus large des deux côtés), barre fine en dessous.
-        backgroundColor = .black
         let size = CGSize(
             width: max(Layout.hudMinWidth, controller.notchWidth + Layout.hudSideMargin),
             height: controller.notchHeight + Layout.hudBottomMargin
         )
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
-            duration: Layout.peekDuration,
+            duration: Layout.peekDuration * controller.animationScale,
+            animated: animated
+        ) { [weak self] in
+            self?.revealClearBackground()
+        }
+    }
+
+    private func applyAmbient(geometry: NotchGeometry, animated: Bool) {
+        removeGlobalClickMonitor()
+        // Pills latérales : même hauteur que l'encoche, plus large des deux côtés.
+        let pillWidth = NotchController.ambientPillWidth
+        let pillGap = NotchController.ambientPillGap
+        let size = CGSize(
+            width: controller.notchWidth + (pillWidth + pillGap) * 2,
+            height: controller.notchHeight
+        )
+        transitionFrame(
+            to: makeFrame(size: size, geometry: geometry),
+            duration: Layout.ambientDuration * controller.animationScale,
             animated: animated
         ) { [weak self] in
             self?.revealClearBackground()
@@ -169,25 +247,27 @@ public final class NotchWindow: NSPanel {
     }
 
     private func applyCollapsed(geometry: NotchGeometry, from: NotchState, animated: Bool) {
-        backgroundColor = .clear
         removeGlobalClickMonitor()
-        let size = CGSize(width: geometry.notchRect.width, height: geometry.notchRect.height)
+        let ringInset = controller.timerRingActive ? NotchController.timerRingInset : 0
+        let size = CGSize(
+            width: geometry.notchRect.width + ringInset * 2,
+            height: geometry.notchRect.height + ringInset
+        )
         guard animated else {
+            backgroundColor = .clear
             applyFrame(size: size, geometry: geometry)
             return
         }
         let frame = makeFrame(size: size, geometry: geometry)
-        // Depuis peek / hud : rétrécir tout de suite. Depuis expanded : attendre l'animation SwiftUI.
-        if from == .peeking || from == .hud {
-            transitionFrame(to: frame, duration: Layout.peekDuration, animated: true) { [weak self] in
-                self?.updateTrackingArea()
+        if from == .expanded {
+            // Fermeture symétrique à l'ouverture : la fenêtre se rétracte, puis redevient transparente.
+            transitionFrame(to: frame, duration: Layout.closeDuration * controller.animationScale, animated: true) { [weak self] in
+                self?.revealClearBackground()
             }
         } else {
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .milliseconds(Layout.collapseFromExpandedDelayMs))
-                guard let self, controller.state == .collapsed else { return }
-                setFrame(frame, display: true, animate: false)
-                updateTrackingArea()
+            // Depuis peek / hud / ambient : rétrécir directement, fond déjà transparent.
+            transitionFrame(to: frame, duration: Layout.peekDuration * controller.animationScale, animated: true) { [weak self] in
+                self?.updateTrackingArea()
             }
         }
     }
@@ -247,9 +327,9 @@ public final class NotchWindow: NSPanel {
         guard let geometry = currentGeometry else { return }
         let mouse = NSEvent.mouseLocation
         let zone = CGRect(
-            x: geometry.anchorPoint.x - Layout.expandedWidth / 2,
+            x: geometry.anchorPoint.x - controller.expandedWidth / 2,
             y: geometry.notchRect.minY - 120,
-            width: Layout.expandedWidth,
+            width: controller.expandedWidth,
             height: 120 + geometry.notchRect.height
         )
 
@@ -291,16 +371,14 @@ public final class NotchWindow: NSPanel {
 // MARK: — Constantes
 
 private enum Layout {
-    static let expandedWidth: CGFloat = 744 // 720 contenu + 12 px d'oreille de chaque côté
     static let navbarHeight: CGFloat = 44
-    static let contentHeight: CGFloat = 180
+    static let contentHeight: CGFloat = 200
     static let openDuration: TimeInterval = 0.40
     static let closeDuration: TimeInterval = 0.34
     static let peekDuration: TimeInterval = 0.20
+    static let ambientDuration: TimeInterval = 0.30
     // HUD : la fenêtre déborde de chaque côté de l'encoche, barre fine en dessous.
     static let hudMinWidth: CGFloat = 280
     static let hudSideMargin: CGFloat = 170
     static let hudBottomMargin: CGFloat = 34
-    /// Attendre la fin de l'animation SwiftUI avant de rétrécir la fenêtre depuis l'état ouvert.
-    static let collapseFromExpandedDelayMs = 380
 }

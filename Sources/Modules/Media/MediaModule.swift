@@ -9,15 +9,23 @@ import SwiftUI
 
     public private(set) var nowPlaying: MediaState = .empty
     public var onBecameActive: (() -> Void)?
+    public var onAmbientUpdate: ((AmbientContent?) -> Void)?
 
     private let source: any MediaSource
     private let artworkSource = AppleMusicArtworkSource()
+    private let spotifyArtworkSource = SpotifyArtworkSource()
     @ObservationIgnored private nonisolated(unsafe) var mrObserver: NSObjectProtocol?
     @ObservationIgnored private nonisolated(unsafe) var pollTimer: Timer?
     @ObservationIgnored private nonisolated(unsafe) var elapsedTimer: Timer?
+    @ObservationIgnored private nonisolated(unsafe) var resyncTimer: Timer?
+    @ObservationIgnored private var startupPollAttemptsRemaining = MediaModule.maxStartupPollAttempts
     @ObservationIgnored private var wasActive = false
+    @ObservationIgnored private var cachedArtwork: NSImage?
+    @ObservationIgnored private var cachedArtworkColor: Color = .white
+    public var artworkAccentColor: Color { cachedArtworkColor }
     /// True quand la lecture est pilotée par Apple Music (notification distribuée).
     @ObservationIgnored private var sourceIsAppleMusic = false
+    @ObservationIgnored private var sourceIsSpotify = false
 
     public init() {
         source = MediaRemoteSource()
@@ -40,12 +48,24 @@ import SwiftUI
             suspensionBehavior: .deliverImmediately
         )
 
-        // Polling de secours toutes les 3 s (utile si la musique joue déjà au lancement)
-        pollTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
-            Task { [weak self] in await self?.refresh() }
-        }
-
+        scheduleStartupPoll()
         Task { await refresh() }
+    }
+
+    /// Sonde de démarrage à intervalles espacés (utile si la musique joue déjà au lancement —
+    /// les notifications ne couvrent que les changements survenant après l'abonnement).
+    /// Nombre de tentatives borné : aucun polling au repos une fois la fenêtre passée.
+    private static let maxStartupPollAttempts = 3
+
+    private func scheduleStartupPoll() {
+        guard startupPollAttemptsRemaining > 0 else { return }
+        startupPollAttemptsRemaining -= 1
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.refresh()
+                self?.scheduleStartupPoll()
+            }
+        }
     }
 
     @objc private func handleMusicPlayerInfo(_ notif: Notification) {
@@ -53,23 +73,32 @@ import SwiftUI
         let playerState = info["Player State"] as? String ?? ""
         let isPlaying = playerState == "Playing"
         let isActive = playerState == "Playing" || playerState == "Paused"
+        let newTitle = isActive ? info["Name"] as? String : nil
 
         let state = MediaState(
-            title: isActive ? info["Name"] as? String : nil,
+            title: newTitle,
             artist: isActive ? info["Artist"] as? String : nil,
             album: isActive ? info["Album"] as? String : nil,
-            artwork: nowPlaying.artwork, // garde la pochette si déjà chargée
+            // Only keep existing artwork if the track title hasn't changed.
+            // If the title changed, clear it so fetchAppleMusicArtworkIfNeeded() fetches the new one.
+            artwork: isActive && newTitle == nowPlaying.title ? nowPlaying.artwork : nil,
             isPlaying: isPlaying,
-            elapsed: (info["Current Position"] as? Double) ?? 0,
-            duration: (info["Total Time"] as? Double ?? 0) / 1000
+            // La notif Apple Music ne contient souvent pas « Current Position » : sur le même
+            // morceau on conserve l'elapsed courant (sinon la barre saute à 0 à chaque play/pause).
+            elapsed: (info["Current Position"] as? Double) ?? (newTitle == nowPlaying.title ? nowPlaying.elapsed : 0),
+            duration: (info["Total Time"] as? Double ?? 0) / 1000,
+            shuffleMode: isActive ? (info["Shuffle Mode"] as? Int ?? nowPlaying.shuffleMode) : 0,
+            repeatMode: isActive ? (info["Repeat Mode"] as? Int ?? nowPlaying.repeatMode) : 0
         )
         let becameActive = !wasActive && state.isActive
         wasActive = state.isActive
         sourceIsAppleMusic = state.isActive
+        sourceIsSpotify = false
         nowPlaying = state
         if becameActive { onBecameActive?() }
         updateElapsedTimer()
         fetchAppleMusicArtworkIfNeeded()
+        updateAmbient()
 
         // Refresh complet pour récupérer la pochette via MediaRemote
         Task { await refresh() }
@@ -77,23 +106,23 @@ import SwiftUI
 
     private func refresh() async {
         let state = await source.fetchNowPlayingInfo()
-        // Merge : si la distributed notification a déjà le titre, garde-le si MediaRemote est vide
-        var merged = state.isActive ? state : nowPlaying
-        // Preserve elapsed from distributed-notification timer if MediaRemote doesn't provide it
-        if state.isActive, state.elapsed == 0, nowPlaying.elapsed > 0, nowPlaying.title == merged.title {
-            merged.elapsed = nowPlaying.elapsed
-        }
-        // Conserve la pochette déjà récupérée si MediaRemote n'en fournit pas (cas Apple Music).
-        if merged.artwork == nil, nowPlaying.artwork != nil, nowPlaying.title == merged.title {
-            merged.artwork = nowPlaying.artwork
-        }
+        let merged = MediaState.merging(incoming: state, previous: nowPlaying)
         let becameActive = !wasActive && merged.isActive
         let playStateChanged = merged.isPlaying != nowPlaying.isPlaying
         wasActive = merged.isActive
+        // Detect Spotify: running and NOT Apple Music
+        if merged.isActive, !sourceIsAppleMusic {
+            sourceIsSpotify = NSWorkspace.shared.runningApplications
+                .contains { $0.bundleIdentifier == "com.spotify.client" }
+        } else if !merged.isActive {
+            sourceIsSpotify = false
+        }
         nowPlaying = merged
         if becameActive { onBecameActive?() }
         if playStateChanged { updateElapsedTimer() }
         fetchAppleMusicArtworkIfNeeded()
+        fetchSpotifyArtworkIfNeeded()
+        updateAmbient()
     }
 
     /// Apple Music ne fournit pas la pochette via MediaRemote → on la récupère via AppleScript.
@@ -104,10 +133,61 @@ import SwiftUI
             guard let image = await self?.artworkSource.artwork(forTrackKey: key) else { return }
             guard let self, nowPlaying.title == title else { return }
             nowPlaying.artwork = image
+            updateAmbient()
+        }
+    }
+
+    /// Spotify peut ne pas fournir de pochette via MediaRemote → fallback via AppleScript (artwork url).
+    private func fetchSpotifyArtworkIfNeeded() {
+        guard sourceIsSpotify, nowPlaying.artwork == nil, let title = nowPlaying.title else { return }
+        let key = "\(title)|\(nowPlaying.artist ?? "")"
+        Task { [weak self] in
+            guard let image = await self?.spotifyArtworkSource.artwork(forTrackKey: key) else { return }
+            guard let self, nowPlaying.title == title, nowPlaying.artwork == nil else { return }
+            nowPlaying.artwork = image
+            updateAmbient()
+        }
+    }
+
+    private func updateAmbient() {
+        if nowPlaying.isActive {
+            let artwork = nowPlaying.artwork
+            // Recompute color only when artwork reference changes
+            if artwork !== cachedArtwork {
+                cachedArtwork = artwork
+                cachedArtworkColor = artwork?.dominantColor ?? .white
+            }
+            onAmbientUpdate?(.init(
+                kind: .music(
+                    artwork: artwork,
+                    isPlaying: nowPlaying.isPlaying,
+                    elapsed: nowPlaying.elapsed,
+                    duration: nowPlaying.duration
+                ),
+                accentColor: cachedArtworkColor
+            ))
+        } else {
+            cachedArtwork = nil
+            onAmbientUpdate?(nil)
         }
     }
 
     public func send(_ command: MediaCommand) {
+        // Mise à jour optimiste : l'UI reflète le changement immédiatement sans attendre
+        // la prochaine notification MediaRemote.
+        switch command {
+        case .toggleShuffle:
+            nowPlaying.shuffleMode = nowPlaying.shuffleMode > 0 ? 0 : 1
+        case .toggleRepeat:
+            // Cycle : off(0) → all(2) → one(1) → off(0)
+            switch nowPlaying.repeatMode {
+            case 0:  nowPlaying.repeatMode = 2
+            case 2:  nowPlaying.repeatMode = 1
+            default: nowPlaying.repeatMode = 0
+            }
+        default:
+            break
+        }
         Task { await source.send(command) }
     }
 
@@ -119,25 +199,28 @@ import SwiftUI
     /// Positionne réellement la lecture (à appeler à la fin du glissement).
     public func seek(to position: TimeInterval) {
         let target = max(0, min(position, nowPlaying.duration))
+        let previousElapsed = nowPlaying.elapsed
         nowPlaying.elapsed = target
         if sourceIsAppleMusic {
-            seekAppleMusic(to: target) // MediaRemote est bloqué pour Music sur macOS 15
+            seekAppleMusic(to: target, revertTo: previousElapsed)
         } else {
             send(.seek(to: target))
         }
     }
 
-    private func seekAppleMusic(to position: TimeInterval) {
+    private func seekAppleMusic(to position: TimeInterval, revertTo previousElapsed: TimeInterval) {
         let running = NSWorkspace.shared.runningApplications.contains {
             $0.bundleIdentifier == "com.apple.Music"
         }
-        guard running else { return }
-        let script = "tell application \"Music\" to set player position to \(Int(position))"
-        Task.detached {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            process.arguments = ["-e", script]
-            try? process.run()
+        guard running else {
+            nowPlaying.elapsed = previousElapsed
+            return
+        }
+        Task.detached { [weak self] in
+            let succeeded = AppleMusicScriptingBridge.setPlayerPosition(position)
+            guard !succeeded else { return }
+            let ref = self
+            await MainActor.run { ref?.nowPlaying.elapsed = previousElapsed }
         }
     }
 
@@ -146,6 +229,8 @@ import SwiftUI
     private func updateElapsedTimer() {
         elapsedTimer?.invalidate()
         elapsedTimer = nil
+        resyncTimer?.invalidate()
+        resyncTimer = nil
         guard nowPlaying.isPlaying else { return }
         elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -153,6 +238,23 @@ import SwiftUI
                 nowPlaying.elapsed = min(nowPlaying.elapsed + 1, nowPlaying.duration)
             }
         }
+        // Resync Apple Music position every 5 s to prevent drift from the 1-s ticker.
+        if sourceIsAppleMusic {
+            resyncTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+                Task { [weak self] in await self?.resyncAppleMusicElapsed() }
+            }
+        }
+    }
+
+    private func resyncAppleMusicElapsed() async {
+        guard sourceIsAppleMusic, nowPlaying.isPlaying else { return }
+        guard let pos = await appleMusicPlayerPosition() else { return }
+        guard sourceIsAppleMusic, nowPlaying.isPlaying else { return }
+        nowPlaying.elapsed = pos
+    }
+
+    private nonisolated func appleMusicPlayerPosition() async -> Double? {
+        await Task.detached { AppleMusicScriptingBridge.playerPosition() }.value
     }
 
     public func stop() {
@@ -167,6 +269,8 @@ import SwiftUI
         pollTimer = nil
         elapsedTimer?.invalidate()
         elapsedTimer = nil
+        resyncTimer?.invalidate()
+        resyncTimer = nil
     }
 
     public func makePeekView() -> AnyView {
@@ -182,5 +286,6 @@ import SwiftUI
         DistributedNotificationCenter.default().removeObserver(self)
         pollTimer?.invalidate()
         elapsedTimer?.invalidate()
+        resyncTimer?.invalidate()
     }
 }

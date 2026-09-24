@@ -4,20 +4,6 @@ import SwiftUI
 struct ShortcutsSettingsView: View {
     var store: SettingsStore
 
-    private struct ShortcutRow: Identifiable {
-        let id: String
-        let labelKey: String
-        let keys: String
-    }
-
-    private let shortcuts: [ShortcutRow] = [
-        ShortcutRow(id: "openClose", labelKey: "settings.shortcuts.openClose", keys: "⌃ Space"),
-        ShortcutRow(id: "media", labelKey: "settings.shortcuts.media", keys: "—"),
-        ShortcutRow(id: "newTimer", labelKey: "settings.shortcuts.newTimer", keys: "⌥⌘ T"),
-        ShortcutRow(id: "paste", labelKey: "settings.shortcuts.paste", keys: "⌥⌘ V"),
-        ShortcutRow(id: "dropzone", labelKey: "settings.shortcuts.dropzone", keys: "—"),
-    ]
-
     var body: some View {
         Form {
             Section {
@@ -30,18 +16,47 @@ struct ShortcutsSettingsView: View {
             }
 
             Section {
-                ForEach(shortcuts) { row in
-                    HStack {
-                        Text(LocalizedStringKey(row.labelKey), bundle: localizationBundle)
-                        Spacer()
-                        Text(row.keys)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                }
+                shortcutRow(
+                    nameKey: "settings.shortcuts.openClose",
+                    shortcut: store.shortcutOpenClose,
+                    onChange: { store.shortcutOpenClose = $0 }
+                )
+                shortcutRow(
+                    nameKey: "settings.shortcuts.paste",
+                    shortcut: store.shortcutPaste,
+                    onChange: { store.shortcutPaste = $0 }
+                )
+                shortcutRow(
+                    nameKey: "settings.shortcuts.newTimer",
+                    shortcut: store.shortcutNewTimer,
+                    onChange: { store.shortcutNewTimer = $0 }
+                )
+                shortcutRow(
+                    nameKey: "settings.shortcuts.openMedia",
+                    shortcut: store.shortcutOpenMedia,
+                    onChange: { store.shortcutOpenMedia = $0 }
+                )
+            } footer: {
+                Text("settings.shortcuts.recorderHint", bundle: localizationBundle)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
         .navigationTitle(Text("settings.section.shortcuts", bundle: localizationBundle))
+    }
+
+    private func shortcutRow(
+        nameKey: String,
+        shortcut: GlobalKeyboardShortcut,
+        onChange: @escaping (GlobalKeyboardShortcut) -> Void
+    ) -> some View {
+        HStack {
+            Text(LocalizedStringKey(nameKey), bundle: localizationBundle)
+            Spacer()
+            ShortcutRecorderView(shortcut: shortcut, onChange: onChange)
+        }
+        .disabled(!store.globalShortcutEnabled)
+        .opacity(store.globalShortcutEnabled ? 1 : 0.4)
     }
 }

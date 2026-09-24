@@ -19,8 +19,10 @@ public final class TimerModule: NotchModule {
 
     public private(set) var entries: [TimerEntry] = []
     public private(set) var pomodoroState: PomodoroState = .init()
+    public var onAmbientUpdate: ((AmbientContent?) -> Void)?
 
     @ObservationIgnored private nonisolated(unsafe) var dispatchTimers: [UUID: DispatchSourceTimer] = [:]
+    @ObservationIgnored private var pomodoroEntryID: UUID?
 
     public init() {
         requestNotificationPermission()
@@ -36,6 +38,7 @@ public final class TimerModule: NotchModule {
         }
         dispatchTimers.removeAll()
         entries.removeAll()
+        updateAmbient()
     }
 
     public func makePeekView() -> AnyView {
@@ -64,21 +67,34 @@ public final class TimerModule: NotchModule {
         }
     }
 
-    public func addTimer(label: String, duration: TimeInterval) {
+    @discardableResult
+    public func addTimer(label: String, duration: TimeInterval) -> UUID {
         let entry = TimerEntry(label: label, duration: duration)
         entries.append(entry)
+        return entry.id
+    }
+
+    /// Crée un timer et le démarre immédiatement. Retourne `nil` si la durée est nulle.
+    @discardableResult
+    public func addAndStart(label: String, duration: TimeInterval) -> UUID? {
+        guard duration > 0 else { return nil }
+        let id = addTimer(label: label, duration: duration)
+        send(.start(id: id))
+        return id
     }
 
     public func removeTimer(id: UUID) {
         stopDispatchTimer(for: id)
         entries.removeAll { $0.id == id }
+        updateAmbient()
     }
 
     public func startPomodoro() {
+        if let old = pomodoroEntryID { removeTimer(id: old) }
         pomodoroState.reset()
-        let duration = pomodoroState.currentPhaseDuration
-        addTimer(label: pomodoroState.currentPhaseLabel, duration: duration)
+        addTimer(label: pomodoroState.currentPhaseLabel, duration: pomodoroState.currentPhaseDuration)
         guard let entry = entries.last else { return }
+        pomodoroEntryID = entry.id
         startEntry(entry.id)
     }
 
@@ -90,6 +106,7 @@ public final class TimerModule: NotchModule {
         entries[index].isRunning = true
         entries[index].isPaused = false
         scheduleDispatchTimer(for: id)
+        updateAmbient()
     }
 
     private func pauseEntry(_ id: UUID) {
@@ -98,6 +115,7 @@ public final class TimerModule: NotchModule {
         entries[index].isRunning = false
         entries[index].isPaused = true
         stopDispatchTimer(for: id)
+        updateAmbient()
     }
 
     private func stopEntry(_ id: UUID) {
@@ -106,6 +124,7 @@ public final class TimerModule: NotchModule {
         entries[index].isPaused = false
         entries[index].remaining = 0
         stopDispatchTimer(for: id)
+        updateAmbient()
     }
 
     private func resetEntry(_ id: UUID) {
@@ -114,6 +133,25 @@ public final class TimerModule: NotchModule {
         entries[index].isRunning = false
         entries[index].isPaused = false
         entries[index].remaining = entries[index].duration
+        updateAmbient()
+    }
+
+    private func updateAmbient() {
+        if let running = entries.first(where: { $0.isRunning }) {
+            let progress = running.duration > 0 ? running.remaining / running.duration : 0
+            onAmbientUpdate?(.init(
+                kind: .timer(label: remainingLabel(running.remaining), progress: progress),
+                accentColor: SettingsStore.shared.hudAccentColor
+            ))
+        } else {
+            onAmbientUpdate?(nil)
+        }
+    }
+
+    /// Décompte vivant « m:ss » affiché dans la pill ambient (mis à jour à chaque tick).
+    private func remainingLabel(_ remaining: TimeInterval) -> String {
+        let total = max(0, Int(remaining))
+        return String(format: "%d:%02d", total / 60, total % 60)
     }
 
     // MARK: — DispatchSourceTimer
@@ -143,7 +181,24 @@ public final class TimerModule: NotchModule {
             entries[index].isRunning = false
             stopDispatchTimer(for: id)
             sendFinishedNotification(for: entries[index])
+            if id == pomodoroEntryID {
+                advancePomodoro()
+            } else {
+                updateAmbient()
+            }
+        } else {
+            updateAmbient()
         }
+    }
+
+    private func advancePomodoro() {
+        entries.removeAll { $0.id == pomodoroEntryID }
+        pomodoroEntryID = nil
+        pomodoroState.advance()
+        addTimer(label: pomodoroState.currentPhaseLabel, duration: pomodoroState.currentPhaseDuration)
+        guard let entry = entries.last else { return }
+        pomodoroEntryID = entry.id
+        startEntry(entry.id)
     }
 
     // MARK: — Notifications
@@ -158,10 +213,16 @@ public final class TimerModule: NotchModule {
 
     private func sendFinishedNotification(for entry: TimerEntry) {
         guard Bundle.main.bundleIdentifier != nil else { return }
+        let settings = SettingsStore.shared
+        if settings.timerAlertVisualOnly { return }
         let content = UNMutableNotificationContent()
         content.title = entry.label
         content.body = NSLocalizedString("timer.notification.body", bundle: localizationBundle, comment: "")
-        content.sound = .default
+        if !settings.timerSoundEnabled {
+            content.sound = nil
+        } else {
+            content.sound = .default
+        }
         let request = UNNotificationRequest(
             identifier: entry.id.uuidString,
             content: content,
@@ -187,10 +248,11 @@ public struct PomodoroState {
     }
 
     public var currentPhaseDuration: TimeInterval {
+        let s = SettingsStore.shared
         switch phase {
-        case .work: 25 * 60
-        case .shortBreak: 5 * 60
-        case .longBreak: 15 * 60
+        case .work: return s.pomodoroWorkDuration * 60
+        case .shortBreak: return s.pomodoroShortBreakDuration * 60
+        case .longBreak: return s.pomodoroLongBreakDuration * 60
         }
     }
 

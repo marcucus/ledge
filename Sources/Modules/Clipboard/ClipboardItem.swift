@@ -18,11 +18,13 @@ public struct ClipboardItem: Identifiable {
     public let id: UUID
     public let content: ClipboardContent
     public let date: Date
+    public var isPinned: Bool
 
-    public init(id: UUID = UUID(), content: ClipboardContent, date: Date = Date()) {
+    public init(id: UUID = UUID(), content: ClipboardContent, date: Date = Date(), isPinned: Bool = false) {
         self.id = id
         self.content = content
         self.date = date
+        self.isPinned = isPinned
     }
 }
 

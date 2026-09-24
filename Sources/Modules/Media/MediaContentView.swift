@@ -12,64 +12,110 @@ struct MediaContentView: View {
         }
     }
 
-    // MARK: — Active layout (artwork left, info + controls right)
+    // MARK: — Active layout
 
     private var activeContent: some View {
-        VStack(spacing: 8) {
-            HStack(alignment: .center, spacing: 14) {
-                artworkView
+        HStack(alignment: .top, spacing: 16) {
+            artworkView
 
-                VStack(alignment: .leading, spacing: 4) {
-                    if let title = module.nowPlaying.title {
-                        Text(title)
-                            .font(.system(size: 14, weight: .semibold))
-                            .lineLimit(1)
-                    }
+            VStack(alignment: .leading, spacing: 4) {
+                // Ligne 1 : Artist · Album
+                HStack(spacing: 4) {
                     if let artist = module.nowPlaying.artist {
                         Text(artist)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                            .foregroundStyle(module.artworkAccentColor)
                     }
-
-                    Spacer(minLength: 0)
-
-                    controlsView
+                    if module.nowPlaying.artist != nil, module.nowPlaying.album != nil {
+                        Text("·").foregroundStyle(.quaternary)
+                    }
+                    if let album = module.nowPlaying.album {
+                        Text(album).foregroundStyle(.tertiary)
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(height: 72)
+                .font(.system(size: 11, weight: .medium))
+                .lineLimit(1)
 
-            VStack(spacing: 4) {
-                scrubbableBar
-
-                HStack {
-                    Text(formatTime(module.nowPlaying.elapsed))
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.tertiary)
-                    Spacer()
-                    Text(formatTime(module.nowPlaying.duration))
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.tertiary)
+                // Ligne 2 : Titre
+                if let title = module.nowPlaying.title {
+                    Text(title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Spacer(minLength: 0)
+
+                // Ligne 3 : [⇄] [◀◀] [▶] [▶▶] [↺]
+                controlsView
+
+                // Ligne 4 : 0:23 ━━━━━━━━━━━━ 3:42
+                progressRow
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(height: 80)
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
+    }
+
+    // MARK: — Controls (toutes les 5 en une ligne)
+
+    private var controlsView: some View {
+        HStack(spacing: 14) {
+            toggleButton(
+                icon: "shuffle",
+                active: module.nowPlaying.shuffleMode > 0
+            ) { module.send(.toggleShuffle) }
+
+            mediaButton(icon: "backward.fill", size: 14) { module.send(.previousTrack) }
+
+            mediaButton(
+                icon: module.nowPlaying.isPlaying ? "pause.fill" : "play.fill",
+                size: 18
+            ) { module.send(.togglePlayPause) }
+
+            mediaButton(icon: "forward.fill", size: 14) { module.send(.nextTrack) }
+
+            toggleButton(
+                icon: module.nowPlaying.repeatMode == 1 ? "repeat.1" : "repeat",
+                active: module.nowPlaying.repeatMode > 0
+            ) { module.send(.toggleRepeat) }
+        }
+    }
+
+    // MARK: — Progress row : timestamp ━━━━━━━━━ timestamp
+
+    private var progressRow: some View {
+        HStack(spacing: 6) {
+            Text(formatTime(module.nowPlaying.elapsed))
+                .font(.system(size: 9).monospacedDigit())
+                .foregroundStyle(.tertiary)
+                .fixedSize()
+
+            scrubbableBar
+
+            Text(formatTime(module.nowPlaying.duration))
+                .font(.system(size: 9).monospacedDigit())
+                .foregroundStyle(.tertiary)
+                .fixedSize()
+        }
+        .frame(height: 12)
     }
 
     private var scrubbableBar: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(.white.opacity(0.18))
-                    .frame(height: 4)
+                    .fill(.white.opacity(0.12))
+                    .frame(height: 3)
+                let fillWidth = max(0, geo.size.width * module.nowPlaying.progress)
                 Capsule()
-                    .fill(.white.opacity(0.85))
-                    .frame(width: max(0, geo.size.width * module.nowPlaying.progress), height: 4)
+                    .fill(module.artworkAccentColor)
+                    .frame(width: fillWidth, height: 3)
+                    .shadow(color: module.artworkAccentColor.opacity(0.6), radius: 3)
             }
-            .frame(maxHeight: .infinity) // centre la barre dans la zone tactile
-            .contentShape(Rectangle()) // toute la hauteur est cliquable
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { value in
@@ -84,8 +130,9 @@ struct MediaContentView: View {
                     }
             )
         }
-        .frame(height: 16) // zone de glissement haute de 16 px
     }
+
+    // MARK: — Artwork
 
     @ViewBuilder
     private var artworkView: some View {
@@ -93,42 +140,50 @@ struct MediaContentView: View {
             Image(nsImage: artwork)
                 .resizable()
                 .scaledToFill()
-                .frame(width: 72, height: 72)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .shadow(color: .black.opacity(0.4), radius: 4)
+                .frame(width: 80, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .shadow(color: module.artworkAccentColor.opacity(0.5), radius: 14, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
         } else {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 10)
                 .fill(.white.opacity(0.06))
-                .frame(width: 72, height: 72)
+                .frame(width: 80, height: 80)
                 .overlay {
                     Image(systemName: "music.note")
-                        .imageScale(.large)
+                        .font(.system(size: 24))
                         .foregroundStyle(.quaternary)
                 }
         }
     }
 
-    private var controlsView: some View {
-        HStack(spacing: 20) {
-            mediaButton(icon: "backward.fill", size: 15) { module.send(.previousTrack) }
-            mediaButton(
-                icon: module.nowPlaying.isPlaying ? "pause.fill" : "play.fill",
-                size: 18
-            ) {
-                module.send(.togglePlayPause)
-            }
-            mediaButton(icon: "forward.fill", size: 15) { module.send(.nextTrack) }
-        }
-    }
+    // MARK: — Boutons
 
     private func mediaButton(icon: String, size: CGFloat, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: size, weight: .semibold))
                 .foregroundStyle(.primary)
-                .frame(width: 28, height: 28)
+                .frame(width: 28, height: 26)
         }
         .buttonStyle(.plain)
+    }
+
+    /// Bouton toggle (shuffle / repeat) : fond coloré + icône accentuée quand actif.
+    private func toggleButton(icon: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: active ? .semibold : .regular))
+                .foregroundStyle(active ? module.artworkAccentColor : Color.primary.opacity(0.3))
+                .frame(width: 28, height: 26)
+                .background {
+                    if active {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(module.artworkAccentColor.opacity(0.15))
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.15), value: active)
     }
 
     // MARK: — Empty
@@ -136,7 +191,7 @@ struct MediaContentView: View {
     private var emptyState: some View {
         VStack(spacing: 8) {
             Image(systemName: "music.note")
-                .imageScale(.large)
+                .font(.system(size: 28))
                 .foregroundStyle(.quaternary)
             Text("media.nowPlaying.empty", bundle: localizationBundle)
                 .font(.callout)

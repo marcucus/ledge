@@ -17,8 +17,9 @@ public final class SystemObserver {
         didSet { updateEventTap() }
     }
 
-    // Accès depuis le callback C (non-isolé)
-    private nonisolated(unsafe) weak static var shared: SystemObserver?
+    // Accès depuis le callback C (non-isolé) — fort pour survivre à l'owner qui l'a créé.
+    // Non-private : lu depuis SystemObserver+Audio.swift (listener CoreAudio).
+    nonisolated(unsafe) static var shared: SystemObserver?
     private nonisolated(unsafe) static var activeTap: CFMachPort?
 
     private nonisolated(unsafe) var pollTimer: Timer?
@@ -26,7 +27,6 @@ public final class SystemObserver {
     private nonisolated(unsafe) var eventTap: CFMachPort?
     private nonisolated(unsafe) var runLoopSource: CFRunLoopSource?
 
-    private var lastVolume: Double = -1
     private var lastBrightness: Double = -1
     private var didPromptAX = false
     private var settingObserver: NSObjectProtocol?
@@ -40,8 +40,7 @@ public final class SystemObserver {
     }
 
     public func start() {
-        // Init aux valeurs courantes pour ne pas déclencher de HUD au lancement
-        lastVolume = SystemObserver.currentVolume()
+        // Init à la valeur courante pour ne pas déclencher de HUD au lancement
         lastBrightness = SystemObserver.currentBrightness()
         installKeyboardMonitor()
         observeSettingChanges()
@@ -54,9 +53,11 @@ public final class SystemObserver {
         globalMonitor.map { NSEvent.removeMonitor($0) }
         globalMonitor = nil
         removeEventTap()
-        // Un observateur à base de bloc se retire via son jeton (pas removeObserver(self)).
+        SystemObserver.removeVolumeListener()
+        SystemObserver.removeDefaultDeviceListener()
         settingObserver.map { NotificationCenter.default.removeObserver($0) }
         settingObserver = nil
+        SystemObserver.shared = nil
     }
 
     // MARK: — Observation (monitor clavier + réglage)
@@ -87,7 +88,13 @@ public final class SystemObserver {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 let suppress = settings.hudReplaceSystem
-                if suppressNativeHUD != suppress { suppressNativeHUD = suppress }
+                if suppressNativeHUD != suppress {
+                    suppressNativeHUD = suppress
+                } else if suppressNativeHUD {
+                    // hudBrightnessManualOnly a peut-être changé : réévalue la cadence du poll.
+                    if !settings.hudBrightnessManualOnly { lastBrightness = SystemObserver.currentBrightness() }
+                    startPolling()
+                }
             }
         }
     }
@@ -105,11 +112,20 @@ public final class SystemObserver {
     }
 
     // MARK: — Polling (uniquement quand le remplacement HUD est actif)
+    //
+    // Le volume est désormais détecté par un listener CoreAudio événementiel
+    // (cf. installVolumeListener) — il ne reste à interroger périodiquement que :
+    //   - la luminosité, et seulement si l'utilisateur a désactivé le mode "clavier
+    //     uniquement" (hudBrightnessManualOnly, activé par défaut → 0 lecture au repos) ;
+    //   - la permission Accessibilité, pour réinstaller le tap dès qu'elle est accordée.
+    // Cadence rapide seulement quand la luminosité est réellement surveillée ; sinon un
+    // simple battement lent suffit pour le recheck Accessibilité.
 
     private func startPolling() {
-        guard pollTimer == nil else { return }
-        // Capture les changements faits via le Centre de contrôle, que le tap ne voit pas.
-        pollTimer = Timer.scheduledTimer(withTimeInterval: HUDTuning.pollInterval, repeats: true) { [weak self] _ in
+        let interval = settings.hudBrightnessManualOnly ? HUDTuning.axRecheckInterval : HUDTuning.pollInterval
+        guard pollTimer == nil || pollTimer?.timeInterval != interval else { return }
+        pollTimer?.invalidate()
+        pollTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.pollAll() }
         }
     }
@@ -124,11 +140,7 @@ public final class SystemObserver {
         if suppressNativeHUD, eventTap == nil, AXIsProcessTrusted() {
             installEventTap()
         }
-        guard suppressNativeHUD else { return }
-        let volume = SystemObserver.currentVolume()
-        if volume >= 0, abs(volume - lastVolume) > HUDTuning.volumeThreshold {
-            emitVolume(volume, muted: SystemObserver.isMuted())
-        }
+        guard suppressNativeHUD, !settings.hudBrightnessManualOnly else { return }
         let brightness = SystemObserver.currentBrightness()
         if brightness >= 0, abs(brightness - lastBrightness) > HUDTuning.brightnessThreshold {
             emitBrightness(brightness)
@@ -137,8 +149,8 @@ public final class SystemObserver {
 
     // MARK: — Émission (MainActor), appelée par le tap / le polling / le monitor
 
-    private func emitVolume(_ value: Double, muted: Bool) {
-        lastVolume = value
+    // Non-private : appelé depuis SystemObserver+Audio.swift (listener CoreAudio).
+    func emitVolume(_ value: Double, muted: Bool) {
         onVolumeChange?(value, muted)
     }
 
@@ -199,9 +211,13 @@ public final class SystemObserver {
         guard suppressNativeHUD else {
             removeEventTap()
             stopPolling()
+            SystemObserver.removeVolumeListener()
+            SystemObserver.removeDefaultDeviceListener()
             return
         }
         startPolling()
+        SystemObserver.installVolumeListener()
+        SystemObserver.installDefaultDeviceListener()
         if AXIsProcessTrusted() {
             installEventTap()
         } else {
@@ -257,6 +273,8 @@ public final class SystemObserver {
         if let tap = eventTap {
             CGEvent.tapEnable(tap: tap, enable: false)
             runLoopSource.map { CFRunLoopRemoveSource(CFRunLoopGetMain(), $0, .commonModes) }
+            // Invalider le mach port pour ne pas le fuiter à chaque cycle install/remove.
+            CFMachPortInvalidate(tap)
         }
         eventTap = nil
         SystemObserver.activeTap = nil
@@ -268,11 +286,16 @@ public final class SystemObserver {
 
 private enum HUDTuning {
     static let pollInterval: TimeInterval = 0.2
+    /// Cadence du battement quand seule la permission Accessibilité doit être resurveillée
+    /// (volume événementiel, luminosité non surveillée en mode "clavier uniquement").
+    static let axRecheckInterval: TimeInterval = 2.0
     static let keyApplyDelay: Duration = .milliseconds(60)
     static let volumeStep: Float = 1.0 / 16.0
     static let fineStep: Float = 1.0 / 64.0 // Maj+Option : incrément plus fin
-    static let volumeThreshold = 0.02
-    static let brightnessThreshold = 0.015
+    // 5 % : filtre les ajustements automatiques (True Tone, capteur ambiant) qui sont
+    // typiquement < 3 % par intervalle de 200 ms. Les touches clavier passent toujours
+    // par le chemin direct (emitBrightness) sans passer par ce seuil.
+    static let brightnessThreshold = 0.05
     static let defaultBrightness: Float = 0.5 // repli si la lecture échoue
 }
 

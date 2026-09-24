@@ -5,4 +5,6 @@ public enum MediaCommand {
     case nextTrack
     case previousTrack
     case seek(to: TimeInterval)
+    case toggleShuffle
+    case toggleRepeat
 }

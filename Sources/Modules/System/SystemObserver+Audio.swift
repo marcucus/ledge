@@ -83,4 +83,84 @@ extension SystemObserver {
         )
         return deviceID
     }
+
+    // MARK: — Listener événementiel (remplace le polling pour le volume)
+
+    private nonisolated(unsafe) static var volumeListenerDevice = AudioDeviceID(kAudioObjectUnknown)
+    private nonisolated(unsafe) static var volumeListenerBlock: AudioObjectPropertyListenerBlock?
+    private nonisolated(unsafe) static var deviceListenerBlock: AudioObjectPropertyListenerBlock?
+
+    private nonisolated static var volumeAddress: AudioObjectPropertyAddress {
+        AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyVolumeScalar,
+            mScope: kAudioObjectPropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+    }
+
+    private nonisolated static var muteAddress: AudioObjectPropertyAddress {
+        AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyMute,
+            mScope: kAudioObjectPropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+    }
+
+    /// Branche un listener CoreAudio sur le volume/mute de la sortie par défaut : capte
+    /// tout changement (Centre de contrôle, AirPods, AppleScript…) sans aucun polling.
+    nonisolated static func installVolumeListener() {
+        removeVolumeListener()
+        let device = defaultOutputDevice()
+        guard device != AudioDeviceID(kAudioObjectUnknown) else { return }
+        volumeListenerDevice = device
+        let block: AudioObjectPropertyListenerBlock = { _, _ in
+            Task { @MainActor in
+                guard let observer = shared, observer.suppressNativeHUD else { return }
+                let volume = currentVolume()
+                if volume >= 0 { observer.emitVolume(volume, muted: isMuted()) }
+            }
+        }
+        volumeListenerBlock = block
+        var volAddr = volumeAddress
+        var muteAddr = muteAddress
+        AudioObjectAddPropertyListenerBlock(device, &volAddr, DispatchQueue.main, block)
+        AudioObjectAddPropertyListenerBlock(device, &muteAddr, DispatchQueue.main, block)
+    }
+
+    nonisolated static func removeVolumeListener() {
+        guard volumeListenerDevice != AudioDeviceID(kAudioObjectUnknown),
+              let block = volumeListenerBlock else { return }
+        var volAddr = volumeAddress
+        var muteAddr = muteAddress
+        AudioObjectRemovePropertyListenerBlock(volumeListenerDevice, &volAddr, DispatchQueue.main, block)
+        AudioObjectRemovePropertyListenerBlock(volumeListenerDevice, &muteAddr, DispatchQueue.main, block)
+        volumeListenerBlock = nil
+        volumeListenerDevice = AudioDeviceID(kAudioObjectUnknown)
+    }
+
+    /// Réinstalle le listener volume quand la sortie par défaut change (ex. bascule vers AirPods).
+    nonisolated static func installDefaultDeviceListener() {
+        removeDefaultDeviceListener()
+        var addr = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let block: AudioObjectPropertyListenerBlock = { _, _ in installVolumeListener() }
+        deviceListenerBlock = block
+        AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &addr, DispatchQueue.main, block)
+    }
+
+    nonisolated static func removeDefaultDeviceListener() {
+        guard let block = deviceListenerBlock else { return }
+        var addr = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        AudioObjectRemovePropertyListenerBlock(
+            AudioObjectID(kAudioObjectSystemObject), &addr, DispatchQueue.main, block
+        )
+        deviceListenerBlock = nil
+    }
 }

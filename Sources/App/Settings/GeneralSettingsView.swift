@@ -1,4 +1,5 @@
 import Core
+import ServiceManagement
 import SwiftUI
 
 struct GeneralSettingsView: View {
@@ -9,8 +10,14 @@ struct GeneralSettingsView: View {
         Form {
             Section {
                 Toggle(isOn: Binding(
-                    get: { store.launchAtLogin },
-                    set: { store.launchAtLogin = $0 }
+                    get: { SMAppService.mainApp.status == .enabled },
+                    set: { shouldEnable in
+                        if shouldEnable {
+                            try? SMAppService.mainApp.register()
+                        } else {
+                            try? SMAppService.mainApp.unregister()
+                        }
+                    }
                 )) {
                     Text("settings.general.launchAtLogin", bundle: localizationBundle)
                 }
@@ -28,11 +35,28 @@ struct GeneralSettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                if store.hudReplaceSystem {
+                    Toggle(isOn: Binding(
+                        get: { store.hudBrightnessManualOnly },
+                        set: { store.hudBrightnessManualOnly = $0 }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("settings.general.hudBrightnessManualOnly", bundle: localizationBundle)
+                            Text("settings.general.hudBrightnessManualOnlyDetail", bundle: localizationBundle)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             }
 
             Section {
                 collapseDelayRow
-                peekDurationRow
+            }
+
+            Section {
+                clickBehaviorRow
             }
 
             Section {
@@ -62,23 +86,17 @@ struct GeneralSettingsView: View {
         }
     }
 
-    private var peekDurationRow: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("settings.general.peekDuration", bundle: localizationBundle)
-            HStack {
-                Slider(
-                    value: Binding(
-                        get: { store.peekDuration },
-                        set: { store.peekDuration = $0 }
-                    ),
-                    in: 0.5...5.0,
-                    step: 0.5
-                )
-                Text(String(format: "%.1f s", store.peekDuration))
-                    .monospacedDigit()
-                    .frame(width: 48, alignment: .trailing)
-            }
+    private var clickBehaviorRow: some View {
+        Picker(selection: Binding(
+            get: { store.clickBehavior },
+            set: { store.clickBehavior = $0 }
+        )) {
+            Text("settings.general.clickBehavior.expand", bundle: localizationBundle).tag(ClickBehavior.expand)
+            Text("settings.general.clickBehavior.peek", bundle: localizationBundle).tag(ClickBehavior.peek)
+        } label: {
+            Text("settings.general.clickBehavior", bundle: localizationBundle)
         }
+        .pickerStyle(.segmented)
     }
 
     private var languageRow: some View {

@@ -6,6 +6,7 @@ import SwiftUI
 
 struct SystemContentView: View {
     var module: SystemModule
+    private var settings: SettingsStore { SettingsStore.shared }
 
     var body: some View {
         ScrollView(.vertical) {
@@ -27,11 +28,67 @@ struct SystemContentView: View {
     private var gaugesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             sectionHeader("system.section.gauges")
-            batteryRow
-            cpuRow
-            ramRow
-            networkRow
+            if settings.systemShowBattery { batteryRow }
+            if settings.systemShowCPU { cpuRow }
+            if settings.systemShowRAM { ramRow }
+            if settings.systemShowNetwork { networkRow }
+            if settings.systemShowMicrophoneIndicator { microphoneRow }
+            if settings.systemShowAccessoryBattery, !module.accessoryBatteries.isEmpty {
+                accessoryBatteryRows
+            }
         }
+    }
+
+    private var microphoneRow: some View {
+        HStack {
+            Image(systemName: "mic.fill")
+                .imageScale(.small)
+                .foregroundStyle(module.isMicrophoneActive ? Color.red : Color.secondary)
+            Text("system.gauge.microphone", bundle: localizationBundle)
+            Spacer()
+            Text(
+                module.isMicrophoneActive
+                    ? "system.microphone.active"
+                    : "system.microphone.inactive",
+                bundle: localizationBundle
+            )
+            .foregroundStyle(module.isMicrophoneActive ? .red : .secondary)
+        }
+        .font(.caption)
+    }
+
+    private var accessoryBatteryRows: some View {
+        ForEach(module.accessoryBatteries) { accessory in
+            accessoryBatteryRow(accessory)
+        }
+    }
+
+    private func accessoryBatteryRow(_ accessory: AccessoryBattery) -> some View {
+        HStack {
+            Image(systemName: "antenna.radiowaves.left.and.right").imageScale(.small)
+            Text(accessory.name)
+                .lineLimit(1)
+            Spacer()
+            if accessory.hasSplitLevels {
+                HStack(spacing: 6) {
+                    if let left = accessory.left { Text("L \(left)%") }
+                    if let right = accessory.right { Text("R \(right)%") }
+                    if let caseBattery = accessory.caseBattery {
+                        HStack(spacing: 2) {
+                            Image(systemName: "case.fill").imageScale(.small)
+                            Text("\(caseBattery)%")
+                        }
+                    }
+                }
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+            } else if let pct = accessory.percentage {
+                Text("\(pct)%").monospacedDigit()
+            } else {
+                Text("—").foregroundStyle(.secondary)
+            }
+        }
+        .font(.caption)
     }
 
     private var batteryRow: some View {

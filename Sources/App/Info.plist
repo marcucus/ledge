@@ -9,7 +9,7 @@
     <key>CFBundleDisplayName</key>
     <string>Ledge</string>
     <key>CFBundleExecutable</key>
-    <string>$(EXECUTABLE_NAME)</string>
+    <string>Ledge</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundleShortVersionString</key>
@@ -20,7 +20,24 @@
     <string>NSApplication</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>fr</string>
+    </array>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2026 Adrien Marques</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Ledge uses Apple Events to control playback (seek, position) in Music and Spotify.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Ledge needs access to your calendar to show your next upcoming event in the notch.</string>
+    <key>SUFeedURL</key>
+    <string>https://TODO-DOMAINE-LEDGE-SITE/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>DAOBnz8aZRDFS04TPHdvhed0Ecb6o/fJ0gDyQj+tEwE=</string>
 </dict>
 </plist>

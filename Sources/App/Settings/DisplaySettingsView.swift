@@ -1,11 +1,27 @@
+import AppKit
 import Core
 import SwiftUI
 
 struct DisplaySettingsView: View {
     var store: SettingsStore
+    @State private var screenNames: [String] = []
 
     var body: some View {
         Form {
+            Section {
+                Picker(selection: Binding(
+                    get: { store.targetScreenName },
+                    set: { store.targetScreenName = $0 }
+                )) {
+                    Text("settings.display.targetScreen.auto", bundle: localizationBundle).tag("")
+                    ForEach(screenNames, id: \.self) { name in
+                        Text(name).tag(name)
+                    }
+                } label: {
+                    Text("settings.display.targetScreen", bundle: localizationBundle)
+                }
+            }
+
             Section {
                 Picker(selection: Binding(
                     get: { store.fullscreenBehavior },
@@ -21,31 +37,12 @@ struct DisplaySettingsView: View {
                     Text("settings.display.fullscreen", bundle: localizationBundle)
                 }
             }
-
-            Section {
-                Picker(selection: Binding(
-                    get: { store.notchDetectionMode },
-                    set: { store.notchDetectionMode = $0 }
-                )) {
-                    Text("settings.display.notchDetection.automatic", bundle: localizationBundle)
-                        .tag(NotchDetectionMode.automatic)
-                    Text("settings.display.notchDetection.manual", bundle: localizationBundle)
-                        .tag(NotchDetectionMode.manual)
-                } label: {
-                    Text("settings.display.notchDetection", bundle: localizationBundle)
-                }
-            }
-
-            Section {
-                Toggle(isOn: Binding(
-                    get: { store.showRingWhenTimerActive },
-                    set: { store.showRingWhenTimerActive = $0 }
-                )) {
-                    Text("settings.display.timerRing", bundle: localizationBundle)
-                }
-            }
         }
         .formStyle(.grouped)
         .navigationTitle(Text("settings.section.display", bundle: localizationBundle))
+        .task { screenNames = NSScreen.allNames }
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
+        ) { _ in screenNames = NSScreen.allNames }
     }
 }
