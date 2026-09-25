@@ -136,6 +136,9 @@ et **remplacer** l'overlay natif de macOS.
   action de récupération lorsque c’est pertinent.
 - VoiceOver enrichi sur la navigation et le HUD ; les animations principales respectent le réglage
   macOS « Réduire les animations ».
+- Sélecteur d'écran fiable dans Réglages → Affichage : écran du Mac par défaut ou écran externe
+  explicite, pseudo-encoche sur les écrans sans encoche, cible persistante et restauration après
+  une déconnexion temporaire.
 
 ## Construire & lancer
 
@@ -148,8 +151,7 @@ Pour tester le HUD : accepter le prompt **Accessibilité**, puis **relancer l'ap
 
 ## Prochaines étapes suggérées
 
-1. **Pochette d'album** fiable (piste `iTunesLibrary` / cache image).
-2. **Distribution directe** → créer un token GitHub fin, publier la 0.1.0, puis tester le parcours
-   Gatekeeper « Ouvrir quand même » sur une autre machine.
-3. Finaliser **V4** : personnalisation des modules, page Permissions complète.
-4. Vérifier les cas **multi-écran / plein écran** décrits en [doc 07](07-architecture-technique.md).
+1. Valider Apple Music en lecture réelle : pochette, seek, resynchronisation et permission Automation.
+2. Vérifier et corriger les trois comportements plein écran, puis les transitions veille/réveil.
+3. Tester le parcours Gatekeeper « Ouvrir quand même » sur une autre machine.
+4. Continuer la passe de robustesse sur les erreurs et opérations impossibles des modules.

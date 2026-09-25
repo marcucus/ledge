@@ -164,6 +164,12 @@ import SwiftUI
 
     // MARK: — Display
 
+    /// Identifiant CoreGraphics persistant de l'écran choisi. Vide = écran du Mac automatiquement.
+    public var targetScreenIdentifier: String {
+        didSet { defaults.set(targetScreenIdentifier, forKey: Keys.targetScreenIdentifier) }
+    }
+
+    /// Nom conservé pour afficher une cible temporairement déconnectée et migrer l'ancien réglage.
     public var targetScreenName: String {
         didSet { defaults.set(targetScreenName, forKey: Keys.targetScreenName) }
     }
@@ -263,6 +269,7 @@ import SwiftUI
         pomodoroWorkDuration = defaults.double(forKey: Keys.pomodoroWorkDuration).nonZero ?? 25
         pomodoroShortBreakDuration = defaults.double(forKey: Keys.pomodoroShortBreakDuration).nonZero ?? 5
         pomodoroLongBreakDuration = defaults.double(forKey: Keys.pomodoroLongBreakDuration).nonZero ?? 15
+        targetScreenIdentifier = defaults.string(forKey: Keys.targetScreenIdentifier) ?? ""
         targetScreenName = defaults.string(forKey: Keys.targetScreenName) ?? ""
         launcherApps = (defaults.stringArray(forKey: Keys.launcherApps)) ?? Self.defaultLauncherApps
         ambientShowArtwork = defaults.object(forKey: Keys.ambientShowArtwork) as? Bool ?? true
@@ -353,6 +360,7 @@ private enum Keys {
     static let pomodoroWorkDuration = "pomodoroWorkDuration"
     static let pomodoroShortBreakDuration = "pomodoroShortBreakDuration"
     static let pomodoroLongBreakDuration = "pomodoroLongBreakDuration"
+    static let targetScreenIdentifier = "targetScreenIdentifier"
     static let targetScreenName = "targetScreenName"
     static let launcherApps = "launcherApps"
     static let ambientShowArtwork = "ambientShowArtwork"
@@ -372,27 +380,5 @@ private enum Keys {
 private extension Double {
     var nonZero: Double? {
         self == 0 ? nil : self
-    }
-}
-
-private extension UserDefaults {
-    func shortcut(forKey key: String) -> GlobalKeyboardShortcut? {
-        guard let data = data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(GlobalKeyboardShortcut.self, from: data)
-    }
-
-    func setShortcut(_ shortcut: GlobalKeyboardShortcut, forKey key: String) {
-        guard let data = try? JSONEncoder().encode(shortcut) else { return }
-        set(data, forKey: key)
-    }
-
-    func setCodable<T: Encodable>(_ value: T, forKey key: String) {
-        guard let data = try? JSONEncoder().encode(value) else { return }
-        set(data, forKey: key)
-    }
-
-    func codable<T: Decodable>(_ type: T.Type, forKey key: String) -> T? {
-        guard let data = data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(type, from: data)
     }
 }

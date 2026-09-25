@@ -19,4 +19,21 @@ struct SettingsStoreTests {
         let reloadedStore = SettingsStore(defaults: defaults)
         #expect(reloadedStore.hasCompletedOnboarding)
     }
+
+    @Test func targetScreenSelectionPersistsIdentifierAndName() {
+        let suiteName = "ledge.screen.tests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Unable to create isolated UserDefaults suite")
+            return
+        }
+        defer { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
+
+        let initialStore = SettingsStore(defaults: defaults)
+        initialStore.targetScreenIdentifier = "E9DBA2F0-TEST"
+        initialStore.targetScreenName = "Studio Display"
+
+        let reloadedStore = SettingsStore(defaults: defaults)
+        #expect(reloadedStore.targetScreenIdentifier == "E9DBA2F0-TEST")
+        #expect(reloadedStore.targetScreenName == "Studio Display")
+    }
 }

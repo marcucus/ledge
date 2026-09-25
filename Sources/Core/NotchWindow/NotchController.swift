@@ -101,7 +101,10 @@ import Foundation
     /// Afficher les libellés texte sous les icônes de modules dans la NavBar.
     public var showModuleLabels: Bool { settings.showModuleLabels }
 
-    /// Nom de l'écran cible ("" = auto, i.e. écran avec encoche).
+    /// Identifiant de l'écran cible ("" = écran intégré avec encoche, automatiquement).
+    public var targetScreenIdentifier: String { settings.targetScreenIdentifier }
+
+    /// Nom historique de l'écran cible, utilisé comme secours pour migrer les réglages existants.
     public var targetScreenName: String { settings.targetScreenName }
 
     public init(settings: SettingsStore) {
