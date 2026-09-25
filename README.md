@@ -62,15 +62,29 @@ se rafraîchissent que panneau ouvert.
 | **V2** | Timers + Drop Zone. | ✅ |
 | **V3** | Presse-papiers + Système. | ✅ |
 | **V4** | Écran Paramètres complet + personnalisation des modules. | ✅ |
-| **V5** | Modules additionnels (Raccourcis, Calendrier, Notes), thèmes, profils par app, HUD système, distribution signée + Sparkle. | ✅ |
+| **V5** | Modules additionnels (Raccourcis, Calendrier, Notes), thèmes, profils par app, HUD système, distribution directe + Sparkle. | ✅ |
 
 > Suivi détaillé et prochaines pistes : [doc 10 — Audit & plan](docs/10-audit-et-plan.md).
+
+## Publication gratuite
+
+Les binaires sont hébergés par GitHub Releases, sans bucket ni service payant. Le token GitHub fin
+est limité à ce dépôt avec la permission `Contents: write` et conservé dans le Trousseau macOS sous
+le service `dev.ledge.github-release-token`. Depuis un commit propre déjà poussé sur `origin/main` :
+
+```bash
+make release CHANGELOG="Première bêta publique"
+```
+
+Le script crée une release brouillon, téléverse le DMG et l'appcast signé, puis la publie. Le flux
+Sparkle stable est
+`https://github.com/marcucus/ledge/releases/latest/download/appcast.xml`.
 
 ## Statut
 
 🛠️ **Implémentation avancée** — la fenêtre encoche (5 états), les modules (Média, Timers, Drop
 Zone, Presse-papiers, Système, Raccourcis, Calendrier, Notes), l'écran Paramètres et la
-distribution (DMG signé/notarisé + Sparkle) sont en place. Détail de l'avancée et du contexte
+distribution directe (DMG ad hoc sur GitHub Releases + Sparkle) sont en place. Détail de l'avancée et du contexte
 technique : [doc 09](docs/09-avancement-et-contexte.md) · plan & suivi : [doc 10](docs/10-audit-et-plan.md).
 
 ## Licence

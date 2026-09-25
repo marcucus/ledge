@@ -9,17 +9,17 @@ struct TimerModuleSettingsView: View {
             Section(header: Text("settings.modules.timer.pomodoro", bundle: localizationBundle)) {
                 durationRow(
                     labelKey: "settings.modules.timer.workDuration",
-                    value: Binding(get: { store.pomodoroWorkDuration }, set: { store.pomodoroWorkDuration = $0 }),
+                    value: durationBinding(\.pomodoroWorkDuration),
                     range: 1...90
                 )
                 durationRow(
                     labelKey: "settings.modules.timer.shortBreakDuration",
-                    value: Binding(get: { store.pomodoroShortBreakDuration }, set: { store.pomodoroShortBreakDuration = $0 }),
+                    value: durationBinding(\.pomodoroShortBreakDuration),
                     range: 1...30
                 )
                 durationRow(
                     labelKey: "settings.modules.timer.longBreakDuration",
-                    value: Binding(get: { store.pomodoroLongBreakDuration }, set: { store.pomodoroLongBreakDuration = $0 }),
+                    value: durationBinding(\.pomodoroLongBreakDuration),
                     range: 1...60
                 )
             }
@@ -56,11 +56,18 @@ struct TimerModuleSettingsView: View {
             Text(LocalizedStringKey(labelKey), bundle: localizationBundle)
             HStack {
                 Slider(value: value, in: range, step: 1)
-                Text(String(format: "%.0f %@", value.wrappedValue,
-                            NSLocalizedString("settings.modules.timer.minutes", bundle: localizationBundle, comment: "")))
+                Text(String(
+                    format: "%.0f %@",
+                    value.wrappedValue,
+                    NSLocalizedString("settings.modules.timer.minutes", bundle: localizationBundle, comment: "")
+                ))
                     .monospacedDigit()
                     .frame(width: 56, alignment: .trailing)
             }
         }
+    }
+
+    private func durationBinding(_ keyPath: ReferenceWritableKeyPath<SettingsStore, Double>) -> Binding<Double> {
+        Binding(get: { store[keyPath: keyPath] }, set: { store[keyPath: keyPath] = $0 })
     }
 }

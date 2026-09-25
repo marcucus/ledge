@@ -216,36 +216,38 @@ private struct AccentColorPicker: View {
     @Binding var colorComponents: [Double]
 
     private struct Preset {
-        let r, g, b: Double
+        let red: Double
+        let green: Double
+        let blue: Double
     }
 
     private let presets: [Preset] = [
-        Preset(r: 1.0,   g: 0.231, b: 0.188), // Red
-        Preset(r: 1.0,   g: 0.584, b: 0.0  ), // Orange
-        Preset(r: 1.0,   g: 0.800, b: 0.0  ), // Yellow
-        Preset(r: 0.196, g: 0.820, b: 0.345), // Green
-        Preset(r: 0.0,   g: 0.780, b: 0.745), // Mint
-        Preset(r: 0.039, g: 0.518, b: 1.0  ), // Blue
-        Preset(r: 0.369, g: 0.361, b: 0.945), // Indigo
-        Preset(r: 0.686, g: 0.322, b: 0.871), // Purple
-        Preset(r: 1.0,   g: 0.176, b: 0.333), // Pink
-        Preset(r: 1.0,   g: 0.420, b: 0.330), // Coral
-        Preset(r: 0.984, g: 0.749, b: 0.0  ), // Amber
-        Preset(r: 0.188, g: 0.706, b: 0.624), // Teal
-        Preset(r: 0.0,   g: 0.792, b: 1.0  ), // Cyan
-        Preset(r: 0.745, g: 0.298, b: 0.871), // Violet
+        Preset(red: 1.0, green: 0.231, blue: 0.188), // Red
+        Preset(red: 1.0, green: 0.584, blue: 0.0), // Orange
+        Preset(red: 1.0, green: 0.800, blue: 0.0), // Yellow
+        Preset(red: 0.196, green: 0.820, blue: 0.345), // Green
+        Preset(red: 0.0, green: 0.780, blue: 0.745), // Mint
+        Preset(red: 0.039, green: 0.518, blue: 1.0), // Blue
+        Preset(red: 0.369, green: 0.361, blue: 0.945), // Indigo
+        Preset(red: 0.686, green: 0.322, blue: 0.871), // Purple
+        Preset(red: 1.0, green: 0.176, blue: 0.333), // Pink
+        Preset(red: 1.0, green: 0.420, blue: 0.330), // Coral
+        Preset(red: 0.984, green: 0.749, blue: 0.0), // Amber
+        Preset(red: 0.188, green: 0.706, blue: 0.624), // Teal
+        Preset(red: 0.0, green: 0.792, blue: 1.0), // Cyan
+        Preset(red: 0.745, green: 0.298, blue: 0.871), // Violet
     ]
 
     private var isCustom: Bool {
         !useSystemAccent && !presets.indices.contains(where: { matchesPreset(presets[$0]) })
     }
 
-    private func matchesPreset(_ p: Preset) -> Bool {
+    private func matchesPreset(_ preset: Preset) -> Bool {
         guard colorComponents.count >= 3 else { return false }
-        let tol = 0.005
-        return abs(colorComponents[0] - p.r) < tol &&
-               abs(colorComponents[1] - p.g) < tol &&
-               abs(colorComponents[2] - p.b) < tol
+        let tolerance = 0.005
+        return abs(colorComponents[0] - preset.red) < tolerance &&
+               abs(colorComponents[1] - preset.green) < tolerance &&
+               abs(colorComponents[2] - preset.blue) < tolerance
     }
 
     private let columns = Array(repeating: GridItem(.fixed(28), spacing: 8), count: 8)
@@ -256,14 +258,14 @@ private struct AccentColorPicker: View {
             systemSwatch
 
             // Presets
-            ForEach(presets.indices, id: \.self) { i in
-                let p = presets[i]
+            ForEach(presets.indices, id: \.self) { index in
+                let preset = presets[index]
                 ColorSwatch(
-                    color: Color(red: p.r, green: p.g, blue: p.b),
-                    isSelected: !useSystemAccent && matchesPreset(p)
+                    color: Color(red: preset.red, green: preset.green, blue: preset.blue),
+                    isSelected: !useSystemAccent && matchesPreset(preset)
                 ) {
                     useSystemAccent = false
-                    colorComponents = [p.r, p.g, p.b]
+                    colorComponents = [preset.red, preset.green, preset.blue]
                 }
             }
 
@@ -293,11 +295,11 @@ private struct AccentColorPicker: View {
                         : .gray
                 },
                 set: { newColor in
-                    if let ns = NSColor(newColor).usingColorSpace(.sRGB) {
+                    if let color = NSColor(newColor).usingColorSpace(.sRGB) {
                         colorComponents = [
-                            Double(ns.redComponent),
-                            Double(ns.greenComponent),
-                            Double(ns.blueComponent),
+                            Double(color.redComponent),
+                            Double(color.greenComponent),
+                            Double(color.blueComponent),
                         ]
                         useSystemAccent = false
                     }

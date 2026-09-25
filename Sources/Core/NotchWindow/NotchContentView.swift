@@ -75,7 +75,7 @@ struct HUDBar: View {
 
     var body: some View {
         GeometryReader { geo in
-            let cy = notchHeight + (geo.size.height - notchHeight) * 0.5
+            let centerY = notchHeight + (geo.size.height - notchHeight) * 0.5
             HStack(spacing: 10) {
                 Image(systemName: content.icon)
                     .font(.system(size: 14, weight: .semibold))
@@ -86,10 +86,10 @@ struct HUDBar: View {
                     Capsule().fill(.white.opacity(0.14))
                     GeometryReader { bar in
                         let fillColor = content.isMuted ? Color.white.opacity(0.4) : content.tint
-                        let w = bar.size.width * max(0.01, content.value)
+                        let fillWidth = bar.size.width * max(0.01, content.value)
                         Capsule()
                             .fill(fillColor)
-                            .frame(width: w)
+                            .frame(width: fillWidth)
                             .shadow(color: fillColor.opacity(0.9), radius: 6)
                             .shadow(color: fillColor.opacity(0.5), radius: 12)
                             .animation(.easeOut(duration: 0.10), value: content.value)
@@ -99,7 +99,7 @@ struct HUDBar: View {
 
                 Group {
                     if content.isMuted {
-                        Text("Muted")
+                        Text("hud.muted", bundle: localizationBundle)
                     } else {
                         Text("\(Int(content.value * 100))%").monospacedDigit()
                     }
@@ -110,7 +110,7 @@ struct HUDBar: View {
             }
             .padding(.horizontal, 20)
             .frame(width: geo.size.width, height: 28)
-            .position(x: geo.size.width / 2, y: cy)
+            .position(x: geo.size.width / 2, y: centerY)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -123,9 +123,9 @@ struct TimerRingView: View {
 
     var body: some View {
         if controller.timerRingActive {
-            TimelineView(.animation) { (ctx: TimelineViewDefaultContext) in
-                let t = ctx.date.timeIntervalSinceReferenceDate
-                let alpha = 0.5 + 0.4 * sin(t * .pi * 0.8)
+            TimelineView(.animation) { (context: TimelineViewDefaultContext) in
+                let elapsed = context.date.timeIntervalSinceReferenceDate
+                let alpha = 0.5 + 0.4 * sin(elapsed * .pi * 0.8)
                 NotchPanelShape(topEar: 0, bottomRadius: 10)
                     .stroke(controller.appAccentColor.opacity(alpha), lineWidth: 1.5)
                     .padding(.horizontal, NotchController.timerRingInset)
