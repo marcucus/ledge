@@ -51,11 +51,11 @@ public struct CalendarContentView: View {
     // MARK: — Empty state
 
     private var emptyView: some View {
-        Text("calendar.empty", bundle: localizationBundle)
-            .font(.footnote)
-            .foregroundStyle(.tertiary)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.vertical, 4)
+        ModuleEmptyState(
+            icon: "calendar.badge.checkmark",
+            titleKey: "calendar.empty",
+            detailKey: "calendar.empty.detail"
+        )
     }
 
     // MARK: — Permission required

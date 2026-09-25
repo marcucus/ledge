@@ -12,6 +12,10 @@ import SwiftUI
 
     // MARK: — General
 
+    public var hasCompletedOnboarding: Bool {
+        didSet { defaults.set(hasCompletedOnboarding, forKey: Keys.hasCompletedOnboarding) }
+    }
+
     public var collapseDelay: Double {
         didSet { defaults.set(collapseDelay, forKey: Keys.collapseDelay) }
     }
@@ -226,6 +230,7 @@ import SwiftUI
     // swiftlint:disable:next function_body_length
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        hasCompletedOnboarding = defaults.bool(forKey: Keys.hasCompletedOnboarding)
         collapseDelay = defaults.double(forKey: Keys.collapseDelay).nonZero ?? 0.6
         moduleOrder = (defaults.array(forKey: Keys.moduleOrder) as? [String]) ?? Self.defaultModuleOrder
         disabledModuleIDs = Set(defaults.stringArray(forKey: Keys.disabledModules) ?? [])
@@ -319,6 +324,7 @@ import SwiftUI
 // MARK: — UserDefaults keys
 
 private enum Keys {
+    static let hasCompletedOnboarding = "hasCompletedOnboarding"
     static let collapseDelay = "collapseDelay"
     static let moduleOrder = "moduleOrder"
     static let disabledModules = "disabledModules"

@@ -48,7 +48,7 @@ struct NavBar: View {
                     if let status = controller.statusModule {
                         status.makePeekView().id(language)
                     }
-                    iconButton(icon: "gear") { controller.openSettings?() }
+                    iconButton(icon: "gear", label: "action.settings") { controller.openSettings?() }
                 }
             }
             .padding(.trailing, 8)
@@ -67,7 +67,7 @@ struct NavBar: View {
         }
     }
 
-    private func iconButton(icon: String, action: @escaping () -> Void) -> some View {
+    private func iconButton(icon: String, label: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .medium))
@@ -75,6 +75,7 @@ struct NavBar: View {
                 .frame(width: 28, height: 44)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text(label, bundle: localizationBundle))
     }
 }
 
@@ -86,6 +87,7 @@ private struct ModuleTabButton: View {
     let action: () -> Void
 
     @State private var isHovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: action) {
@@ -103,7 +105,7 @@ private struct ModuleTabButton: View {
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .accessibilityLabel(item.base.tabLabel)
-        .animation(.easeOut(duration: 0.12), value: isHovered)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isHovered)
     }
 }
 

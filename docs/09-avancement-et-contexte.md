@@ -3,7 +3,7 @@
 > Le *où on en est*. Les docs 01–08 décrivent la **vision** ; celui-ci décrit l'**état réel
 > du code** à un instant donné. À mettre à jour au fil des avancées.
 >
-> Dernière mise à jour : **2026-09-24**
+> Dernière mise à jour : **2026-09-25**
 
 ## Vue d'ensemble
 
@@ -19,7 +19,7 @@ le HUD volume/luminosité maison qui remplace celui de macOS.
 | **V1** — Module Média | ✅ Fonctionnel | Lecture, contrôles, pochette (partiel), barre de progression scrubbable. |
 | **V2** — Timers + Drop Zone | ✅ Présent | Modules implémentés. |
 | **V3** — Presse-papiers + Système | ✅ Présent | Modules implémentés + HUD volume/luminosité (nouveau). |
-| **V4** — Paramètres complets | 🔄 En cours | Fenêtre réglages multi-sections en place, i18n, toggles. |
+| **V4** — Paramètres complets | ✅ Fait | Réglages multi-sections, onboarding, permissions centralisées, i18n et accessibilité. |
 
 ## Pile technique réelle
 
@@ -120,8 +120,22 @@ et **remplacer** l'overlay natif de macOS.
 | **Accessibilité** | `CGEventTap` (supprimer le HUD natif volume/luminosité) | Prompt au lancement si le réglage HUD est actif. |
 | **Automation (Music)** | Seek dans Apple Music via AppleScript | Prompt au 1er glissement sur la barre. |
 | **Notifications** | Alertes de fin de timer | À la 1re alerte. |
+| **Calendrier** | Affichage du prochain événement | À l’ouverture du module ou depuis la page Permissions. |
 
 > Chaque fonction se **dégrade proprement** sans sa permission (cf. [doc 07](07-architecture-technique.md)).
+
+## Finition du premier lancement (0.1.1)
+
+- Onboarding facultatif en trois écrans, réouvrable depuis la barre de menus : valeur du produit,
+  gestes essentiels et explication de la politique de permissions.
+- Page Permissions enrichie : états réels Accessibilité, Notifications et Calendrier, distinction
+  entre accès non demandé et refusé, actualisation automatique au retour des Réglages Système.
+- L’accès Calendrier n’est plus demandé au démarrage de l’app : la demande est maintenant
+  contextuelle.
+- États vides harmonisés pour Média, Presse-papiers, Drop Zone, Raccourcis et Calendrier, avec une
+  action de récupération lorsque c’est pertinent.
+- VoiceOver enrichi sur la navigation et le HUD ; les animations principales respectent le réglage
+  macOS « Réduire les animations ».
 
 ## Construire & lancer
 

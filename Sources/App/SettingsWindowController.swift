@@ -15,19 +15,21 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.setFrameAutosaveName("SettingsWindow")
         self.init(window: window)
         window.delegate = self
-        let hostingView = NSHostingView(
-            rootView: SettingsRootView(store: SettingsStore.shared)
-        )
+        let hostingView = NSHostingView(rootView: SettingsRootView(store: SettingsStore.shared))
         window.contentView = hostingView
     }
 
-    func show() {
+    func show(section: SettingsSection = .general) {
+        guard let window else { return }
+        window.contentView = NSHostingView(
+            rootView: SettingsRootView(store: SettingsStore.shared, initialSelection: section)
+        )
         NSApp.setActivationPolicy(.regular)
         // Le bundle n'a pas d'icône Dock par défaut, et l'icône posée au lancement (mode accessoire)
         // ne « prend » pas toujours au passage en .regular → on la repose explicitement ici.
         applyDockIcon()
         showWindow(nil)
-        window?.makeKeyAndOrderFront(nil)
+        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 

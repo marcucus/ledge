@@ -189,15 +189,11 @@ struct MediaContentView: View {
     // MARK: — Empty
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "music.note")
-                .font(.system(size: 28))
-                .foregroundStyle(.quaternary)
-            Text("media.nowPlaying.empty", bundle: localizationBundle)
-                .font(.callout)
-                .foregroundStyle(.tertiary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ModuleEmptyState(
+            icon: "music.note",
+            titleKey: "media.nowPlaying.empty",
+            detailKey: "media.nowPlaying.empty.detail"
+        )
     }
 
     // MARK: — Helpers

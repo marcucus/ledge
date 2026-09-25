@@ -44,12 +44,24 @@ public struct ShortcutsContentView: View {
 
     @ViewBuilder
     private var shortcutList: some View {
-        if module.shortcuts.isEmpty {
-            Text("shortcuts.empty", bundle: localizationBundle)
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 4)
+        if module.isLoading && module.shortcuts.isEmpty {
+            VStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("shortcuts.loading", bundle: localizationBundle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if module.shortcuts.isEmpty {
+            ModuleEmptyState(
+                icon: "square.stack.3d.up.slash",
+                titleKey: "shortcuts.empty",
+                detailKey: "shortcuts.empty.detail",
+                actionKey: "shortcuts.action.refresh"
+            ) {
+                Task { await module.refresh() }
+            }
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 4) {

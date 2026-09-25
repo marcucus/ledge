@@ -3,8 +3,13 @@ import SwiftUI
 
 struct SettingsRootView: View {
     var store: SettingsStore
-    @State private var selection: SettingsSection? = .general
+    @State private var selection: SettingsSection?
     @AppStorage("preferredLanguage") private var language: String = "system"
+
+    init(store: SettingsStore, initialSelection: SettingsSection = .general) {
+        self.store = store
+        _selection = State(initialValue: initialSelection)
+    }
 
     var body: some View {
         NavigationSplitView {

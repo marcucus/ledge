@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NotchContentView: View {
     var controller: NotchController
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var state: NotchState {
         controller.state
     }
@@ -43,7 +44,10 @@ struct NotchContentView: View {
             // Fermeture : la fenêtre se rétracte avec un fond noir — l'animation SwiftUI est couverte,
             //             on la laisse courte pour éviter toute artefact visible.
             .animation(
-                .easeOut(duration: state == .expanded ? 0.12 : 0.06).delay(state == .expanded ? 0.28 : 0),
+                reduceMotion
+                    ? nil
+                    : .easeOut(duration: state == .expanded ? 0.12 : 0.06)
+                        .delay(state == .expanded ? 0.28 : 0),
                 value: state
             )
             .colorScheme(.dark)
@@ -63,7 +67,7 @@ struct NotchContentView: View {
                 topEar: state == .collapsed ? 0 : 12,
                 bottomRadius: state == .expanded ? controller.panelCornerRadius : 10
             ))
-            .animation(.easeOut(duration: 0.15), value: state)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: state)
     }
 }
 
@@ -72,6 +76,7 @@ struct NotchContentView: View {
 struct HUDBar: View {
     let content: HUDContent
     let notchHeight: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
@@ -92,7 +97,7 @@ struct HUDBar: View {
                             .frame(width: fillWidth)
                             .shadow(color: fillColor.opacity(0.9), radius: 6)
                             .shadow(color: fillColor.opacity(0.5), radius: 12)
-                            .animation(.easeOut(duration: 0.10), value: content.value)
+                            .animation(reduceMotion ? nil : .easeOut(duration: 0.10), value: content.value)
                     }
                 }
                 .frame(height: 6)
@@ -113,6 +118,21 @@ struct HUDBar: View {
             .position(x: geo.size.width / 2, y: centerY)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            Text(
+                content.kind == .volume ? "hud.accessibility.volume" : "hud.accessibility.brightness",
+                bundle: localizationBundle
+            )
+        )
+        .accessibilityValue(accessibilityValue)
+    }
+
+    private var accessibilityValue: Text {
+        if content.isMuted {
+            return Text("hud.muted", bundle: localizationBundle)
+        }
+        return Text("\(Int(content.value * 100))%")
     }
 }
 
@@ -120,17 +140,25 @@ struct HUDBar: View {
 
 struct TimerRingView: View {
     let controller: NotchController
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if controller.timerRingActive {
-            TimelineView(.animation) { (context: TimelineViewDefaultContext) in
-                let elapsed = context.date.timeIntervalSinceReferenceDate
-                let alpha = 0.5 + 0.4 * sin(elapsed * .pi * 0.8)
-                NotchPanelShape(topEar: 0, bottomRadius: 10)
-                    .stroke(controller.appAccentColor.opacity(alpha), lineWidth: 1.5)
-                    .padding(.horizontal, NotchController.timerRingInset)
-                    .padding(.bottom, NotchController.timerRingInset)
+            if reduceMotion {
+                ring(alpha: 0.8)
+            } else {
+                TimelineView(.animation) { (context: TimelineViewDefaultContext) in
+                    let elapsed = context.date.timeIntervalSinceReferenceDate
+                    ring(alpha: 0.5 + 0.4 * sin(elapsed * .pi * 0.8))
+                }
             }
         }
+    }
+
+    private func ring(alpha: Double) -> some View {
+        NotchPanelShape(topEar: 0, bottomRadius: 10)
+            .stroke(controller.appAccentColor.opacity(alpha), lineWidth: 1.5)
+            .padding(.horizontal, NotchController.timerRingInset)
+            .padding(.bottom, NotchController.timerRingInset)
     }
 }

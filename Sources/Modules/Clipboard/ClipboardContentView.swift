@@ -111,15 +111,24 @@ struct ClipboardContentView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "clipboard")
-                .imageScale(.large)
-                .foregroundStyle(.tertiary)
-            Text("clipboard.empty", bundle: localizationBundle)
-                .font(.callout)
-                .foregroundStyle(.tertiary)
+        Group {
+            if module.items.isEmpty {
+                ModuleEmptyState(
+                    icon: "clipboard",
+                    titleKey: "clipboard.empty",
+                    detailKey: "clipboard.empty.detail"
+                )
+            } else {
+                ModuleEmptyState(
+                    icon: "magnifyingglass",
+                    titleKey: "clipboard.search.empty",
+                    detailKey: "clipboard.search.empty.detail",
+                    actionKey: "clipboard.search.clear"
+                ) {
+                    searchText = ""
+                }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

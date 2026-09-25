@@ -49,16 +49,11 @@ public struct DropZoneContentView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "tray.and.arrow.down")
-                .font(.title2)
-                .foregroundStyle(.tertiary)
-            Text("dropzone.empty", bundle: localizationBundle)
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.vertical, 16)
+        ModuleEmptyState(
+            icon: "tray.and.arrow.down",
+            titleKey: "dropzone.empty",
+            detailKey: "dropzone.empty.detail"
+        )
     }
 
     private var itemGrid: some View {

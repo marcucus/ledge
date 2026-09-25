@@ -31,7 +31,11 @@ public final class CalendarModule: NotchModule {
     // MARK: — NotchModule
 
     public func start() {
-        Task { await requestAccessAndRefresh() }
+        let status = EKEventStore.authorizationStatus(for: .event)
+        authorizationDenied = status != .fullAccess
+        if status == .fullAccess {
+            refreshNextEvent()
+        }
     }
 
     public func stop() {
