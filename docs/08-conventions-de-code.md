@@ -25,7 +25,7 @@
 | Langage | **Swift 5.10+** (ou la dernière stable), `swift-tools-version` figé dans le Package. |
 | UI | **SwiftUI** pour le contenu, **AppKit** pour la fenêtre/encoche. |
 | Concurrence | **`async/await` + `actor`** exclusivement. Pas de `DispatchQueue` manuel sauf cas bas niveau justifié. Pas de complétions par closures pour du nouveau code. |
-| Cible | macOS 13.0 minimum. |
+| Cible | macOS 14.0 minimum. |
 | Build | **Swift Package Manager** (pas de fichier `.xcodeproj` versionné si évitable ; sinon généré). |
 
 ---

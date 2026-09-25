@@ -57,14 +57,14 @@ plus haute gagne l'affichage quand plusieurs modules contribuent en même temps.
 ## Pourquoi pas de vrai SDK de plugin (chargement dynamique)
 
 Un vrai SDK de plugin impliquerait de charger du **code tiers compilé** (`.bundle`/`.dylib`)
-à l'exécution, hors du binaire signé/notarisé de Ledge. Concrètement :
+à l'exécution, hors du bundle de Ledge tel qu'il a été publié. Concrètement :
 
 - **Exécution de code arbitraire** : un plugin chargé dynamiquement tourne avec les mêmes
   droits que l'app — accès complet aux autres modules, au presse-papiers, aux fichiers, aux
   événements clavier interceptés par `SystemObserver`. Aucune sandbox ne le contiendrait
   (l'app elle-même n'est pas sandboxée, cf. [doc 09](09-avancement-et-contexte.md)).
-- **Signature/notarisation** : Apple notarise le binaire de Ledge tel qu'il est distribué ;
-  charger un binaire tiers non notarisé à l'exécution casse cette garantie pour l'utilisateur
+- **Intégrité** : Ledge publie un bundle fixe dont le DMG est signé avec Sparkle EdDSA ; charger un
+  binaire tiers arbitraire à l'exécution casse cette garantie pour l'utilisateur
   final, qui croit lancer une seule app de confiance.
 - **Surface de maintenance** : un ABI de plugin stable à travers les versions de Ledge est un
   engagement à long terme (versionnement, dépréciation) disproportionné par rapport à la

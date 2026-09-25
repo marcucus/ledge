@@ -2,6 +2,8 @@ import AppKit
 import QuartzCore
 import SwiftUI
 
+// La fenêtre centralise volontairement le cycle de vie AppKit et ses transitions géométriques.
+// swiftlint:disable:next type_body_length
 public final class NotchWindow: NSPanel {
     public let controller = NotchController(settings: .shared)
 
@@ -261,12 +263,20 @@ public final class NotchWindow: NSPanel {
         let frame = makeFrame(size: size, geometry: geometry)
         if from == .expanded {
             // Fermeture symétrique à l'ouverture : la fenêtre se rétracte, puis redevient transparente.
-            transitionFrame(to: frame, duration: Layout.closeDuration * controller.animationScale, animated: true) { [weak self] in
+            transitionFrame(
+                to: frame,
+                duration: Layout.closeDuration * controller.animationScale,
+                animated: true
+            ) { [weak self] in
                 self?.revealClearBackground()
             }
         } else {
             // Depuis peek / hud / ambient : rétrécir directement, fond déjà transparent.
-            transitionFrame(to: frame, duration: Layout.peekDuration * controller.animationScale, animated: true) { [weak self] in
+            transitionFrame(
+                to: frame,
+                duration: Layout.peekDuration * controller.animationScale,
+                animated: true
+            ) { [weak self] in
                 self?.updateTrackingArea()
             }
         }

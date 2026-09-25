@@ -78,7 +78,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Sparkle nécessite un vrai `.app` bundle — ne pas démarrer depuis `swift run`.
     private func setupUpdater() {
-        guard Bundle.main.bundlePath.hasSuffix(".app") else { return }
+        guard Bundle.main.bundlePath.hasSuffix(".app"),
+              Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") is String
+        else { return }
         updaterController = SPUStandardUpdaterController(
             startingUpdater: true,
             updaterDelegate: nil,

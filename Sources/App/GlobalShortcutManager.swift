@@ -18,7 +18,7 @@ final class GlobalShortcutManager {
     private let settings: SettingsStore
     private var isEnabled = false
 
-    private enum HK: UInt32, CaseIterable {
+    private enum HotKey: UInt32, CaseIterable {
         case openClose = 1
         case paste     = 2
         case newTimer  = 3
@@ -42,12 +42,12 @@ final class GlobalShortcutManager {
 
     func enable() {
         isEnabled = true
-        for id in HK.allCases { register(id, id.shortcut(in: settings)) }
+        for id in HotKey.allCases { register(id, id.shortcut(in: settings)) }
     }
 
     func disable() {
         isEnabled = false
-        for id in HK.allCases { unregister(id) }
+        for id in HotKey.allCases { unregister(id) }
     }
 
     /// Réconcilie l'état (activé + combinaisons) avec `SettingsStore` actuel — à appeler à
@@ -63,7 +63,7 @@ final class GlobalShortcutManager {
 
     // MARK: — Private
 
-    private func register(_ id: HK, _ shortcut: GlobalKeyboardShortcut) {
+    private func register(_ id: HotKey, _ shortcut: GlobalKeyboardShortcut) {
         guard hotKeyRefs[id.rawValue] == nil, shortcut.hasModifier else { return }
         let hkID = EventHotKeyID(signature: 0x4C475348, id: id.rawValue)
         var ref: EventHotKeyRef?
@@ -71,7 +71,7 @@ final class GlobalShortcutManager {
         if err == noErr, let ref { hotKeyRefs[id.rawValue] = ref }
     }
 
-    private func unregister(_ id: HK) {
+    private func unregister(_ id: HotKey) {
         guard let ref = hotKeyRefs.removeValue(forKey: id.rawValue) else { return }
         UnregisterEventHotKey(ref)
     }
@@ -105,7 +105,7 @@ final class GlobalShortcutManager {
     }
 
     @MainActor private func dispatch(id: UInt32) {
-        switch HK(rawValue: id) {
+        switch HotKey(rawValue: id) {
         case .openClose: onOpenClose?()
         case .paste:     onPaste?()
         case .newTimer:  onNewTimer?()

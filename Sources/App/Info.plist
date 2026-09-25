@@ -35,8 +35,6 @@
     <string>Ledge uses Apple Events to control playback (seek, position) in Music and Spotify.</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>Ledge needs access to your calendar to show your next upcoming event in the notch.</string>
-    <key>SUFeedURL</key>
-    <string>https://TODO-DOMAINE-LEDGE-SITE/appcast.xml</string>
     <key>SUPublicEDKey</key>
     <string>DAOBnz8aZRDFS04TPHdvhed0Ecb6o/fJ0gDyQj+tEwE=</string>
 </dict>

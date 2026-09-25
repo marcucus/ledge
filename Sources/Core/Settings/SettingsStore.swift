@@ -221,8 +221,9 @@ import SwiftUI
         didSet { defaults.setCodable(appProfiles, forKey: Keys.appProfiles) }
     }
 
-    /// `defaults` injectable pour les tests (instance isolée, ex. `UserDefaults(suiteName:)`) —
-    /// en production, utiliser `SettingsStore.shared` plutôt que d'instancier directement.
+    // `defaults` est injectable pour les tests; en production, utiliser `SettingsStore.shared`.
+    // Initialisation plate et exhaustive : la découper masquerait la source de chaque valeur.
+    // swiftlint:disable:next function_body_length
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         collapseDelay = defaults.double(forKey: Keys.collapseDelay).nonZero ?? 0.6
@@ -235,8 +236,12 @@ import SwiftUI
         panelWidth = PanelWidth(rawValue: defaults.integer(forKey: Keys.panelWidth)) ?? .standard
         cornerRadius = defaults.double(forKey: Keys.cornerRadius).nonZero ?? 12.0
         panelOpacity = defaults.object(forKey: Keys.panelOpacity) as? Double ?? 1.0
-        notchDetectionMode = NotchDetectionMode(rawValue: defaults.integer(forKey: Keys.notchDetectionMode)) ?? .automatic
-        fullscreenBehavior = FullscreenBehavior(rawValue: defaults.integer(forKey: Keys.fullscreenBehavior)) ?? .accessible
+        notchDetectionMode = NotchDetectionMode(
+            rawValue: defaults.integer(forKey: Keys.notchDetectionMode)
+        ) ?? .automatic
+        fullscreenBehavior = FullscreenBehavior(
+            rawValue: defaults.integer(forKey: Keys.fullscreenBehavior)
+        ) ?? .accessible
         showRingWhenTimerActive = defaults.object(forKey: Keys.showRingWhenTimerActive) as? Bool ?? false
         animationSpeed = AnimationSpeed(rawValue: defaults.object(forKey: Keys.animationSpeed) as? Int ?? -1) ?? .normal
         clickBehavior = ClickBehavior(rawValue: defaults.object(forKey: Keys.clickBehavior) as? Int ?? -1) ?? .expand

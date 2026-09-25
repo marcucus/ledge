@@ -11,7 +11,7 @@
 | Contenu / UI | **SwiftUI** (hébergé dans `NSHostingView`) | Rapide à construire, animations spring natives. |
 | Cycle de vie | **Agent** (`LSUIElement = true`) | Pas d'icône Dock, démarrage léger. |
 | Réglages | Fenêtre `NSWindow` classique + `@AppStorage`/`UserDefaults` | Standard macOS. |
-| Données | Événements système (voir chaque module) | **Zéro polling** sauf presse-papiers (négligeable). |
+| Données | Événements système (voir chaque module) | Événementiel par défaut; polling léger seulement quand justifié. |
 
 ## Pourquoi c'est léger (le vrai argument)
 
@@ -159,5 +159,6 @@ Ledge/
 
 - **Hors Mac App Store** probablement nécessaire : les frameworks privés (MediaRemote) et
   certaines permissions (Accessibilité, lecture notifs) sont **incompatibles avec le sandbox MAS**.
-- Donc : distribution directe (DMG), **signée + notarisée** par Apple pour passer Gatekeeper.
+- Décision actuelle : distribution directe par DMG signé ad hoc, sans compte Apple. Gatekeeper
+  demande donc une autorisation manuelle dans Confidentialité et sécurité au premier lancement.
 - Prévoir un mécanisme de mise à jour (Sparkle est le standard).

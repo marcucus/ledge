@@ -248,11 +248,11 @@ public struct PomodoroState {
     }
 
     public var currentPhaseDuration: TimeInterval {
-        let s = SettingsStore.shared
+        let settings = SettingsStore.shared
         switch phase {
-        case .work: return s.pomodoroWorkDuration * 60
-        case .shortBreak: return s.pomodoroShortBreakDuration * 60
-        case .longBreak: return s.pomodoroLongBreakDuration * 60
+        case .work: return settings.pomodoroWorkDuration * 60
+        case .shortBreak: return settings.pomodoroShortBreakDuration * 60
+        case .longBreak: return settings.pomodoroLongBreakDuration * 60
         }
     }
 

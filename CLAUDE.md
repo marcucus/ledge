@@ -3,8 +3,8 @@
 App macOS d'encoche (notch) : barre d'outils contextuelle sous l'encoche du MacBook, avec des
 modules (Média, Timers, Drop Zone, Presse-papiers, Système, Raccourcis, Calendrier, Notes).
 Swift Package Manager pur (pas de projet Xcode), Swift 5.10+, macOS 14+, Apple Silicon.
-App `LSUIElement` (pas d'icône Dock, sauf fenêtre Réglages ouverte). Distribution hors App Store
-(DMG signé/notarisé + Sparkle) à cause des frameworks privés.
+App `LSUIElement` (pas d'icône Dock, sauf fenêtre Réglages ouverte). Distribution directe hors
+App Store : DMG auto-hébergé, signature ad hoc et mises à jour signées avec Sparkle EdDSA.
 
 ## Commandes
 
@@ -14,7 +14,8 @@ App `LSUIElement` (pas d'icône Dock, sauf fenêtre Réglages ouverte). Distribu
   Calendrier) : `swift run` n'a pas de bundle/Info.plist, donc macOS (TCC) n'accorde rien.
 - **Lancer :** `open dist/Ledge.app`. **Une seule instance à la fois** — sinon plusieurs encoches
   s'ouvrent en parallèle. Avant relance : `killall Ledge`.
-- **Distribution :** `make sign` (Developer ID), `make dmg`, `make notarize`, `make appcast`.
+- **Distribution directe :** `make release` ne demande aucun compte Apple. Le parcours optionnel
+  Developer ID reste disponible via `make release-notarized`.
 
 ## Pièges connus
 
