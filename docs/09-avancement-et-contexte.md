@@ -3,13 +3,13 @@
 > Le *où on en est*. Les docs 01–08 décrivent la **vision** ; celui-ci décrit l'**état réel
 > du code** à un instant donné. À mettre à jour au fil des avancées.
 >
-> Dernière mise à jour : **2026-06-15**
+> Dernière mise à jour : **2026-09-24**
 
 ## Vue d'ensemble
 
 Ledge est passé de la phase **conception** (docs 01–08) à une phase **implémentation
 active**. Le socle technique (V0) et le premier module riche (Média, V1) sont en place, et les
-quatre modules existent au moins en version fonctionnelle. Le travail récent porte sur le
+les huit modules existent au moins en version fonctionnelle. Le travail récent porte sur le
 **polissage** (média, alignement de la NavBar) et sur une **nouvelle fonctionnalité système** :
 le HUD volume/luminosité maison qui remplace celui de macOS.
 
@@ -27,15 +27,16 @@ Conforme à la [doc 07](07-architecture-technique.md), avec quelques précisions
 
 - **Swift Package Manager** (pas de projet Xcode). `swift-tools-version: 5.10`, cible
   **macOS 14+**, localisation par défaut `en`.
-- Découpage en cibles : `App` (exécutable) → `Core` + 5 modules (`MediaModule`,
-  `TimerModule`, `DropZoneModule`, `ClipboardModule`, `SystemModule`).
+- Découpage en cibles : `App` (exécutable) → `Core` + 8 modules (`MediaModule`, `TimerModule`,
+  `DropZoneModule`, `ClipboardModule`, `SystemModule`, `ShortcutsModule`, `CalendarModule`,
+  `NotesModule`).
 - **AppKit** (`NSPanel` borderless non-activating) pour la fenêtre encoche + **SwiftUI**
   (`NSHostingView`) pour le contenu.
 - `SystemModule` lie **IOKit** et **CoreAudio** (`linkerSettings` dans [Package.swift](../Package.swift)).
 - Frameworks privés via `dlopen`/`dlsym` : **MediaRemote** (média), **DisplayServices**
   (luminosité sur Apple Silicon).
-- Build & run : `swift build` / `swift run`. Signature ad-hoc (pas encore de bundle `.app`
-  signé/notarisé).
+- Build rapide : `swift build` / `swift test`. Les permissions se testent avec `make app`; la
+  distribution directe passe par un DMG signé ad hoc et un appcast signé avec Sparkle EdDSA.
 
 ## Architecture du cœur (`Core`)
 
@@ -55,6 +56,7 @@ Conforme à la [doc 07](07-architecture-technique.md), avec quelques précisions
 ### Les états de l'encoche
 
 - **collapsed** — au repos, fenêtre à la taille exacte de l'encoche physique.
+- **ambient** — extension latérale discrète pour musique, timer ou Drop Zone.
 - **peeking** — aperçu compact (largeur expanded, hauteur NavBar).
 - **hud** — barre compacte volume/luminosité : fenêtre qui **entoure l'encoche**
   (`notchWidth + 170` de large, `notchHeight + 34` de haut), barre fine centrée **sous**
@@ -109,7 +111,7 @@ et **remplacer** l'overlay natif de macOS.
 | **Pochette d'album** | ⚠️ Partiel | MediaRemote est bloqué pour Apple Music sur macOS 15 (run non-bundlé) ; la notification distribuée `com.apple.Music.playerInfo` ne fournit pas d'image. Piste : `iTunesLibrary` via « Persistent ID ». |
 | **Seek Apple Music** | ✅ Contourné | MediaRemote bloqué → on passe par **AppleScript** (`set player position`) pour Music, MediaRemote (`MRMediaRemoteSetElapsedTime`) pour les autres lecteurs. Demande la permission **Automation** au 1er usage. |
 | **Suppression HUD natif** | ✅ OK (bundle signé) | Le `CGEventTap` consomme les touches volume/luminosité **si l'Accessibilité est accordée**. Tester via `dist/Ledge.app` (`make app`), pas `swift run` (pas de bundle = pas de permission). `make app` signe avec une identité Apple Development **stable** → l'autorisation persiste entre les rebuilds. La barre Ledge (volume événementiel) marche sans permission. |
-| **Distribution** | ✅ En place | Bundle `.app` signé (ad-hoc dev / Developer ID via `make sign`), DMG (`make dmg`), notarisation (`make notarize`), mises à jour Sparkle (`make appcast`). `SUFeedURL` reste un placeholder tant que le domaine n'est pas choisi. |
+| **Distribution** | ✅ Code prêt | `make release` crée un bundle ad hoc et un DMG sans compte Apple, signe la mise à jour avec Sparkle EdDSA puis publie le DMG et l'appcast dans GitHub Releases. Gatekeeper impose une autorisation manuelle au premier lancement. |
 
 ## Permissions requises (récapitulatif)
 
@@ -133,6 +135,7 @@ Pour tester le HUD : accepter le prompt **Accessibilité**, puis **relancer l'ap
 ## Prochaines étapes suggérées
 
 1. **Pochette d'album** fiable (piste `iTunesLibrary` / cache image).
-2. **Bundle `.app`** signé + notarisé → fiabilise Accessibilité/Automation et la distribution.
+2. **Distribution directe** → créer un token GitHub fin, publier la 0.1.0, puis tester le parcours
+   Gatekeeper « Ouvrir quand même » sur une autre machine.
 3. Finaliser **V4** : personnalisation des modules, page Permissions complète.
 4. Vérifier les cas **multi-écran / plein écran** décrits en [doc 07](07-architecture-technique.md).

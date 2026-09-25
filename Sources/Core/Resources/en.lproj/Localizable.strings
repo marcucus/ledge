@@ -173,3 +173,4 @@
 "settings.appProfiles.bundleID" = "Bundle identifier";
 "settings.appProfiles.modules" = "Modules shown for this app";
 "settings.appProfiles.save" = "Save";
+"hud.muted" = "Muted";

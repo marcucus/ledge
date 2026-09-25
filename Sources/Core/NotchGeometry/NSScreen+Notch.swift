@@ -38,6 +38,6 @@ extension NSScreen {
         if #available(macOS 12, *) {
             return screens.map(\.localizedName)
         }
-        return screens.enumerated().map { "Display \($0.offset + 1)" }
+        return screens.indices.map { "Display \($0 + 1)" }
     }
 }

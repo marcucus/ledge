@@ -1,6 +1,7 @@
 # 05 — Module Timers & Notifications ⏱️
 
-> Minuteurs/Pomodoro + rappels + agrégation de notifs. Implémentation V2 (timers) → V4 (notifs).
+> Minuteurs/Pomodoro livrés. L'agrégation des notifications d'autres apps reste une piste avancée,
+> non livrée et désactivée par défaut faute d'API publique fiable.
 
 ## Objectif
 

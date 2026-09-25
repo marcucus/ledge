@@ -118,15 +118,15 @@ struct MusicVisualizerView: View {
     private let phases: [Double] = [0, .pi / 3, .pi * 0.8, .pi * 1.5]
 
     var body: some View {
-        TimelineView(.animation(paused: !isPlaying)) { ctx in
-            let t = ctx.date.timeIntervalSinceReferenceDate
+        TimelineView(.animation(paused: !isPlaying)) { context in
+            let elapsed = context.date.timeIntervalSinceReferenceDate
             HStack(alignment: .center, spacing: 3) {
-                ForEach(0..<4, id: \.self) { i in
-                    let raw = sin(t * speeds[i] * .pi * 2 + phases[i])
-                    let h = isPlaying ? 0.3 + 0.7 * (raw * 0.5 + 0.5) : 0.2
+                ForEach(0..<4, id: \.self) { index in
+                    let raw = sin(elapsed * speeds[index] * .pi * 2 + phases[index])
+                    let height = isPlaying ? 0.3 + 0.7 * (raw * 0.5 + 0.5) : 0.2
                     Capsule()
                         .fill(color)
-                        .frame(width: 3, height: max(4, 18 * h))
+                        .frame(width: 3, height: max(4, 18 * height))
                 }
             }
         }
@@ -171,11 +171,11 @@ public extension NSImage {
                      bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
                      format: .RGBA8, colorSpace: nil)
 
-        let r = Double(bitmap[0]) / 255
-        let g = Double(bitmap[1]) / 255
-        let b = Double(bitmap[2]) / 255
+        let red = Double(bitmap[0]) / 255
+        let green = Double(bitmap[1]) / 255
+        let blue = Double(bitmap[2]) / 255
         // Fall back to white if the image is too dark to be legible as a tint
-        let brightness = 0.299 * r + 0.587 * g + 0.114 * b
-        return brightness < 0.18 ? .white : Color(red: r, green: g, blue: b)
+        let brightness = 0.299 * red + 0.587 * green + 0.114 * blue
+        return brightness < 0.18 ? .white : Color(red: red, green: green, blue: blue)
     }
 }

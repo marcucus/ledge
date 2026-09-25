@@ -144,7 +144,7 @@ import Foundation
         ambientContent = best?.content
 
         let bestIsTimerInRingMode: Bool
-        if let c = ambientContent, case .timer = c.kind, settings.showRingWhenTimerActive {
+        if let content = ambientContent, case .timer = content.kind, settings.showRingWhenTimerActive {
             bestIsTimerInRingMode = true
         } else {
             bestIsTimerInRingMode = false

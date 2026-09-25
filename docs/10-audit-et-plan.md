@@ -32,7 +32,7 @@ fondateur exige « tout passe les tests » — c'est le point le plus en décala
 | B3 | **Persistance du presse-papiers** entre sessions (perdu au quit ; aucune option d'opt-in). | doc 03 | 🟡 |
 | B4 | **Pochette Apple Music fiable** (toujours partielle via AppleScript). | doc 09 | 🟡 |
 | B5 | **Détail batterie complet** : cycles / santé / temps restant promis par le wireframe. À confirmer. | doc 04 | 🟢 |
-| B6 | **Distribution** : Sparkle non configuré — `SUFeedURL` et `SUPublicEDKey` = placeholders dans [Info.plist](../Sources/App/Info.plist). | doc 09 | 🔴 (bloquant release) |
+| B6 | **Distribution** : résolu côté code — clé Sparkle réelle, feed injecté au build et publication gratuite via GitHub Releases, sans compte Apple. | doc 09 | ✅ |
 
 > Déjà présent (plus avancé que la doc 09 ne le dit) : AirDrop (`NSSharingServicePicker`), lanceur
 > d'apps, notifications `UserNotifications`, launch-at-login (`SMAppService`), sélecteur de langue.
@@ -44,7 +44,7 @@ fondateur exige « tout passe les tests » — c'est le point le plus en décala
 | # | Constat | Détail | Gravité |
 |---|---------|--------|---------|
 | S1 | **Usage descriptions absentes de l'Info.plist** | Le code lance `osascript` (Automation/Apple Events) mais il **manque `NSAppleEventsUsageDescription`**. Sous Hardened Runtime + notarisation, la permission peut être refusée silencieusement → seek/pochette cassés sans message. | 🔴 |
-| S2 | **Sparkle = placeholders** | Feed et clé EdDSA non renseignés. À configurer **avant** toute distribution. | 🔴 |
+| S2 | **Sparkle** | Résolu : clé EdDSA réelle dans le bundle et feed injecté par `make release`. | ✅ |
 | S3 | `disable-library-validation = true` | Nécessaire pour `dlopen` MediaRemote/DisplayServices, donc justifié, mais affaiblit la validation. À documenter pour la notarisation. | 🟡 |
 | S4 | **CGEventTap clavier global** (`.cghidEventTap`) | Surface puissante. Implémentation saine (ne logge/ne stocke rien, filtre sur codes média) — à ne jamais étendre sans revue. | 🟡 |
 | S5 | Presse-papiers — filtrage partiel | Skip `ConcealedType` ✓, mais contenus sensibles non marqués restent en historique RAM. À mentionner dans la doc confidentialité. | 🟢 |
@@ -146,7 +146,7 @@ Chaque ligne = une PR (règle « une tâche = un sujet = une PR »).
 | Jalon | Item | État |
 |---|---|---|
 | 0 | S1 — usage descriptions Info.plist | ✅ `NSAppleEventsUsageDescription` ajouté (en/fr via `InfoPlist.strings`, copié par le Makefile à la racine du bundle) |
-| 0 | S2/B6 — Sparkle configuré | ✅ partiel — clé EdDSA générée (privée dans le Keychain, publique dans Info.plist) ; `make appcast` signe les `.dmg` et génère `dist/appcast.xml` via `generate_appcast`. ⏳ `SUFeedURL` reste un placeholder (`TODO-DOMAINE-LEDGE-SITE`) tant que le domaine n'est pas choisi. Le pipeline de stockage des `.dmg` côté `ledge-site` (R2/S3/Vercel Blob) n'est pas implémenté — cf. `PROMPT-SITE-WEB.md` §2bis. |
+| 0 | S2/B6 — Sparkle configuré | ✅ clé EdDSA dans Info.plist ; `make release` construit un DMG ad hoc sans compte Apple, génère l'appcast signé et publie les deux assets dans une GitHub Release. Le token fin `Contents: write`, limité à `marcucus/ledge`, est conservé dans le Trousseau macOS. `make release-notarized` conserve un parcours Apple optionnel. |
 | 0 | S6 — copyright | ✅ `© 2026` |
 | 0 | P1 — polling HUD | ✅ volume passé à un listener CoreAudio événementiel (`AudioObjectAddPropertyListenerBlock`, zéro polling) ; luminosité : zéro lecture en mode par défaut (`hudBrightnessManualOnly`), poll à 0,2 s seulement si l'utilisateur désactive ce mode ; sinon un battement à 2 s pour le seul recheck de la permission Accessibilité. |
 | 1 | B1 — raccourcis personnalisables | ✅ `GlobalKeyboardShortcut` (Core, Codable, persisté en JSON dans `UserDefaults`) + `ShortcutRecorderView` (capture clavier locale, exige ≥1 modificateur) + `GlobalShortcutManager` lit désormais `SettingsStore` au lieu de coder les combinaisons en dur. |

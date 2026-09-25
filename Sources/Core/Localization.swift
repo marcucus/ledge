@@ -17,12 +17,12 @@ private let _ledgeCoreBundle: Bundle = {
     // 1. Swift run / binaire non-bundle : Ledge_Core.bundle est dans le même répertoire que l'exécutable
     if let execURL = Bundle.main.executableURL {
         let candidate = execURL.deletingLastPathComponent().appendingPathComponent("Ledge_Core.bundle")
-        if let b = Bundle(url: candidate) { return b }
+        if let bundle = Bundle(url: candidate) { return bundle }
     }
     // 2. .app bundle : les bundles SPM sont dans Contents/Resources/
     if let resURL = Bundle.main.resourceURL {
         let candidate = resURL.appendingPathComponent("Ledge_Core.bundle")
-        if let b = Bundle(url: candidate) { return b }
+        if let bundle = Bundle(url: candidate) { return bundle }
     }
     // 3. Fallback
     return .module

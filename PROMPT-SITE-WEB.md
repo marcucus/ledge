@@ -33,12 +33,13 @@ qu'on en a besoin, elle s'anime et se déploie en un panneau riche, ancré sous 
 
 **Promesses clés (les arguments de vente) :**
 
-1. **Ultra-légère.** Swift natif, *aucun runtime tiers*. Elle « dort » au repos : pas de polling,
-   on s'abonne aux événements système, les jauges ne tournent que panneau ouvert. → **conso quasi nulle**.
+1. **Ultra-légère.** Swift natif, *aucun runtime tiers*. Elle « dort » au repos : événements
+   système par défaut, contrôle léger du presse-papiers, jauges actives seulement panneau ouvert.
 2. **Native et intégrée.** AppKit + SwiftUI, matériaux translucides macOS, coins qui prolongent le
    rayon de l'encoche (effet liquide continu), respect clair/sombre. Agent en arrière-plan, pas
    d'icône dans le Dock (`LSUIElement`).
-3. **Modulaire.** 4 modules activables, réordonnables, masquables. L'utilisateur compose son menu.
+3. **Modulaire.** 7 modules visibles, activables, réordonnables et masquables. L'utilisateur
+   compose son menu. Le module Système reste une source transverse de statut/HUD, sans onglet.
 4. **Vivante mais discrète.** Le « peek » automatique vient montrer une info importante (nouvelle
    piste, fin de timer, copie) 2 s puis disparaît. Réglable.
 5. **Respectueuse.** Chaque fonction se dégrade proprement sans sa permission ; rien d'imposé.
@@ -48,16 +49,22 @@ qu'on en a besoin, elle s'anime et se déploie en un panneau riche, ancré sous 
 - **Survol / Aperçu** — l'encoche « gonfle » en spring, bandeau compact (ex. piste en cours).
 - **Ouvert** — panneau complet avec onglets = modules, ancré et centré sous l'encoche.
 
-**Les 4 modules :**
+**Les modules réellement visibles :**
 
 | Module | Argument | Détail pour la copy |
 |---|---|---|
 | 🎵 **Média** | Contrôle ta musique depuis l'encoche | Pochette qui déborde, play/pause/précédent/suivant, **barre de progression scrubbable**, titre/artiste. |
-| 📋 **Presse-papiers + Drop Zone** | Ton historique de copies + une étagère de fichiers | Historique de copies, glisser-déposer de fichiers près de l'encoche, partage rapide. |
-| ⚙️ **Système** | Tes jauges et un HUD volume/luminosité maison | Batterie / CPU / RAM, toggles rapides, lanceur d'apps, **HUD volume/luminosité qui remplace celui de macOS**. |
-| ⏱️ **Timers & notifs** | Pomodoro et minuteurs autour de l'encoche | Anneau de progression qui borde l'encoche, rappels, agrégation de notifs. |
+| 📋 **Presse-papiers** | Ton historique de copies | Recherche, épinglage et persistance locale optionnelle. |
+| 📥 **Drop Zone** | Une étagère de fichiers temporaire | Glisser-déposer entrant/sortant, aperçu Quick Look et partage rapide. |
+| ⏱️ **Timers** | Pomodoro et minuteurs autour de l'encoche | Molette H:M:S, presets et décompte ambient. |
+| ⚡ **Raccourcis** | Lance Shortcuts.app depuis l'encoche | Liste et exécution des raccourcis disponibles. |
+| 📅 **Calendrier** | Le prochain rendez-vous au bon moment | Prochain événement autorisé via EventKit. |
+| 📝 **Notes** | Une note rapide sous l'encoche | Texte libre éphémère, local à l'app. |
 
-**Cible technique de l'app :** Apple Silicon, **macOS 13+** (encoche = MacBook Pro/Air 2021+).
+**Fonctions transverses :** HUD volume/luminosité, batterie dans la navigation, thèmes et profils
+par application active. Ne pas présenter Système comme un onglet tant qu'il reste masqué.
+
+**Cible technique de l'app :** Apple Silicon, **macOS 14+** (encoche = MacBook Pro/Air 2021+).
 **Multilingue** : l'app suit la langue du Mac.
 
 ---
@@ -70,12 +77,11 @@ et les permissions système). Le téléchargement direct est donc le canal offic
 
 **Conséquences pour le site :**
 - Le **CTA principal est « Télécharger pour macOS » → un `.dmg`**. Affiche à côté : **version**,
-  **taille du fichier**, exigence **macOS 13+ · Apple Silicon**, et la date/numéro de version.
-- Comme l'app est distribuée **hors App Store**, prévois une **section « Premier lancement »**
-  claire et rassurante : app signée/notarisée Developer ID si dispo → double-clic et c'est bon ;
-  sinon (app non encore notarisée) → *clic droit sur l'app > Ouvrir* pour passer Gatekeeper, puis
-  accorder les permissions (Accessibilité pour le HUD, etc.) et **relancer**. Tourne ça de façon
-  positive, pas anxiogène.
+  **taille du fichier**, exigence **macOS 14+ · Apple Silicon**, et la date/numéro de version.
+- Comme l'app est distribuée **hors App Store et sans notarisation Apple**, prévois une **section
+  « Premier lancement »** honnête : tenter une première ouverture, puis aller dans Réglages
+  Système → Confidentialité et sécurité → « Ouvrir quand même ». Expliquer que le DMG et les
+  mises à jour restent protégés par SHA-256 et signature Sparkle EdDSA.
 - Idéal : un mécanisme de **mises à jour intégré** (Sparkle prévu côté app) → mentionne « mises à
   jour automatiques » seulement quand ce sera vrai.
 
@@ -94,46 +100,28 @@ valeurs codées en dur.
 
 C'est une **exigence centrale du site**, pas un détail. Le flux voulu :
 
-> Quand je **publie une nouvelle version**, un appel est envoyé à une **route du site**. Cet appel
-> contient le **numéro de version** et le **fichier `.dmg`**. La route **enregistre le fichier** et
-> **l'ajoute à la liste des versions**. Le site sert alors automatiquement cette version comme la
-> dernière à télécharger.
+> Quand je **publie une nouvelle version**, le script crée une GitHub Release brouillon, téléverse
+> le DMG et l'appcast signé, puis la rend publique. Le site lit les releases publiques et sert
+> automatiquement la dernière version stable.
 
 ### Ce qu'il faut construire
 
-1. **Un endpoint de publication protégé** — ex. `POST /api/releases`.
-   - **Authentifié** par un secret (token Bearer / clé d'API dans un header), stocké en variable
-     d'environnement côté serveur. **Jamais** exposé au client, jamais commité. Sans token valide → `401`.
-   - **Entrée** : le numéro de **version** (SemVer, ex. `1.4.0`) + le **fichier `.dmg`** (upload
-     `multipart/form-data`, ou URL d'un binaire déjà uploadé selon le stockage choisi). Optionnel :
-     **notes de version** (changelog), `minOS`, `sha256`, `signature`/notarisation, flag `prerelease`.
-   - **Traitement** : valider (version unique et bien formée, fichier non vide, type `.dmg`),
-     calculer la **taille** et le **SHA-256**, **stocker le `.dmg`**, puis **ajouter une entrée** à
-     la liste des versions (métadonnées : version, url, taille, sha256, date, changelog, minOS).
-   - **Sortie** : `201` avec l'objet release créé ; erreurs claires (`400` validation, `409`
-     version déjà existante, `401` non autorisé).
-   - **Idempotence / sécurité** : refuser d'écraser une version existante (sauf flag explicite),
-     limiter la taille d'upload, logguer la publication.
+1. **Un flux de publication GitHub protégé.**
+   - `make release` utilise un token GitHub fin limité au dépôt avec `Contents: write`. Ce token
+     reste local, n'est jamais transmis au site et n'est jamais commité.
+   - Le script crée d'abord une release brouillon pour éviter qu'une publication partielle soit
+     visible, puis téléverse `Ledge-<version>.dmg` et `appcast.xml`.
+   - Version, build, macOS minimum, SHA-256 et signature EdDSA sont inclus dans un commentaire
+     HTML machine-readable du corps de la release; le changelog reste lisible normalement.
+   - La release ne devient publique qu'après le succès des deux uploads. Une version existante
+     n'est jamais écrasée implicitement.
 
-2. **Le stockage des binaires.** Un `.dmg` fait plusieurs Mo → **pas dans le repo Git**. Utilise un
-   **object storage** (ex. **Cloudflare R2**, **AWS S3**, **Supabase Storage**, **Vercel Blob**).
-   Le `.dmg` y est uploadé ; on garde son URL publique dans la liste des versions.
+2. **Le stockage des binaires.** Les DMG vivent dans les **GitHub Releases** du dépôt public
+   `marcucus/ledge`. Il n'y a ni bucket, ni base, ni coût de stockage dédié.
 
-3. **L'index des versions.** Une **source de vérité** pour la liste : selon la stack, une **petite
-   base** (SQLite/Turso, Postgres/Supabase, KV) **ou** un fichier `releases.json` versionné/édité
-   par l'endpoint. Schéma d'une release :
-   ```jsonc
-   {
-     "version": "1.4.0",
-     "url": "https://.../ledge-1.4.0.dmg",
-     "size": 8412345,           // octets
-     "sha256": "…",
-     "minOS": "13.0",
-     "notes": "Changelog markdown…",
-     "publishedAt": "2026-06-23T10:00:00Z",
-     "prerelease": false
-   }
-   ```
+3. **L'index des versions.** L'API publique GitHub Releases est la source de vérité. Le site
+   transforme ses releases et assets en objets `Release` après validation des métadonnées et,
+   lorsque GitHub le fournit, de l'empreinte SHA-256 de l'asset.
 
 4. **Les routes de lecture** (publiques) que le site consomme :
    - **`GET /api/releases/latest`** — la dernière version stable → alimente le **bouton de
@@ -141,19 +129,16 @@ C'est une **exigence centrale du site**, pas un détail. Le flux voulu :
    - **`GET /api/releases`** — l'historique complet → page **« Historique des versions / Changelog »**.
    - Idéalement **`GET /download/latest`** — une URL stable qui **redirige (302)** vers le `.dmg` de
      la dernière version, pratique à partager et à mettre dans le bouton.
-   - **(Bonus, plus tard)** un **`appcast.xml`** compatible **Sparkle** pour les mises à jour
-     automatiques dans l'app — même source de données. Mentionne-le comme évolution, ne le construis
-     que si je le demande.
+   - **`GET /appcast.xml`** — flux Sparkle généré depuis la même source de données.
 
 5. **Côté UI** : le bouton « Télécharger » et l'encart version/taille/date sont **dynamiques**
    (depuis `latest`). Prévois une page ou section **Changelog** listant l'historique. Gère le cas
    « aucune version publiée » proprement (état vide soigné).
 
 ### Implications sur la stack (cf. §5)
-Ce besoin rend le site **non 100 % statique** : il s'appuie sur les **route handlers Next.js**
-(`app/api/.../route.ts`) pour la publication et la lecture, un **object storage** pour les `.dmg`,
-et un **index des versions** (base légère ou `releases.json`). Stack actée : **Next.js + TypeScript
-+ Tailwind** (cf. §5).
+Le site utilise les **route handlers Next.js** uniquement comme vues de lecture et redirections.
+La publication et le stockage sont entièrement gérés par GitHub Releases. Stack actée :
+**Next.js + TypeScript + Tailwind** (cf. §5).
 
 ---
 
@@ -181,13 +166,13 @@ Le site doit donner la même sensation que l'app : **sobre, premium, natif macOS
 ## 4. Structure de site recommandée (point de départ, adaptable)
 
 1. **Hero** — nom, pitch en une phrase, démo/anim de l'encoche, CTA principal (Télécharger /
-   Rejoindre la liste d'attente), badge « macOS 13+ · Apple Silicon ».
+   Rejoindre la liste d'attente), badge « macOS 14+ · Apple Silicon ».
 2. **Le concept** — les 3 états (repos / survol / ouvert), avec visuels. « Une extension naturelle
    du matériel. »
-3. **Les 4 modules** — une section par module, alternées, avec mini-démo ou capture.
+3. **Les 7 modules visibles** — présentation fidèle aux onglets réellement enregistrés dans l'app.
 4. **Pourquoi c'est léger** — l'argument technique : ne rien faire au repos, natif, zéro runtime tiers.
 5. **Téléchargement** — CTA « Télécharger pour macOS » → `.dmg` de la **dernière version** (dynamique,
-   cf. §2bis). Version, taille, exigences (macOS 13+ · Apple Silicon), bloc **« Premier lancement »**
+   cf. §2bis). Version, taille, exigences (macOS 14+ · Apple Silicon), bloc **« Premier lancement »**
    (Gatekeeper / permissions).
 5bis. **Historique des versions / Changelog** — liste des versions publiées (depuis `GET /api/releases`).
 6. **FAQ** — permissions demandées et pourquoi, compatibilité, vie privée (tout est local, rien
@@ -202,13 +187,12 @@ Le site doit donner la même sensation que l'app : **sobre, premium, natif macOS
 - **Next.js (App Router) + TypeScript + Tailwind CSS.** C'est le socle. Le site **n'est pas 100 %
   statique** : il utilise les **route handlers** Next.js pour l'endpoint de publication et les
   routes de lecture (cf. §2bis).
-- **Stockage des binaires** : object storage — **Cloudflare R2 / AWS S3 / Vercel Blob** (à choisir
-  selon l'hébergement ; me demander si pas tranché). Jamais le `.dmg` dans Git.
-- **Index des versions** : petite base (Postgres/Supabase, SQLite/Turso, KV) **ou** `releases.json`
-  selon ce qu'on décide à la mise en place.
+- **Stockage des binaires** : **GitHub Releases** dans le dépôt public de l'app.
+- **Index des versions** : API publique GitHub Releases, avec métadonnées signées dans chaque
+  release.
 - **Déploiement** : **Vercel** par défaut (natif Next.js + fonctions + Blob), sinon Netlify /
-  Cloudflare. Build reproductible. Secrets (token de publication, clés storage) en variables
-  d'environnement, jamais commités.
+  Cloudflare. Build reproductible. Le token GitHub d'écriture reste uniquement sur la machine de
+  publication; un éventuel token de lecture du site doit être limité à la lecture.
 - **Zéro dépendance superflue.** Comme l'app : *natif d'abord*. Pas de grosse lib d'animation si du
   CSS / Web Animations API suffit. Justifie toute dépendance ajoutée.
 

@@ -44,6 +44,7 @@ Package.resolved
 secrets.plist
 
 # ─── Signature & distribution ───
+dist/
 *.p12
 *.cer
 *.certSigningRequest
