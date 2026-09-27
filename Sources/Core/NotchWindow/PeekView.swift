@@ -15,6 +15,7 @@ struct PeekView: View {
                             .frame(width: 26, height: 44)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(item.base.tabLabel)
                 }
             }
             .padding(.leading, 12)
@@ -34,6 +35,7 @@ struct PeekView: View {
                     .frame(width: 26, height: 44)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(Text("action.settings", bundle: localizationBundle))
             .padding(.trailing, 8)
         }
         .frame(height: 44)

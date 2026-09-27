@@ -89,5 +89,20 @@ let package = Package(
             dependencies: ["SystemModule"],
             path: "Tests/SystemModuleTests"
         ),
+        .testTarget(
+            name: "TimerModuleTests",
+            dependencies: ["TimerModule"],
+            path: "Tests/TimerModuleTests"
+        ),
+        .testTarget(
+            name: "ClipboardModuleTests",
+            dependencies: ["ClipboardModule"],
+            path: "Tests/ClipboardModuleTests"
+        ),
+        .testTarget(
+            name: "DropZoneModuleTests",
+            dependencies: ["DropZoneModule"],
+            path: "Tests/DropZoneModuleTests"
+        ),
     ]
 )

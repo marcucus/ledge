@@ -71,8 +71,12 @@ struct SystemContentView: View {
             Spacer()
             if accessory.hasSplitLevels {
                 HStack(spacing: 6) {
-                    if let left = accessory.left { Text("L \(left)%") }
-                    if let right = accessory.right { Text("R \(right)%") }
+                    if let left = accessory.left {
+                        Text(localizedPercentage("system.accessory.left.format", value: left))
+                    }
+                    if let right = accessory.right {
+                        Text(localizedPercentage("system.accessory.right.format", value: right))
+                    }
                     if let caseBattery = accessory.caseBattery {
                         HStack(spacing: 2) {
                             Image(systemName: "case.fill").imageScale(.small)
@@ -102,7 +106,8 @@ struct SystemContentView: View {
                     Text("system.battery.charging", bundle: localizationBundle).foregroundStyle(.green)
                 }
                 if let cycles = module.battery.cycleCount {
-                    Text("\(cycles) cyc.").foregroundStyle(.secondary)
+                    Text(localizedPercentage("system.battery.cycles.format", value: cycles))
+                        .foregroundStyle(.secondary)
                 }
             } else {
                 Text("—").foregroundStyle(.secondary)
@@ -194,6 +199,13 @@ struct SystemContentView: View {
             .font(.caption2.weight(.semibold))
             .foregroundStyle(.secondary)
             .textCase(.uppercase)
+    }
+
+    private func localizedPercentage(_ key: String, value: Int) -> String {
+        String(
+            format: NSLocalizedString(key, bundle: localizationBundle, comment: ""),
+            value
+        )
     }
 }
 

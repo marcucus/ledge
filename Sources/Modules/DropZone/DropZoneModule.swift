@@ -10,6 +10,7 @@ public final class DropZoneModule: NotchModule {
     public let tabLabel: LocalizedStringKey = "module.dropzone.label"
 
     public private(set) var items: [ShelfItem] = []
+    public private(set) var lastCopyFailureCount = 0
     public var isDragActive = false {
         didSet { updateAmbient() }
     }
@@ -73,7 +74,7 @@ public final class DropZoneModule: NotchModule {
     // MARK: — AirDrop
 
     public func shareViaAirDrop(from view: NSView) {
-        let urls = items.map(\.url)
+        let urls = items.filter(\.isAvailable).map(\.url)
         guard !urls.isEmpty else { return }
         let picker = NSSharingServicePicker(items: urls)
         picker.show(relativeTo: view.bounds, of: view, preferredEdge: .minY)
@@ -97,9 +98,16 @@ public final class DropZoneModule: NotchModule {
 
     private func copyItems(to destination: URL) async {
         let fileManager = FileManager.default
-        for item in items {
+        var failureCount = 0
+        for item in items where item.isAvailable {
             let dest = destination.appendingPathComponent(item.displayName)
-            try? fileManager.copyItem(at: item.url, to: dest)
+            do {
+                try fileManager.copyItem(at: item.url, to: dest)
+            } catch {
+                failureCount += 1
+            }
         }
+        failureCount += items.filter { !$0.isAvailable }.count
+        lastCopyFailureCount = failureCount
     }
 }

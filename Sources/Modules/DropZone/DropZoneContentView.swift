@@ -15,11 +15,44 @@ public struct DropZoneContentView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             dropZoneArea
+            if unavailableCount > 0 {
+                unavailableWarning
+            }
+            if module.lastCopyFailureCount > 0 {
+                copyFailureWarning
+            }
             if !module.items.isEmpty {
                 actionBar
             }
         }
         .padding(12)
+    }
+
+    private var unavailableCount: Int {
+        module.items.filter { !$0.isAvailable }.count
+    }
+
+    private var unavailableWarning: some View {
+        warningLabel(key: "dropzone.unavailable.count", count: unavailableCount)
+    }
+
+    private var copyFailureWarning: some View {
+        warningLabel(key: "dropzone.copy.failed.count", count: module.lastCopyFailureCount)
+    }
+
+    private func warningLabel(key: String, count: Int) -> some View {
+        Label {
+            Text(
+                String(
+                    format: NSLocalizedString(key, bundle: localizationBundle, comment: ""),
+                    count
+                )
+            )
+        } icon: {
+            Image(systemName: "exclamationmark.triangle.fill")
+        }
+        .font(.caption)
+        .foregroundStyle(.orange)
     }
 
     // MARK: — Drop zone
@@ -49,16 +82,11 @@ public struct DropZoneContentView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "tray.and.arrow.down")
-                .font(.title2)
-                .foregroundStyle(.tertiary)
-            Text("dropzone.empty", bundle: localizationBundle)
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.vertical, 16)
+        ModuleEmptyState(
+            icon: "tray.and.arrow.down",
+            titleKey: "dropzone.empty",
+            detailKey: "dropzone.empty.detail"
+        )
     }
 
     private var itemGrid: some View {
@@ -163,6 +191,7 @@ private struct ShelfItemView: View {
                 }
                 .buttonStyle(.plain)
                 .offset(x: 4, y: -4)
+                .accessibilityLabel(Text("dropzone.action.remove", bundle: localizationBundle))
             }
             Text(item.displayName)
                 .font(.system(size: 9))
@@ -173,6 +202,8 @@ private struct ShelfItemView: View {
         .frame(width: 64)
         .draggable(item.url)
         .help(item.displayName)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(item.displayName)
         .onHover(perform: handleHover)
         .popover(isPresented: $isPreviewVisible, arrowEdge: .top) {
             QuickLookPreview(url: item.url)
@@ -182,15 +213,23 @@ private struct ShelfItemView: View {
     }
 
     private var iconView: some View {
-        Group {
-            if let icon = item.icon {
-                Image(nsImage: icon)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-            } else {
-                Image(systemName: "doc")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
+        ZStack(alignment: .bottomTrailing) {
+            Group {
+                if let icon = item.icon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                } else {
+                    Image(systemName: "doc")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .opacity(item.isAvailable ? 1 : 0.35)
+            if !item.isAvailable {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
             }
         }
         .frame(width: 40, height: 40)
@@ -200,7 +239,7 @@ private struct ShelfItemView: View {
     /// ou change de cible avant l'expiration (pattern collapseTask/hudTask de NotchController).
     private func handleHover(isHovering: Bool) {
         hoverPreviewTask?.cancel()
-        guard isHovering else {
+        guard isHovering, item.isAvailable else {
             isPreviewVisible = false
             return
         }

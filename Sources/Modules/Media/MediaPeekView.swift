@@ -48,6 +48,12 @@ struct MediaPeekView: View {
                 .frame(width: 28, height: 28)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(
+            Text(
+                module.nowPlaying.isPlaying ? "media.action.pause" : "media.action.play",
+                bundle: localizationBundle
+            )
+        )
         .opacity(module.nowPlaying.isActive ? 1 : 0)
     }
 }

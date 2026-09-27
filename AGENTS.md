@@ -82,12 +82,13 @@ Avant une relance manuelle, arrêter l'instance existante avec `killall Ledge`. 
 distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make notarize` et
 `make appcast` selon les secrets disponibles.
 
-## État vérifié le 24 septembre 2026
+## État vérifié le 27 septembre 2026
 
 - Branche `main`, commit observé `fa5f726`.
-- `swift test` compile et exécute **27 tests dans 4 suites**, tous verts.
-- SwiftLint est vert sur `Sources` et `Tests` au 24 septembre 2026.
-- Version bundle actuelle : `0.1.0`.
+- `swift test` compile et exécute **41 tests dans 8 suites**, tous verts.
+- SwiftLint est vert sur `Sources` et `Tests` au 27 septembre 2026.
+- Version bundle actuelle : `0.2.0` (build `2`), candidate locale non publiée. La version publique
+  observée sur GitHub/Vercel reste `0.1.0` tant que la nouvelle release n'est pas publiée.
 - La clé publique Sparkle est renseignée. `SUFeedURL` est injectée dans le bundle de distribution
   par `SPARKLE_FEED_URL`; le bundle de développement n'active pas Sparkle sans cette valeur.
 - `make release` crée un DMG signé ad hoc, génère l'appcast Sparkle EdDSA, crée une GitHub Release

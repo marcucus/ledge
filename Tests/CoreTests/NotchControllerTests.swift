@@ -1,9 +1,22 @@
 @testable import Core
 import Foundation
+import SwiftUI
 import Testing
 
 @MainActor
 struct NotchControllerTests {
+    private final class StubModule: NotchModule {
+        let id: String
+        let tabIcon = "circle"
+        let tabLabel: LocalizedStringKey = "stub"
+
+        init(id: String) {
+            self.id = id
+        }
+
+        func start() {}
+    }
+
     /// Réglages isolés par test — évite de lire/écrire dans les vrais UserDefaults de l'utilisateur.
     /// `UserDefaults(suiteName:)` persiste sur disque : le suite est supprimé via le `cleanup`
     /// retourné, à appeler en `defer` dans chaque test.
@@ -104,6 +117,21 @@ struct NotchControllerTests {
         #expect(controller.state == .collapsed)
     }
 
+    @Test func expandedContentWaitsForWindowAnimation() {
+        let (controller, cleanup) = Self.makeController()
+        defer { cleanup() }
+
+        controller.cursorEntered()
+        #expect(controller.state == .expanded)
+        #expect(!controller.isExpansionSettled)
+
+        controller.expansionDidFinish()
+        #expect(controller.isExpansionSettled)
+
+        controller.dismiss()
+        #expect(controller.isExpansionSettled)
+    }
+
     @Test func dismissReturnsToAmbientWhenAmbientContentActive() {
         let (controller, cleanup) = Self.makeController()
         defer { cleanup() }
@@ -112,5 +140,89 @@ struct NotchControllerTests {
         #expect(controller.state == .expanded)
         controller.dismiss()
         #expect(controller.state == .ambient)
+    }
+
+    @Test func focusedAndImmersiveKeepDistinctExpandedGeometry() {
+        let suiteName = "ledge.composition-geometry.tests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Unable to create isolated UserDefaults suite")
+            return
+        }
+        defer { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
+
+        let settings = SettingsStore(defaults: defaults)
+        let controller = NotchController(settings: settings)
+
+        settings.panelComposition = .focused
+        #expect(controller.expandedWidth == 580)
+        #expect(controller.expandedContentHeight == 200)
+
+        settings.panelComposition = .immersive
+        #expect(controller.expandedWidth == 744)
+        #expect(controller.expandedContentHeight == 320)
+    }
+
+    @Test func transientPopoverInteractionSuspendsAutomaticCollapse() async {
+        let suiteName = "ledge.transient-interaction.tests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Unable to create isolated UserDefaults suite")
+            return
+        }
+        defer { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
+
+        let settings = SettingsStore(defaults: defaults)
+        settings.collapseDelay = 0.01
+        let controller = NotchController(settings: settings)
+
+        controller.cursorEntered()
+        controller.setTransientInteractionActive(true)
+        controller.cursorExited()
+        try? await Task.sleep(for: .milliseconds(30))
+        #expect(controller.state == .expanded)
+
+        controller.setTransientInteractionActive(false)
+        try? await Task.sleep(for: .milliseconds(30))
+        #expect(controller.state == .collapsed)
+    }
+
+    @Test func hidingSelectedModuleFallsBackToAvailableContent() {
+        let suiteName = "ledge.hidden-selection.tests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Unable to create isolated UserDefaults suite")
+            return
+        }
+        defer { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
+
+        let settings = SettingsStore(defaults: defaults)
+        settings.panelComposition = .focused
+        let controller = NotchController(settings: settings)
+        controller.register(modules: [StubModule(id: "media"), StubModule(id: "timers")])
+        controller.selectModule(id: "timers")
+        #expect(controller.activeModuleID == "timers")
+
+        settings.setModulePlacement(.hidden, for: "timers", in: .focused)
+
+        #expect(controller.activeModuleID == "media")
+        #expect(controller.selectedModule?.id == "media")
+    }
+
+    @Test func gridButtonDisappearsWhenGridHasNoModules() {
+        let suiteName = "ledge.empty-grid.tests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Unable to create isolated UserDefaults suite")
+            return
+        }
+        defer { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
+
+        let settings = SettingsStore(defaults: defaults)
+        settings.panelComposition = .focused
+        settings.setShowsModuleGrid(true, in: .focused)
+        settings.setModulePlacement(.bar, for: "media", in: .focused)
+        settings.setModulePlacement(.hidden, for: "timers", in: .focused)
+        let controller = NotchController(settings: settings)
+        controller.register(modules: [StubModule(id: "media"), StubModule(id: "timers")])
+
+        #expect(controller.gridModules.isEmpty)
+        #expect(!controller.showsModuleGrid)
     }
 }

@@ -25,7 +25,6 @@ struct AppProfilesSettingsView: View {
                 Text("settings.appProfiles.list", bundle: localizationBundle)
             }
         }
-        .navigationTitle(Text("settings.appProfiles.title", bundle: localizationBundle))
         .toolbar {
             ToolbarItem {
                 Button {

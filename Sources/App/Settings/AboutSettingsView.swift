@@ -54,6 +54,5 @@ struct AboutSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(Text("settings.section.about", bundle: localizationBundle))
     }
 }

@@ -12,6 +12,10 @@ import SwiftUI
 
     // MARK: — General
 
+    public var hasCompletedOnboarding: Bool {
+        didSet { defaults.set(hasCompletedOnboarding, forKey: Keys.hasCompletedOnboarding) }
+    }
+
     public var collapseDelay: Double {
         didSet { defaults.set(collapseDelay, forKey: Keys.collapseDelay) }
     }
@@ -58,8 +62,36 @@ import SwiftUI
         )
     }
 
-    public var panelWidth: PanelWidth {
-        didSet { defaults.set(panelWidth.rawValue, forKey: Keys.panelWidth) }
+    public var panelComposition: PanelComposition {
+        didSet { defaults.set(panelComposition.rawValue, forKey: Keys.panelComposition) }
+    }
+
+    var focusedModulePlacements: [String: Int] {
+        didSet { defaults.set(focusedModulePlacements, forKey: Keys.focusedModulePlacements) }
+    }
+
+    var panoramicModulePlacements: [String: Int] {
+        didSet { defaults.set(panoramicModulePlacements, forKey: Keys.panoramicModulePlacements) }
+    }
+
+    var immersiveModulePlacements: [String: Int] {
+        didSet { defaults.set(immersiveModulePlacements, forKey: Keys.immersiveModulePlacements) }
+    }
+
+    var focusedShowsModuleGrid: Bool {
+        didSet { defaults.set(focusedShowsModuleGrid, forKey: Keys.focusedShowsModuleGrid) }
+    }
+
+    var panoramicShowsModuleGrid: Bool {
+        didSet { defaults.set(panoramicShowsModuleGrid, forKey: Keys.panoramicShowsModuleGrid) }
+    }
+
+    var immersiveShowsModuleGrid: Bool {
+        didSet { defaults.set(immersiveShowsModuleGrid, forKey: Keys.immersiveShowsModuleGrid) }
+    }
+
+    var compositionModuleOrders: CompositionModuleOrders {
+        didSet { defaults.setCodable(compositionModuleOrders, forKey: Keys.compositionModuleOrders) }
     }
 
     public var cornerRadius: Double {
@@ -118,12 +150,6 @@ import SwiftUI
         didSet { defaults.setShortcut(shortcutOpenMedia, forKey: Keys.shortcutOpenMedia) }
     }
 
-    // MARK: — NavBar
-
-    public var showModuleLabels: Bool {
-        didSet { defaults.set(showModuleLabels, forKey: Keys.showModuleLabels) }
-    }
-
     // MARK: — Clipboard module
 
     public var clipboardMaxItems: Int {
@@ -160,6 +186,12 @@ import SwiftUI
 
     // MARK: — Display
 
+    /// Identifiant CoreGraphics persistant de l'écran choisi. Vide = écran du Mac automatiquement.
+    public var targetScreenIdentifier: String {
+        didSet { defaults.set(targetScreenIdentifier, forKey: Keys.targetScreenIdentifier) }
+    }
+
+    /// Nom conservé pour afficher une cible temporairement déconnectée et migrer l'ancien réglage.
     public var targetScreenName: String {
         didSet { defaults.set(targetScreenName, forKey: Keys.targetScreenName) }
     }
@@ -226,6 +258,7 @@ import SwiftUI
     // swiftlint:disable:next function_body_length
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        hasCompletedOnboarding = defaults.bool(forKey: Keys.hasCompletedOnboarding)
         collapseDelay = defaults.double(forKey: Keys.collapseDelay).nonZero ?? 0.6
         moduleOrder = (defaults.array(forKey: Keys.moduleOrder) as? [String]) ?? Self.defaultModuleOrder
         disabledModuleIDs = Set(defaults.stringArray(forKey: Keys.disabledModules) ?? [])
@@ -233,9 +266,24 @@ import SwiftUI
         hudBrightnessManualOnly = defaults.object(forKey: Keys.hudBrightnessManualOnly) as? Bool ?? true
         hudUseSystemAccent = defaults.object(forKey: Keys.hudUseSystemAccent) as? Bool ?? true
         hudAccentColorComponents = (defaults.array(forKey: Keys.hudAccentColorComponents) as? [Double]) ?? []
-        panelWidth = PanelWidth(rawValue: defaults.integer(forKey: Keys.panelWidth)) ?? .standard
+        let storedComposition = defaults.object(forKey: Keys.panelComposition) as? Int
+        let legacyWidth = defaults.object(forKey: Keys.legacyPanelWidth) as? Int
+        panelComposition = PanelComposition(rawValue: storedComposition ?? legacyWidth ?? -1) ?? .panoramic
+        focusedModulePlacements = defaults.dictionary(forKey: Keys.focusedModulePlacements) as? [String: Int]
+            ?? Self.defaultFocusedModulePlacements
+        panoramicModulePlacements = defaults.dictionary(forKey: Keys.panoramicModulePlacements) as? [String: Int]
+            ?? Self.defaultPanoramicModulePlacements
+        immersiveModulePlacements = defaults.dictionary(forKey: Keys.immersiveModulePlacements) as? [String: Int]
+            ?? Self.defaultImmersiveModulePlacements
+        focusedShowsModuleGrid = defaults.object(forKey: Keys.focusedShowsModuleGrid) as? Bool ?? true
+        panoramicShowsModuleGrid = defaults.object(forKey: Keys.panoramicShowsModuleGrid) as? Bool ?? false
+        immersiveShowsModuleGrid = defaults.object(forKey: Keys.immersiveShowsModuleGrid) as? Bool ?? true
+        compositionModuleOrders = defaults.codable(
+            CompositionModuleOrders.self,
+            forKey: Keys.compositionModuleOrders
+        ) ?? .defaults
         cornerRadius = defaults.double(forKey: Keys.cornerRadius).nonZero ?? 12.0
-        panelOpacity = defaults.object(forKey: Keys.panelOpacity) as? Double ?? 1.0
+        panelOpacity = max(defaults.object(forKey: Keys.panelOpacity) as? Double ?? 1.0, 0.92)
         notchDetectionMode = NotchDetectionMode(
             rawValue: defaults.integer(forKey: Keys.notchDetectionMode)
         ) ?? .automatic
@@ -252,12 +300,12 @@ import SwiftUI
         shortcutPaste = defaults.shortcut(forKey: Keys.shortcutPaste) ?? .defaultPaste
         shortcutNewTimer = defaults.shortcut(forKey: Keys.shortcutNewTimer) ?? .defaultNewTimer
         shortcutOpenMedia = defaults.shortcut(forKey: Keys.shortcutOpenMedia) ?? .defaultOpenMedia
-        showModuleLabels = defaults.object(forKey: Keys.showModuleLabels) as? Bool ?? false
         clipboardMaxItems = defaults.object(forKey: Keys.clipboardMaxItems) as? Int ?? 50
         clipboardPersistEnabled = defaults.object(forKey: Keys.clipboardPersistEnabled) as? Bool ?? false
         pomodoroWorkDuration = defaults.double(forKey: Keys.pomodoroWorkDuration).nonZero ?? 25
         pomodoroShortBreakDuration = defaults.double(forKey: Keys.pomodoroShortBreakDuration).nonZero ?? 5
         pomodoroLongBreakDuration = defaults.double(forKey: Keys.pomodoroLongBreakDuration).nonZero ?? 15
+        targetScreenIdentifier = defaults.string(forKey: Keys.targetScreenIdentifier) ?? ""
         targetScreenName = defaults.string(forKey: Keys.targetScreenName) ?? ""
         launcherApps = (defaults.stringArray(forKey: Keys.launcherApps)) ?? Self.defaultLauncherApps
         ambientShowArtwork = defaults.object(forKey: Keys.ambientShowArtwork) as? Bool ?? true
@@ -272,41 +320,6 @@ import SwiftUI
         appProfiles = defaults.codable([AppProfile].self, forKey: Keys.appProfiles) ?? []
     }
 
-    private static let defaultLauncherApps: [String] = {
-        let candidates = [
-            "/Applications/Safari.app",
-            "/System/Applications/Utilities/Terminal.app",
-            "/System/Library/CoreServices/Finder.app",
-        ]
-        return candidates.filter { FileManager.default.fileExists(atPath: $0) }
-    }()
-
-    // MARK: — Themes
-
-    /// Applique un thème nommé : couleur d'accent + opacité + rayon des coins en une fois.
-    public func apply(_ theme: Theme) {
-        hudUseSystemAccent = false
-        hudAccentColorComponents = theme.accent
-        panelOpacity = theme.panelOpacity
-        cornerRadius = theme.cornerRadius
-    }
-
-    /// `id` du thème dont tous les réglages correspondent à l'état courant, sinon `nil`
-    /// (couleur système active ou réglages personnalisés ne correspondant à aucun thème).
-    public var activeThemeID: String? {
-        guard !hudUseSystemAccent, hudAccentColorComponents.count >= 3 else { return nil }
-        let tolerance = 0.005
-        return Theme.all.first { theme in
-            abs(hudAccentColorComponents[0] - theme.accent[0]) < tolerance &&
-                abs(hudAccentColorComponents[1] - theme.accent[1]) < tolerance &&
-                abs(hudAccentColorComponents[2] - theme.accent[2]) < tolerance &&
-                abs(panelOpacity - theme.panelOpacity) < tolerance &&
-                abs(cornerRadius - theme.cornerRadius) < tolerance
-        }?.id
-    }
-
-    // MARK: — Module helpers
-
     public func isModuleEnabled(_ id: String) -> Bool {
         !disabledModuleIDs.contains(id)
     }
@@ -319,6 +332,7 @@ import SwiftUI
 // MARK: — UserDefaults keys
 
 private enum Keys {
+    static let hasCompletedOnboarding = "hasCompletedOnboarding"
     static let collapseDelay = "collapseDelay"
     static let moduleOrder = "moduleOrder"
     static let disabledModules = "disabledModules"
@@ -326,7 +340,15 @@ private enum Keys {
     static let hudBrightnessManualOnly = "hudBrightnessManualOnly"
     static let hudUseSystemAccent = "hudUseSystemAccent"
     static let hudAccentColorComponents = "hudAccentColorComponents"
-    static let panelWidth = "panelWidth"
+    static let panelComposition = "panelComposition"
+    static let focusedModulePlacements = "focusedModulePlacements"
+    static let panoramicModulePlacements = "panoramicModulePlacements"
+    static let immersiveModulePlacements = "immersiveModulePlacements"
+    static let focusedShowsModuleGrid = "focusedShowsModuleGrid"
+    static let panoramicShowsModuleGrid = "panoramicShowsModuleGrid"
+    static let immersiveShowsModuleGrid = "immersiveShowsModuleGrid"
+    static let compositionModuleOrders = "compositionModuleOrders"
+    static let legacyPanelWidth = "panelWidth"
     static let cornerRadius = "cornerRadius"
     static let panelOpacity = "panelOpacity"
     static let notchDetectionMode = "notchDetectionMode"
@@ -341,12 +363,12 @@ private enum Keys {
     static let shortcutPaste = "shortcutPaste"
     static let shortcutNewTimer = "shortcutNewTimer"
     static let shortcutOpenMedia = "shortcutOpenMedia"
-    static let showModuleLabels = "showModuleLabels"
     static let clipboardMaxItems = "clipboardMaxItems"
     static let clipboardPersistEnabled = "clipboardPersistEnabled"
     static let pomodoroWorkDuration = "pomodoroWorkDuration"
     static let pomodoroShortBreakDuration = "pomodoroShortBreakDuration"
     static let pomodoroLongBreakDuration = "pomodoroLongBreakDuration"
+    static let targetScreenIdentifier = "targetScreenIdentifier"
     static let targetScreenName = "targetScreenName"
     static let launcherApps = "launcherApps"
     static let ambientShowArtwork = "ambientShowArtwork"
@@ -366,27 +388,5 @@ private enum Keys {
 private extension Double {
     var nonZero: Double? {
         self == 0 ? nil : self
-    }
-}
-
-private extension UserDefaults {
-    func shortcut(forKey key: String) -> GlobalKeyboardShortcut? {
-        guard let data = data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(GlobalKeyboardShortcut.self, from: data)
-    }
-
-    func setShortcut(_ shortcut: GlobalKeyboardShortcut, forKey key: String) {
-        guard let data = try? JSONEncoder().encode(shortcut) else { return }
-        set(data, forKey: key)
-    }
-
-    func setCodable<T: Encodable>(_ value: T, forKey key: String) {
-        guard let data = try? JSONEncoder().encode(value) else { return }
-        set(data, forKey: key)
-    }
-
-    func codable<T: Decodable>(_ type: T.Type, forKey key: String) -> T? {
-        guard let data = data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(type, from: data)
     }
 }

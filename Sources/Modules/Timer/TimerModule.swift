@@ -23,10 +23,9 @@ public final class TimerModule: NotchModule {
 
     @ObservationIgnored private nonisolated(unsafe) var dispatchTimers: [UUID: DispatchSourceTimer] = [:]
     @ObservationIgnored private var pomodoroEntryID: UUID?
+    @ObservationIgnored private var didRequestNotificationPermission = false
 
-    public init() {
-        requestNotificationPermission()
-    }
+    public init() {}
 
     // MARK: — NotchModule
 
@@ -105,15 +104,19 @@ public final class TimerModule: NotchModule {
         guard !entries[index].isRunning else { return }
         entries[index].isRunning = true
         entries[index].isPaused = false
+        entries[index].scheduledEndDate = Date().addingTimeInterval(entries[index].remaining)
+        requestNotificationPermissionIfNeeded()
         scheduleDispatchTimer(for: id)
         updateAmbient()
     }
 
     private func pauseEntry(_ id: UUID) {
-        guard let index = entries.firstIndex(where: { $0.id == id }) else { return }
-        guard entries[index].isRunning else { return }
+        guard entries.contains(where: { $0.id == id && $0.isRunning }) else { return }
+        synchronizeTimer(id: id, now: Date())
+        guard let index = entries.firstIndex(where: { $0.id == id }), entries[index].isRunning else { return }
         entries[index].isRunning = false
         entries[index].isPaused = true
+        entries[index].scheduledEndDate = nil
         stopDispatchTimer(for: id)
         updateAmbient()
     }
@@ -123,6 +126,7 @@ public final class TimerModule: NotchModule {
         entries[index].isRunning = false
         entries[index].isPaused = false
         entries[index].remaining = 0
+        entries[index].scheduledEndDate = nil
         stopDispatchTimer(for: id)
         updateAmbient()
     }
@@ -133,6 +137,7 @@ public final class TimerModule: NotchModule {
         entries[index].isRunning = false
         entries[index].isPaused = false
         entries[index].remaining = entries[index].duration
+        entries[index].scheduledEndDate = nil
         updateAmbient()
     }
 
@@ -162,7 +167,7 @@ public final class TimerModule: NotchModule {
         source.schedule(deadline: .now() + 1, repeating: 1.0)
         source.setEventHandler { [weak self] in
             guard let self else { return }
-            MainActor.assumeIsolated { self.tick(id: id) }
+            MainActor.assumeIsolated { self.synchronizeTimer(id: id, now: Date()) }
         }
         source.resume()
         dispatchTimers[id] = source
@@ -173,12 +178,15 @@ public final class TimerModule: NotchModule {
         dispatchTimers.removeValue(forKey: id)
     }
 
-    private func tick(id: UUID) {
+    /// Recalcule depuis une échéance absolue : la veille du Mac ne ralentit pas le minuteur.
+    func synchronizeTimer(id: UUID, now: Date) {
         guard let index = entries.firstIndex(where: { $0.id == id }) else { return }
-        entries[index].remaining -= 1
+        guard entries[index].isRunning, let endDate = entries[index].scheduledEndDate else { return }
+        entries[index].remaining = ceil(max(0, endDate.timeIntervalSince(now)))
         if entries[index].remaining <= 0 {
             entries[index].remaining = 0
             entries[index].isRunning = false
+            entries[index].scheduledEndDate = nil
             stopDispatchTimer(for: id)
             sendFinishedNotification(for: entries[index])
             if id == pomodoroEntryID {
@@ -203,8 +211,12 @@ public final class TimerModule: NotchModule {
 
     // MARK: — Notifications
 
-    private func requestNotificationPermission() {
-        guard Bundle.main.bundleIdentifier != nil else { return }
+    private func requestNotificationPermissionIfNeeded() {
+        guard !didRequestNotificationPermission,
+              !SettingsStore.shared.timerAlertVisualOnly,
+              Bundle.main.bundlePath.hasSuffix(".app")
+        else { return }
+        didRequestNotificationPermission = true
         Task {
             try? await UNUserNotificationCenter.current()
                 .requestAuthorization(options: [.alert, .sound])
@@ -212,7 +224,7 @@ public final class TimerModule: NotchModule {
     }
 
     private func sendFinishedNotification(for entry: TimerEntry) {
-        guard Bundle.main.bundleIdentifier != nil else { return }
+        guard Bundle.main.bundlePath.hasSuffix(".app") else { return }
         let settings = SettingsStore.shared
         if settings.timerAlertVisualOnly { return }
         let content = UNMutableNotificationContent()

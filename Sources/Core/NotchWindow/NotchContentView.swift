@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NotchContentView: View {
     var controller: NotchController
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var state: NotchState {
         controller.state
     }
@@ -23,8 +24,7 @@ struct NotchContentView: View {
                     NavBar(controller: controller)
                 }
 
-                if state == .expanded {
-                    Divider().opacity(0.3)
+                if state == .expanded && controller.isExpansionSettled {
                     Group {
                         if let module = controller.selectedModule {
                             module.makeContentView()
@@ -32,20 +32,36 @@ struct NotchContentView: View {
                             Color.clear
                         }
                     }
-                    .id("\(controller.selectedModuleID)-\(language)")
+                    .id("\(controller.activeModuleID)-\(language)")
+                    .padding(.horizontal, contentHorizontalPadding)
+                    .padding(.top, controller.panelComposition == .immersive ? 8 : 0)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .environment(\.panelComposition, controller.panelComposition)
+                    .transition(contentTransition)
                 }
             }
-            .padding(.horizontal, (state == .collapsed || state == .ambient) ? 0 : 12)
+            .padding(.horizontal, outerHorizontalPadding)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(background)
-            // Ouverture : contenu apparaît 0.28 s après le début (pendant que la fenêtre s'agrandit).
-            // Fermeture : la fenêtre se rétracte avec un fond noir — l'animation SwiftUI est couverte,
-            //             on la laisse courte pour éviter toute artefact visible.
+            // Le masque porte sur toute la hiérarchie, pas seulement sur le fond. Certains
+            // modules dessinent leur propre noir ; sans ce clip ils recouvrent les quatre coins.
+            .clipShape(panelShape)
+            // La sortie conserve la transition historique. Le signal `isExpansionSettled`
+            // n'ajoute qu'une révélation à l'entrée, après le redimensionnement AppKit.
             .animation(
-                .easeOut(duration: state == .expanded ? 0.12 : 0.06).delay(state == .expanded ? 0.28 : 0),
+                reduceMotion || state == .expanded
+                    ? nil
+                    : .spring(response: 0.42, dampingFraction: 0.88),
                 value: state
             )
+            .animation(
+                reduceMotion
+                    ? nil
+                    : .easeOut(duration: 0.18),
+                value: controller.isExpansionSettled
+            )
+            .animation(reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 0.9),
+                       value: controller.panelComposition)
             .colorScheme(.dark)
 
             // Ring timer
@@ -55,15 +71,58 @@ struct NotchContentView: View {
         }
     }
 
+    private var outerHorizontalPadding: CGFloat {
+        guard state != .collapsed, state != .ambient else { return 0 }
+        return controller.panelComposition == .focused ? 10 : 14
+    }
+
+    private var contentHorizontalPadding: CGFloat {
+        switch controller.panelComposition {
+        case .focused: 0
+        case .panoramic: 8
+        case .immersive: 16
+        }
+    }
+
+    private var contentTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .opacity.combined(with: .offset(y: -6))
+    }
+
     @ViewBuilder
     private var background: some View {
         Color.black
             .opacity(state == .collapsed ? 0 : controller.panelBackgroundOpacity)
-            .clipShape(NotchPanelShape(
-                topEar: state == .collapsed ? 0 : 12,
-                bottomRadius: state == .expanded ? controller.panelCornerRadius : 10
-            ))
-            .animation(.easeOut(duration: 0.15), value: state)
+            // À l'ouverture, AppKit possède seul le mouvement géométrique. À la fermeture,
+            // on restaure l'interpolation du masque qui produisait la résorption d'origine.
+            .animation(
+                reduceMotion || state == .expanded
+                    ? nil
+                    : .spring(response: 0.4, dampingFraction: 0.9),
+                value: state
+            )
+    }
+
+    private var panelShape: NotchPanelShape {
+        NotchPanelShape(
+            topEar: state == .collapsed ? 0 : effectiveTopEar,
+            bottomRadius: state == .expanded ? controller.panelCornerRadius : 10
+        )
+    }
+
+    /// Ambient, HUD et peek sont des états universels : leur silhouette ne dépend jamais de la
+    /// composition du panneau ouvert. La géométrie compacte est la référence commune.
+    private var effectiveTopEar: CGFloat {
+        guard state == .expanded else { return 10 }
+        return topEar
+    }
+
+    private var topEar: CGFloat {
+        switch controller.panelComposition {
+        case .focused: 10
+        case .panoramic: 18
+        case .immersive: 14
+        }
     }
 }
 
@@ -72,6 +131,7 @@ struct NotchContentView: View {
 struct HUDBar: View {
     let content: HUDContent
     let notchHeight: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
@@ -92,7 +152,7 @@ struct HUDBar: View {
                             .frame(width: fillWidth)
                             .shadow(color: fillColor.opacity(0.9), radius: 6)
                             .shadow(color: fillColor.opacity(0.5), radius: 12)
-                            .animation(.easeOut(duration: 0.10), value: content.value)
+                            .animation(reduceMotion ? nil : .easeOut(duration: 0.10), value: content.value)
                     }
                 }
                 .frame(height: 6)
@@ -113,6 +173,21 @@ struct HUDBar: View {
             .position(x: geo.size.width / 2, y: centerY)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            Text(
+                content.kind == .volume ? "hud.accessibility.volume" : "hud.accessibility.brightness",
+                bundle: localizationBundle
+            )
+        )
+        .accessibilityValue(accessibilityValue)
+    }
+
+    private var accessibilityValue: Text {
+        if content.isMuted {
+            return Text("hud.muted", bundle: localizationBundle)
+        }
+        return Text("\(Int(content.value * 100))%")
     }
 }
 
@@ -120,17 +195,25 @@ struct HUDBar: View {
 
 struct TimerRingView: View {
     let controller: NotchController
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if controller.timerRingActive {
-            TimelineView(.animation) { (context: TimelineViewDefaultContext) in
-                let elapsed = context.date.timeIntervalSinceReferenceDate
-                let alpha = 0.5 + 0.4 * sin(elapsed * .pi * 0.8)
-                NotchPanelShape(topEar: 0, bottomRadius: 10)
-                    .stroke(controller.appAccentColor.opacity(alpha), lineWidth: 1.5)
-                    .padding(.horizontal, NotchController.timerRingInset)
-                    .padding(.bottom, NotchController.timerRingInset)
+            if reduceMotion {
+                ring(alpha: 0.8)
+            } else {
+                TimelineView(.animation) { (context: TimelineViewDefaultContext) in
+                    let elapsed = context.date.timeIntervalSinceReferenceDate
+                    ring(alpha: 0.5 + 0.4 * sin(elapsed * .pi * 0.8))
+                }
             }
         }
+    }
+
+    private func ring(alpha: Double) -> some View {
+        NotchPanelShape(topEar: 0, bottomRadius: 10)
+            .stroke(controller.appAccentColor.opacity(alpha), lineWidth: 1.5)
+            .padding(.horizontal, NotchController.timerRingInset)
+            .padding(.bottom, NotchController.timerRingInset)
     }
 }
