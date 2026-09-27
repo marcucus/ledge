@@ -85,8 +85,10 @@ et **remplacer** l'overlay natif de macOS.
   - **Volume** via CoreAudio (`kAudioDevicePropertyVolumeScalar` / `…Mute`), lecture + écriture.
   - **Luminosité** via **DisplayServices** (`DisplayServicesGet/SetBrightness`) sur Apple Silicon,
     fallback IOKit (`IODisplayGetFloatParameter`) sur Intel.
-  - **Polling 0,2 s** : capte les changements (touches clavier non interceptées + Centre de
-    contrôle) sans aucune permission.
+  - **Volume événementiel** via les listeners CoreAudio, sans polling.
+  - **Luminosité** : aucune lecture périodique avec le réglage par défaut « clavier uniquement » ;
+    polling 0,2 s uniquement si l'utilisateur demande explicitement de suivre aussi les
+    changements externes.
   - **Monitor clavier** `.systemDefined` immédiat pour la réactivité.
   - **CGEventTap** (`.cghidEventTap`) : intercepte les touches média, **consomme** l'événement
     (→ pas de HUD macOS) et applique lui-même le changement (pas de 1/16, ou 1/64 en mode fin
@@ -100,8 +102,9 @@ et **remplacer** l'overlay natif de macOS.
   (`@AppStorage("hudReplaceSystem")`, **activé par défaut** via `register(defaults:)`).
 
 **Comportement**
-- Réglage **activé** (défaut) : la barre Ledge s'affiche (via polling, sans permission) ; le HUD
-  macOS est supprimé **dès que l'Accessibilité est accordée** (le `CGEventTap` peut alors agir).
+- Réglage **activé** (défaut) : la barre Ledge s'affiche via les événements système ; le HUD
+  macOS est supprimé **dès que l'Accessibilité est accordée**. Le retour de Réglages Système est
+  détecté au changement d'application, sans battement périodique au repos.
 - Réglage **désactivé** : comportement macOS natif, Ledge ne montre rien.
 
 ## Limites connues / points ouverts
@@ -109,7 +112,7 @@ et **remplacer** l'overlay natif de macOS.
 | Sujet | État | Détail |
 |---|---|---|
 | **Pochette d'album** | ⚠️ Partiel | MediaRemote est bloqué pour Apple Music sur macOS 15 (run non-bundlé) ; la notification distribuée `com.apple.Music.playerInfo` ne fournit pas d'image. Piste : `iTunesLibrary` via « Persistent ID ». |
-| **Seek Apple Music** | ✅ Contourné | MediaRemote bloqué → on passe par **AppleScript** (`set player position`) pour Music, MediaRemote (`MRMediaRemoteSetElapsedTime`) pour les autres lecteurs. Demande la permission **Automation** au 1er usage. |
+| **Seek Apple Music** | ✅ Contourné | MediaRemote bloqué → on passe par **ScriptingBridge** (`set player position`) pour Music, MediaRemote (`MRMediaRemoteSetElapsedTime`) pour les autres lecteurs. Demande la permission **Automation** au 1er usage. |
 | **Suppression HUD natif** | ✅ OK (bundle signé) | Le `CGEventTap` consomme les touches volume/luminosité **si l'Accessibilité est accordée**. Tester via `dist/Ledge.app` (`make app`), pas `swift run` (pas de bundle = pas de permission). `make app` signe avec une identité Apple Development **stable** → l'autorisation persiste entre les rebuilds. La barre Ledge (volume événementiel) marche sans permission. |
 | **Distribution** | ✅ Code prêt | `make release` crée un bundle ad hoc et un DMG sans compte Apple, signe la mise à jour avec Sparkle EdDSA puis publie le DMG et l'appcast dans GitHub Releases. Gatekeeper impose une autorisation manuelle au premier lancement. |
 
@@ -119,7 +122,7 @@ et **remplacer** l'overlay natif de macOS.
 |---|---|---|
 | **Accessibilité** | `CGEventTap` (supprimer le HUD natif volume/luminosité) | Prompt au lancement si le réglage HUD est actif. |
 | **Automation (Music)** | Seek dans Apple Music via AppleScript | Prompt au 1er glissement sur la barre. |
-| **Notifications** | Alertes de fin de timer | À la 1re alerte. |
+| **Notifications** | Alertes de fin de timer | Au premier démarrage d’un timer, jamais au lancement de Ledge. |
 | **Calendrier** | Affichage du prochain événement | À l’ouverture du module ou depuis la page Permissions. |
 
 > Chaque fonction se **dégrade proprement** sans sa permission (cf. [doc 07](07-architecture-technique.md)).
@@ -139,6 +142,38 @@ et **remplacer** l'overlay natif de macOS.
 - Sélecteur d'écran fiable dans Réglages → Affichage : écran du Mac par défaut ou écran externe
   explicite, pseudo-encoche sur les écrans sans encoche, cible persistante et restauration après
   une déconnexion temporaire.
+- Trois dispositions persistantes dans Réglages → Apparence : Concentrée, Panoramique par défaut
+  et Immersive. Elles conservent un fond noir continu avec l'encoche, ajustent largeur, hauteur et
+  navigation, et partagent une transition amortie qui respecte « Réduire les animations ».
+- L'ouverture est séquencée en deux temps : expansion de la surface noire, puis apparition du
+  contenu. Les rayons de la silhouette sont bornés à chaque image pour éviter l'auto-intersection
+  des coins en Immersive. Les Réglages emploient un en-tête interne qui ne recouvre plus la première
+  section des formulaires.
+- Le masque de la silhouette s'applique à toute la hiérarchie du panneau afin que les fonds propres
+  aux modules ne puissent plus recouvrir les coins. Média possède une composition intérieure dédiée
+  à chaque disposition et la navigation inclut un lanceur de modules en grille redessiné. Dans
+  Réglages → Apparence, chaque disposition possède maintenant son propre routage exclusif des
+  modules — Barre, Grille ou Masqué —, son propre ordre dans chaque destination et un choix
+  indépendant d'affichage du bouton de grille.
+  La barre emploie des icônes seules dans toutes les dispositions ; les noms complets restent dans
+  VoiceOver et dans la grille. Le panneau reste ouvert tant que le popover de la grille est utilisé.
+  La forme ambient est volontairement identique dans les trois dispositions.
+
+## Robustesse des modules (27 septembre 2026)
+
+- Les timers utilisent désormais une échéance absolue : une veille du Mac ou un blocage du run
+  loop ne ralentit plus le décompte. La permission Notifications est demandée à l’usage.
+- Le presse-papiers maintient réellement les éléments épinglés en tête. Sans permission
+  Accessibilité, l’élément est tout de même copié et l’interface explique pourquoi le collage
+  automatique n’a pas eu lieu.
+- La Drop Zone détecte les fichiers supprimés ou déplacés après leur dépôt, les signale dans la
+  grille et les exclut du partage. Les échecs de copie ne sont plus silencieux.
+- Calendrier distingue maintenant accès non demandé, accordé et refusé, et ne démarre son polling
+  que lorsque l’accès est accordé.
+- Raccourcis distingue une liste vide d’un échec de la commande système et affiche aussi l’échec
+  éventuel d’un lancement.
+- La suite couvre 41 tests dans 8 suites, dont les cas de veille, grille vide, module masqué pendant
+  sa sélection, élément épinglé et fichier de Drop Zone devenu indisponible.
 
 ## Construire & lancer
 
@@ -147,7 +182,8 @@ swift build          # compilation
 swift run            # build + lancement (agent, pas d'icône Dock)
 ```
 
-Pour tester le HUD : accepter le prompt **Accessibilité**, puis **relancer l'app**.
+Pour tester le HUD : accepter le prompt **Accessibilité**, puis revenir dans une autre app. Ledge
+réinstalle le tap au changement d'application, sans nécessiter de relance.
 
 ## Prochaines étapes suggérées
 

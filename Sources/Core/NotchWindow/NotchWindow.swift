@@ -61,6 +61,7 @@ public final class NotchWindow: NSPanel {
         withObservationTracking {
             applyCollectionBehavior(for: controller.fullscreenBehavior)
             _ = controller.expandedWidth
+            _ = controller.expandedContentHeight
             _ = controller.targetScreenIdentifier
             _ = controller.targetScreenName
         } onChange: { [weak self] in
@@ -168,14 +169,15 @@ public final class NotchWindow: NSPanel {
         animated: Bool,
         onComplete: @escaping () -> Void
     ) {
-        guard animated else {
+        let shouldAnimate = animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        guard shouldAnimate else {
             setFrame(frame, display: true, animate: false)
             onComplete()
             return
         }
         NSAnimationContext.runAnimationGroup { context in
             context.duration = duration
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            context.timingFunction = NotchWindowLayout.expansionTiming
             self.animator().setFrame(frame, display: true)
         } completionHandler: { onComplete() }
     }
@@ -194,21 +196,17 @@ public final class NotchWindow: NSPanel {
         }
     }
 
-    private func applyExpanded(geometry: NotchGeometry, from: NotchState, animated: Bool) {
+    private func applyExpanded(geometry: NotchGeometry, from _: NotchState, animated: Bool) {
         let size = CGSize(
             width: controller.expandedWidth,
-            height: NotchWindowLayout.navbarHeight + NotchWindowLayout.contentHeight
+            height: controller.navigationHeight + controller.expandedContentHeight
         )
-        // Depuis ambient : le fond SwiftUI changerait de forme abruptement pendant l'animation
-        // → on pose un fond noir opaque pour masquer la transition, révélé à la fin comme d'habitude.
-        if animated && from == .ambient {
-            backgroundColor = .black
-        }
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
             duration: NotchWindowLayout.openDuration * controller.animationScale,
             animated: animated
         ) { [weak self] in
+            self?.controller.expansionDidFinish()
             self?.revealClearBackground()
         }
         addGlobalClickMonitor()
@@ -216,7 +214,7 @@ public final class NotchWindow: NSPanel {
 
     private func applyPeeking(geometry: NotchGeometry, animated: Bool) {
         removeGlobalClickMonitor()
-        let size = CGSize(width: controller.expandedWidth, height: NotchWindowLayout.navbarHeight)
+        let size = CGSize(width: controller.expandedWidth, height: controller.navigationHeight)
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
             duration: NotchWindowLayout.peekDuration * controller.animationScale,

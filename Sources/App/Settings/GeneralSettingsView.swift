@@ -64,7 +64,6 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(Text("settings.section.general", bundle: localizationBundle))
     }
 
     private var collapseDelayRow: some View {

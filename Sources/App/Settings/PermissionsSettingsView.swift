@@ -57,7 +57,6 @@ struct PermissionsSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(Text("settings.section.permissions", bundle: localizationBundle))
         .task { await refreshStatuses() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { await refreshStatuses() }

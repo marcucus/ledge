@@ -304,20 +304,24 @@ private struct TimerRowView: View {
                     Image(systemName: "pause.fill").imageScale(.small)
                 }
                 .buttonStyle(.plain).foregroundStyle(.secondary)
+                .accessibilityLabel(Text("timer.action.pause", bundle: localizationBundle))
             } else {
                 Button { module.send(.start(id: entry.id)) } label: {
                     Image(systemName: "play.fill").imageScale(.small)
                 }
                 .buttonStyle(.plain).foregroundStyle(Color.accentColor)
+                .accessibilityLabel(Text("timer.action.resume", bundle: localizationBundle))
             }
             Button { module.send(.reset(id: entry.id)) } label: {
                 Image(systemName: "arrow.counterclockwise").imageScale(.small)
             }
             .buttonStyle(.plain).foregroundStyle(.secondary)
+            .accessibilityLabel(Text("timer.action.reset", bundle: localizationBundle))
             Button { module.removeTimer(id: entry.id) } label: {
                 Image(systemName: "xmark").imageScale(.small)
             }
             .buttonStyle(.plain).foregroundStyle(.secondary)
+            .accessibilityLabel(Text("timer.action.remove", bundle: localizationBundle))
         }
     }
 }

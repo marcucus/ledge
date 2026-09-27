@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import Core
 import Foundation
 import SwiftUI
@@ -12,6 +13,8 @@ public final class ClipboardModule: NotchModule {
 
     /// Ordered from newest to oldest; capped at `clipboardMaxItems` from SettingsStore (0 = unlimited).
     private(set) var items: [ClipboardItem] = []
+    /// Vrai quand l'élément a bien été préparé mais que macOS bloque la frappe ⌘V simulée.
+    private(set) var pasteRequiresAccessibility = false
 
     @ObservationIgnored private let source = ClipboardSource()
     @ObservationIgnored private let historyStore = ClipboardHistoryStore()
@@ -31,7 +34,7 @@ public final class ClipboardModule: NotchModule {
 
     public func start() {
         if SettingsStore.shared.clipboardPersistEnabled {
-            items = historyStore.load()
+            items = Self.orderedForDisplay(historyStore.load())
         }
         let max = SettingsStore.shared.clipboardMaxItems
         source.maxItems = max > 0 ? max : Int.max
@@ -52,6 +55,11 @@ public final class ClipboardModule: NotchModule {
 
     func paste(item: ClipboardItem) {
         writeToPasteboard(item)
+        guard AXIsProcessTrusted() else {
+            pasteRequiresAccessibility = true
+            return
+        }
+        pasteRequiresAccessibility = false
         simulatePaste()
     }
 
@@ -72,6 +80,7 @@ public final class ClipboardModule: NotchModule {
     func togglePin(_ item: ClipboardItem) {
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[index].isPinned.toggle()
+        items = Self.orderedForDisplay(items)
         if SettingsStore.shared.clipboardPersistEnabled {
             historyStore.save(items)
         }
@@ -102,7 +111,8 @@ public final class ClipboardModule: NotchModule {
     // MARK: — Private helpers
 
     private func append(_ item: ClipboardItem) {
-        items.insert(item, at: 0)
+        items.append(item)
+        items = Self.orderedForDisplay(items)
         let max = SettingsStore.shared.clipboardMaxItems
         if max > 0 { trim(to: max) }
         if SettingsStore.shared.clipboardPersistEnabled {
@@ -147,6 +157,14 @@ public final class ClipboardModule: NotchModule {
         keyUp?.flags = .maskCommand
         keyDown?.post(tap: .cghidEventTap)
         keyUp?.post(tap: .cghidEventTap)
+    }
+
+    /// Les épinglés restent en tête ; chaque groupe conserve l'ordre du plus récent au plus ancien.
+    static func orderedForDisplay(_ items: [ClipboardItem]) -> [ClipboardItem] {
+        items.sorted { lhs, rhs in
+            if lhs.isPinned != rhs.isPinned { return lhs.isPinned }
+            return lhs.date > rhs.date
+        }
     }
 }
 

@@ -45,7 +45,6 @@ struct DisplaySettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(Text("settings.section.display", bundle: localizationBundle))
         .task { refreshScreens() }
         .onReceive(
             NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)

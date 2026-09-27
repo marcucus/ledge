@@ -30,6 +30,7 @@ public final class SystemObserver {
     private var lastBrightness: Double = -1
     private var didPromptAX = false
     private var settingObserver: NSObjectProtocol?
+    private var appActivationObserver: NSObjectProtocol?
 
     private let settings: SettingsStore
 
@@ -44,6 +45,7 @@ public final class SystemObserver {
         lastBrightness = SystemObserver.currentBrightness()
         installKeyboardMonitor()
         observeSettingChanges()
+        observeAppActivations()
         // Déclenche updateEventTap() via didSet → installe tap + polling si activé.
         suppressNativeHUD = settings.hudReplaceSystem
     }
@@ -57,6 +59,8 @@ public final class SystemObserver {
         SystemObserver.removeDefaultDeviceListener()
         settingObserver.map { NotificationCenter.default.removeObserver($0) }
         settingObserver = nil
+        appActivationObserver.map { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+        appActivationObserver = nil
         SystemObserver.shared = nil
     }
 
@@ -91,10 +95,27 @@ public final class SystemObserver {
                 if suppressNativeHUD != suppress {
                     suppressNativeHUD = suppress
                 } else if suppressNativeHUD {
-                    // hudBrightnessManualOnly a peut-être changé : réévalue la cadence du poll.
+                    // hudBrightnessManualOnly a peut-être changé : réévalue si le polling
+                    // luminosité est réellement nécessaire.
                     if !settings.hudBrightnessManualOnly { lastBrightness = SystemObserver.currentBrightness() }
                     startPolling()
                 }
+            }
+        }
+    }
+
+    /// Réévalue la permission Accessibilité quand l'utilisateur change d'application.
+    /// Le retour de Réglages Système déclenche notamment cette notification : nul besoin de
+    /// réveiller Ledge toutes les deux secondes au repos pour détecter l'autorisation accordée.
+    private func observeAppActivations() {
+        appActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, suppressNativeHUD, eventTap == nil, AXIsProcessTrusted() else { return }
+                installEventTap()
             }
         }
     }
@@ -116,16 +137,18 @@ public final class SystemObserver {
     // Le volume est désormais détecté par un listener CoreAudio événementiel
     // (cf. installVolumeListener) — il ne reste à interroger périodiquement que :
     //   - la luminosité, et seulement si l'utilisateur a désactivé le mode "clavier
-    //     uniquement" (hudBrightnessManualOnly, activé par défaut → 0 lecture au repos) ;
-    //   - la permission Accessibilité, pour réinstaller le tap dès qu'elle est accordée.
-    // Cadence rapide seulement quand la luminosité est réellement surveillée ; sinon un
-    // simple battement lent suffit pour le recheck Accessibilité.
+    //     uniquement" (hudBrightnessManualOnly, activé par défaut → 0 lecture au repos).
+    // La permission Accessibilité est réévaluée de façon événementielle au changement
+    // d'application, notamment au retour de Réglages Système.
 
     private func startPolling() {
-        let interval = settings.hudBrightnessManualOnly ? HUDTuning.axRecheckInterval : HUDTuning.pollInterval
-        guard pollTimer == nil || pollTimer?.timeInterval != interval else { return }
+        guard !settings.hudBrightnessManualOnly else {
+            stopPolling()
+            return
+        }
+        guard pollTimer == nil else { return }
         pollTimer?.invalidate()
-        pollTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        pollTimer = Timer.scheduledTimer(withTimeInterval: HUDTuning.pollInterval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.pollAll() }
         }
     }
@@ -136,10 +159,6 @@ public final class SystemObserver {
     }
 
     private func pollAll() {
-        // Réinstalle le tap si la permission vient d'être accordée après coup
-        if suppressNativeHUD, eventTap == nil, AXIsProcessTrusted() {
-            installEventTap()
-        }
         guard suppressNativeHUD, !settings.hudBrightnessManualOnly else { return }
         let brightness = SystemObserver.currentBrightness()
         if brightness >= 0, abs(brightness - lastBrightness) > HUDTuning.brightnessThreshold {
@@ -286,9 +305,6 @@ public final class SystemObserver {
 
 private enum HUDTuning {
     static let pollInterval: TimeInterval = 0.2
-    /// Cadence du battement quand seule la permission Accessibilité doit être resurveillée
-    /// (volume événementiel, luminosité non surveillée en mode "clavier uniquement").
-    static let axRecheckInterval: TimeInterval = 2.0
     static let keyApplyDelay: Duration = .milliseconds(60)
     static let volumeStep: Float = 1.0 / 16.0
     static let fineStep: Float = 1.0 / 64.0 // Maj+Option : incrément plus fin

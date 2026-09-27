@@ -53,6 +53,15 @@ public struct ShortcutsContentView: View {
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if module.loadFailed {
+            ModuleEmptyState(
+                icon: "exclamationmark.triangle",
+                titleKey: "shortcuts.error",
+                detailKey: "shortcuts.error.detail",
+                actionKey: "shortcuts.action.retry"
+            ) {
+                Task { await module.refresh() }
+            }
         } else if module.shortcuts.isEmpty {
             ModuleEmptyState(
                 icon: "square.stack.3d.up.slash",
@@ -65,6 +74,20 @@ public struct ShortcutsContentView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 4) {
+                    if let failedName = module.lastRunFailedName {
+                        Text(
+                            String(
+                                format: NSLocalizedString(
+                                    "shortcuts.run.error.format",
+                                    bundle: localizationBundle,
+                                    comment: ""
+                                ),
+                                failedName
+                            )
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    }
                     ForEach(module.shortcuts.prefix(maxDisplayed), id: \.self) { name in
                         ShortcutRowView(name: name, module: module)
                     }
@@ -89,11 +112,15 @@ private struct ShortcutRowView: View {
             Button {
                 module.run(name)
             } label: {
-                Image(systemName: "play.fill")
-                    .imageScale(.small)
+                if module.runningShortcutName == name {
+                    ProgressView().controlSize(.mini)
+                } else {
+                    Image(systemName: "play.fill").imageScale(.small)
+                }
             }
             .buttonStyle(.plain)
             .foregroundStyle(Color.accentColor)
+            .disabled(module.runningShortcutName != nil)
             .accessibilityLabel(Text("shortcuts.action.run", bundle: localizationBundle))
         }
         .padding(.vertical, 2)

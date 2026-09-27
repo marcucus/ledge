@@ -13,9 +13,25 @@ struct ClipboardContentView: View {
         VStack(spacing: 0) {
             toolbar
             searchField
+            if module.pasteRequiresAccessibility {
+                accessibilityWarning
+            }
             Divider().opacity(0.4)
             itemList
         }
+    }
+
+    private var accessibilityWarning: some View {
+        Label {
+            Text("clipboard.paste.accessibility", bundle: localizationBundle)
+        } icon: {
+            Image(systemName: "lock.trianglebadge.exclamationmark")
+        }
+        .font(.caption)
+        .foregroundStyle(.orange)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
     }
 
     // MARK: — Displayed items
@@ -170,6 +186,11 @@ private struct ClipboardRowView: View {
         }
         .buttonStyle(.plain)
         .help(
+            item.isPinned
+                ? Text("clipboard.action.unpin", bundle: localizationBundle)
+                : Text("clipboard.action.pin", bundle: localizationBundle)
+        )
+        .accessibilityLabel(
             item.isPinned
                 ? Text("clipboard.action.unpin", bundle: localizationBundle)
                 : Text("clipboard.action.pin", bundle: localizationBundle)

@@ -3,6 +3,12 @@ import EventKit
 import Foundation
 import SwiftUI
 
+public enum CalendarAccessState {
+    case notDetermined
+    case authorized
+    case denied
+}
+
 // MARK: — CalendarModule
 
 /// Surfaces the next upcoming calendar event (EventKit), refreshed periodically
@@ -16,7 +22,7 @@ public final class CalendarModule: NotchModule {
     public let tabLabel: LocalizedStringKey = "module.calendar.label"
 
     public private(set) var nextEvent: EKEvent?
-    public private(set) var authorizationDenied: Bool = false
+    public private(set) var accessState: CalendarAccessState = .notDetermined
 
     @ObservationIgnored private let eventStore = EKEventStore()
     @ObservationIgnored private nonisolated(unsafe) var refreshTimer: Timer?
@@ -31,9 +37,8 @@ public final class CalendarModule: NotchModule {
     // MARK: — NotchModule
 
     public func start() {
-        let status = EKEventStore.authorizationStatus(for: .event)
-        authorizationDenied = status != .fullAccess
-        if status == .fullAccess {
+        refreshAccessState()
+        if accessState == .authorized {
             refreshNextEvent()
         }
     }
@@ -54,10 +59,20 @@ public final class CalendarModule: NotchModule {
 
     /// Call from the content view's `onAppear`.
     func beginPolling() {
-        guard refreshTimer == nil else { return }
-        // Re-tente l'accès à chaque affichage : si l'utilisateur l'a accordé après coup (via
-        // Réglages Système), la vue de permission se débloque sans relancer l'app.
-        Task { await requestAccessAndRefresh() }
+        refreshAccessState()
+        switch accessState {
+        case .authorized:
+            refreshNextEvent()
+            startPollingIfNeeded()
+        case .notDetermined:
+            Task { await requestAccessAndRefresh() }
+        case .denied:
+            nextEvent = nil
+        }
+    }
+
+    private func startPollingIfNeeded() {
+        guard refreshTimer == nil, accessState == .authorized else { return }
         let timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refreshNextEvent() }
         }
@@ -72,22 +87,37 @@ public final class CalendarModule: NotchModule {
 
     // MARK: — Authorization
 
-    private func requestAccessAndRefresh() async {
+    func requestAccessAndRefresh() async {
         do {
             let granted = try await eventStore.requestFullAccessToEvents()
-            authorizationDenied = !granted
+            accessState = granted ? .authorized : .denied
             if granted {
                 refreshNextEvent()
+                startPollingIfNeeded()
+            } else {
+                nextEvent = nil
             }
         } catch {
-            authorizationDenied = true
+            accessState = .denied
+            nextEvent = nil
+        }
+    }
+
+    private func refreshAccessState() {
+        switch EKEventStore.authorizationStatus(for: .event) {
+        case .fullAccess:
+            accessState = .authorized
+        case .notDetermined:
+            accessState = .notDetermined
+        default:
+            accessState = .denied
         }
     }
 
     // MARK: — Event lookup
 
     private func refreshNextEvent() {
-        guard !authorizationDenied else { return }
+        guard accessState == .authorized else { return }
         let now = Date()
         let end = now.addingTimeInterval(lookahead)
         let predicate = eventStore.predicateForEvents(withStart: now, end: end, calendars: nil)

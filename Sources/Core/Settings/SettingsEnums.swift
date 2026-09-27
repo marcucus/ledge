@@ -1,9 +1,16 @@
 import Foundation
 
-public enum PanelWidth: Int, CaseIterable {
-    case compact = 0
-    case standard = 1
-    case large = 2
+public enum PanelComposition: Int, CaseIterable {
+    case focused = 0
+    case panoramic = 1
+    case immersive = 2
+}
+
+/// Destination d'un module dans la navigation d'une composition donnée.
+public enum ModulePlacement: Int, CaseIterable {
+    case bar = 0
+    case grid = 1
+    case hidden = 2
 }
 
 public enum NotchDetectionMode: Int, CaseIterable {

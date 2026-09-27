@@ -17,7 +17,10 @@ struct SettingsRootView: View {
         } detail: {
             SettingsDetailView(section: selection ?? .general, store: store)
         }
-        .frame(minWidth: 620, minHeight: 440)
+        .frame(minWidth: 720, minHeight: 520)
+        .background(Color.black)
+        .tint(store.hudAccentColor)
+        .preferredColorScheme(.dark)
         .id(language)
     }
 }

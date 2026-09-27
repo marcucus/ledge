@@ -14,7 +14,6 @@ struct ModulesSettingsView: View {
                 .onMove(perform: move)
             }
         }
-        .navigationTitle(Text("settings.section.modules", bundle: localizationBundle))
         .sheet(item: $selectedEntryForSettings) { entry in
             if let builder = entry.settingsBuilder {
                 NavigationStack {
