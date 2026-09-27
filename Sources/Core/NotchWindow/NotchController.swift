@@ -5,6 +5,9 @@ import Foundation
     public private(set) var state: NotchState = .collapsed
     public private(set) var modules: [any NotchModule] = []
     public private(set) var selectedModuleID: String = ""
+    /// Devient vrai une fois l'expansion géométrique de la fenêtre terminée. Le contenu lourd
+    /// attend ce signal pour ne pas se recomposer pendant le redimensionnement AppKit.
+    public private(set) var isExpansionSettled = false
     public var notchWidth: CGFloat = NotchGeometry.fallbackSize.width
     public var notchHeight: CGFloat = NotchGeometry.fallbackSize.height
 
@@ -22,6 +25,8 @@ import Foundation
     private var collapseTask: Task<Void, Never>?
     private var hudTask: Task<Void, Never>?
     @ObservationIgnored private var isDragHovering = false
+    @ObservationIgnored private var isPointerInsidePanel = false
+    @ObservationIgnored private var isTransientInteractionActive = false
 
     /// Largeur d'une pill ambient (pixel, même dans NotchWindow Layout).
     public static let ambientPillWidth: CGFloat = 44
@@ -55,16 +60,66 @@ import Foundation
         return (settings.moduleOrder, { [settings] module in settings.isModuleEnabled(module.id) })
     }
 
-    public var selectedModule: (any NotchModule)? {
-        visibleModules.first { $0.id == selectedModuleID } ?? visibleModules.first
+    private var contentModules: [any NotchModule] {
+        navigationModules + gridModules
     }
 
-    /// Largeur du panneau selon le réglage panelWidth (compact/standard/large).
+    public var selectedModule: (any NotchModule)? {
+        contentModules.first { $0.id == selectedModuleID } ?? contentModules.first
+    }
+
+    public var activeModuleID: String { selectedModule?.id ?? "" }
+
+    /// Modules affichés directement sur les épaules de l'encoche pour la composition courante.
+    public var navigationModules: [any NotchModule] {
+        modules(placedIn: .bar)
+    }
+
+    /// Modules rangés dans le lanceur en grille pour la composition courante.
+    public var gridModules: [any NotchModule] {
+        modules(placedIn: .grid)
+    }
+
+    public var showsModuleGrid: Bool {
+        settings.showsModuleGrid(in: panelComposition) && !gridModules.isEmpty
+    }
+
+    /// Composition choisie dans Réglages → Apparence.
+    public var panelComposition: PanelComposition { settings.panelComposition }
+
+    private func modules(placedIn placement: ModulePlacement) -> [any NotchModule] {
+        let order = settings.moduleOrder(in: panelComposition)
+        return visibleModules
+            .filter { settings.modulePlacement($0.id, in: panelComposition) == placement }
+            .sorted {
+                (order.firstIndex(of: $0.id) ?? .max) < (order.firstIndex(of: $1.id) ?? .max)
+            }
+    }
+
+    /// Largeur du panneau selon la composition choisie.
     public var expandedWidth: CGFloat {
-        switch settings.panelWidth {
-        case .compact: 580
-        case .standard: 744
-        case .large: 920
+        switch panelComposition {
+        case .focused: 580
+        case .panoramic: 920
+        case .immersive: 744
+        }
+    }
+
+    /// Hauteur de navigation, intégrée aux épaules de l'encoche.
+    public var navigationHeight: CGFloat {
+        switch panelComposition {
+        case .focused: 44
+        case .panoramic: 58
+        case .immersive: 52
+        }
+    }
+
+    /// Hauteur de contenu laissant plus de place au mode immersif.
+    public var expandedContentHeight: CGFloat {
+        switch panelComposition {
+        case .focused: 200
+        case .panoramic: 220
+        case .immersive: 320
         }
     }
 
@@ -78,7 +133,7 @@ import Foundation
     public var animationScale: Double { settings.animationSpeed.scale }
 
     /// Opacité du fond du panneau (hors état collapsed).
-    public var panelBackgroundOpacity: Double { settings.panelOpacity }
+    public var panelBackgroundOpacity: Double { max(settings.panelOpacity, 0.92) }
 
     /// Afficher la pochette dans l'ambient.
     public var ambientShowArtwork: Bool { settings.ambientShowArtwork }
@@ -98,10 +153,10 @@ import Foundation
     /// Comportement plein écran courant.
     public var fullscreenBehavior: FullscreenBehavior { settings.fullscreenBehavior }
 
-    /// Afficher les libellés texte sous les icônes de modules dans la NavBar.
-    public var showModuleLabels: Bool { settings.showModuleLabels }
+    /// Identifiant de l'écran cible ("" = écran intégré avec encoche, automatiquement).
+    public var targetScreenIdentifier: String { settings.targetScreenIdentifier }
 
-    /// Nom de l'écran cible ("" = auto, i.e. écran avec encoche).
+    /// Nom historique de l'écran cible, utilisé comme secours pour migrer les réglages existants.
     public var targetScreenName: String { settings.targetScreenName }
 
     public init(settings: SettingsStore) {
@@ -110,12 +165,12 @@ import Foundation
 
     public func register(modules: [any NotchModule]) {
         self.modules = modules
-        selectedModuleID = visibleModules.first?.id ?? ""
+        selectedModuleID = contentModules.first?.id ?? ""
         modules.forEach { $0.start() }
     }
 
     public func selectModule(id: String) {
-        guard modules.contains(where: { $0.id == id }) else { return }
+        guard contentModules.contains(where: { $0.id == id }) else { return }
         selectedModuleID = id
     }
 
@@ -124,8 +179,8 @@ import Foundation
     public func updateActiveProfile(bundleID: String?) {
         guard bundleID != activeBundleID else { return }
         activeBundleID = bundleID
-        if !visibleModules.contains(where: { $0.id == selectedModuleID }) {
-            selectedModuleID = visibleModules.first?.id ?? ""
+        if !contentModules.contains(where: { $0.id == selectedModuleID }) {
+            selectedModuleID = contentModules.first?.id ?? ""
         }
     }
 
@@ -184,6 +239,7 @@ import Foundation
     }
 
     public func cursorEntered() {
+        isPointerInsidePanel = true
         collapseTask?.cancel()
         hudTask?.cancel()
         hudContent = nil
@@ -219,8 +275,27 @@ import Foundation
     }
 
     public func cursorExited() {
+        isPointerInsidePanel = false
         // Le HUD se ferme via son propre hudTask, pas via le tracking curseur.
-        guard state != .collapsed, state != .ambient, state != .hud, !isDragHovering else { return }
+        guard state != .collapsed,
+              state != .ambient,
+              state != .hud,
+              !isDragHovering,
+              !isTransientInteractionActive
+        else { return }
+        scheduleCollapse()
+    }
+
+    /// Maintient le panneau ouvert pendant une interaction présentée hors de sa fenêtre
+    /// (par exemple le popover de la grille de modules).
+    public func setTransientInteractionActive(_ isActive: Bool) {
+        isTransientInteractionActive = isActive
+        collapseTask?.cancel()
+        guard !isActive, !isPointerInsidePanel else { return }
+        scheduleCollapse()
+    }
+
+    private func scheduleCollapse() {
         collapseTask?.cancel()
         collapseTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(self?.settings.collapseDelay ?? 0.6))
@@ -254,7 +329,17 @@ import Foundation
 
     private func transition(to newState: NotchState) {
         guard newState != state else { return }
+        // Ce drapeau ne pilote que l'entrée. Le conserver pendant la sortie laisse SwiftUI
+        // rejouer exactement la transition de fermeture historique, sans animation concurrente.
+        if newState == .expanded {
+            isExpansionSettled = false
+        }
         state = newState
         onTransition?(newState)
+    }
+
+    func expansionDidFinish() {
+        guard state == .expanded else { return }
+        isExpansionSettled = true
     }
 }

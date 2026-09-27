@@ -6,8 +6,13 @@ struct NavBar: View {
     var controller: NotchController
     @AppStorage("preferredLanguage") private var language: String = "system"
 
-    /// Largeur d'un onglet (frame 30 + espacement 2).
-    private let tabWidth: CGFloat = 32
+    private var tabWidth: CGFloat {
+        switch controller.panelComposition {
+        case .focused: 40
+        case .panoramic: 48
+        case .immersive: 44
+        }
+    }
 
     /// Largeur réservée au centre : encoche physique + une marge de chaque côté pour que les
     /// onglets voisins ne passent pas sous l'encoche (légèrement plus large que la valeur brute).
@@ -18,7 +23,11 @@ struct NavBar: View {
     /// Répartit les onglets autour de l'encoche : autant que la zone gauche peut en contenir,
     /// le surplus passe à droite de l'encoche (collé à l'encoche), avant batterie + réglages.
     private var moduleSplit: (left: [ModuleItem], right: [ModuleItem]) {
-        let items = controller.visibleModules.map(ModuleItem.init)
+        let items = controller.navigationModules.map(ModuleItem.init)
+        if controller.panelComposition != .focused {
+            let leftCount = (items.count + 1) / 2
+            return (Array(items.prefix(leftCount)), Array(items.dropFirst(leftCount)))
+        }
         let leftZone = (controller.expandedWidth - notchReserve) / 2 - 10
         let maxLeft = max(1, Int(leftZone / tabWidth))
         guard items.count > maxLeft else { return (items, []) }
@@ -30,6 +39,17 @@ struct NavBar: View {
         return HStack(spacing: 0) {
             // Zone gauche : premiers onglets
             HStack(spacing: 2) {
+                if controller.showsModuleGrid {
+                    ModuleLauncherButton(
+                        modules: controller.gridModules,
+                        selectedModuleID: controller.activeModuleID,
+                        width: tabWidth,
+                        height: controller.navigationHeight,
+                        accentColor: controller.appAccentColor,
+                        onSelect: controller.selectModule(id:),
+                        onPresentationChange: controller.setTransientInteractionActive(_:)
+                    )
+                }
                 ForEach(split.left, id: \.id) { tabButton($0) }
             }
             .padding(.leading, 8)
@@ -48,34 +68,36 @@ struct NavBar: View {
                     if let status = controller.statusModule {
                         status.makePeekView().id(language)
                     }
-                    iconButton(icon: "gear") { controller.openSettings?() }
+                    SettingsNavigationButton(height: controller.navigationHeight) {
+                        controller.openSettings?()
+                    }
                 }
             }
             .padding(.trailing, 8)
             .frame(maxWidth: .infinity)
         }
-        .frame(height: 44)
+        .frame(height: controller.navigationHeight)
         .frame(maxWidth: .infinity)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.white.opacity(0.08))
+                .frame(height: 0.5)
+                .padding(.horizontal, 14)
+        }
     }
 
     private func tabButton(_ item: ModuleItem) -> some View {
         ModuleTabButton(
             item: item,
-            isSelected: item.id == controller.selectedModuleID
+            isSelected: item.id == controller.activeModuleID,
+            width: tabWidth,
+            height: controller.navigationHeight,
+            accentColor: controller.appAccentColor
         ) {
             controller.selectModule(id: item.id)
         }
     }
 
-    private func iconButton(icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white.opacity(0.7))
-                .frame(width: 28, height: 44)
-        }
-        .buttonStyle(.plain)
-    }
 }
 
 // MARK: — Tab button avec hover
@@ -83,27 +105,80 @@ struct NavBar: View {
 private struct ModuleTabButton: View {
     let item: ModuleItem
     let isSelected: Bool
+    let width: CGFloat
+    let height: CGFloat
+    let accentColor: Color
     let action: () -> Void
 
     @State private var isHovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: item.base.tabIcon)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(isSelected ? 1 : (isHovered ? 0.85 : 0.6)))
-                .frame(width: 30, height: 44)
-                .background(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.white.opacity(isSelected ? 0.16 : (isHovered ? 0.08 : 0)))
-                        .padding(.horizontal, 2)
-                        .padding(.vertical, 5)
-                )
+            NavigationTabLabel(
+                icon: item.base.tabIcon,
+                isSelected: isSelected,
+                isHovered: isHovered,
+                width: width,
+                height: height,
+                accentColor: accentColor
+            )
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .accessibilityLabel(item.base.tabLabel)
-        .animation(.easeOut(duration: 0.12), value: isHovered)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isHovered)
+    }
+
+}
+
+struct NavigationTabLabel: View {
+    let icon: String
+    let isSelected: Bool
+    let isHovered: Bool
+    let width: CGFloat
+    let height: CGFloat
+    let accentColor: Color
+
+    var body: some View {
+        Image(systemName: icon)
+            .font(.system(size: 12.5, weight: .medium))
+            .foregroundStyle(.white.opacity(isSelected ? 1 : (isHovered ? 0.85 : 0.58)))
+            .frame(width: width, height: height)
+            .background(selectionBackground)
+    }
+
+    private var selectionBackground: some View {
+        ZStack(alignment: .bottom) {
+            Color.white.opacity(isSelected ? 0.08 : (isHovered ? 0.04 : 0))
+            Capsule()
+                .fill(isSelected ? accentColor : .clear)
+                .frame(width: 16, height: 2)
+                .padding(.bottom, 4)
+        }
+    }
+}
+
+private struct SettingsNavigationButton: View {
+    let height: CGFloat
+    let action: () -> Void
+
+    @State private var isHovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "gearshape")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white.opacity(isHovered ? 0.9 : 0.62))
+                .frame(width: 36, height: height)
+                .background(Color.white.opacity(isHovered ? 0.045 : 0))
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .help(Text("action.settings", bundle: localizationBundle))
+        .accessibilityLabel(Text("action.settings", bundle: localizationBundle))
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isHovered)
     }
 }
 

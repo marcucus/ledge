@@ -21,7 +21,6 @@
 "settings.about.copyright" = "Copyright";
 "settings.about.version" = "Version";
 "settings.appearance.cornerRadius" = "Rayon des coins";
-"settings.appearance.panelWidth" = "Largeur du panneau";
 "settings.display.fullscreen" = "Comportement plein écran";
 "settings.display.fullscreen.accessible" = "Rester accessible (au survol)";
 "settings.display.fullscreen.hidden" = "Masquer automatiquement";
@@ -38,7 +37,6 @@
 "settings.general.language" = "Langue";
 "settings.general.languageRestart" = "Les changements prennent effet au prochain lancement.";
 "settings.general.launchAtLogin" = "Lancer au démarrage";
-"settings.general.peekDuration" = "Durée du survol";
 "settings.modules.enabled" = "Activé";
 "settings.permissions.accessibility" = "Accessibilité";
 "settings.permissions.notifications" = "Notifications";

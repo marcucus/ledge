@@ -63,12 +63,27 @@ GÉNÉRAL
 APPARENCE
   Thème                  ( ) Clair  ( ) Sombre  (•) Système
   Matériau du panneau    [ Translucide HUD ▾ ]
-  Largeur du panneau     ( ) Compact  (•) Standard  ( ) Large
-  Disposition            (•) Onglets (un module)  ( ) Tout-en-un (empilé)
+  Disposition du panneau ( ) Concentrée  (•) Panoramique  ( ) Immersive
+       └─ Concentrée : compacte pour les actions rapides
+       └─ Panoramique : large, continue avec la barre des menus (recommandée)
+       └─ Immersive : davantage de place pour les contenus visuels
+  Navigation de cette disposition
+       ☑ Afficher la grille de modules
+       Média             (•) Barre  ( ) Grille  ( ) Masqué
+       Timers            (•) Barre  ( ) Grille  ( ) Masqué
+                         [↑] [↓] pour choisir l'ordre dans chaque destination
+       …
   Coins                  [—————●——]  (rayon, prolonge l'encoche)
   ☑ Effets de débordement (pochette, anneau)
   Densité                ( ) Confort  (•) Standard  ( ) Dense
 ```
+
+Les trois dispositions partagent la même matière noire, la même navigation et la même animation
+attachée à l'encoche. Le choix modifie réellement la largeur, la hauteur et la densité du panneau ;
+il ne crée pas trois thèmes indépendants. La destination des modules est toutefois mémorisée pour
+chaque disposition : un module appartient soit à la barre, soit au lanceur en grille, soit à aucun
+des deux. Son ordre est également indépendant dans la barre et dans la grille. Le bouton de grille
+peut être affiché ou masqué indépendamment par disposition.
 
 ---
 

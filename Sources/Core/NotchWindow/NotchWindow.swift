@@ -61,6 +61,8 @@ public final class NotchWindow: NSPanel {
         withObservationTracking {
             applyCollectionBehavior(for: controller.fullscreenBehavior)
             _ = controller.expandedWidth
+            _ = controller.expandedContentHeight
+            _ = controller.targetScreenIdentifier
             _ = controller.targetScreenName
         } onChange: { [weak self] in
             DispatchQueue.main.async {
@@ -108,20 +110,13 @@ public final class NotchWindow: NSPanel {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                guard let self else { return }
-                let name = controller.targetScreenName
-                if !name.isEmpty, NSScreen.screen(named: name) == nil {
-                    SettingsStore.shared.targetScreenName = ""
-                }
-                positionOnNotch()
+                self?.positionOnNotch()
             }
         }
     }
 
     private func positionOnNotch() {
-        let screen = NSScreen.screen(named: controller.targetScreenName)
-            ?? NSScreen.withNotch
-            ?? NSScreen.main
+        let screen = resolvedTargetScreen()
         guard let geometry = screen?.notchGeometry() ?? screen.map({ scr in
             // Écran sans encoche : ancre une encoche simulée au centre du bord supérieur.
             let bounds = scr.frame
@@ -132,6 +127,21 @@ public final class NotchWindow: NSPanel {
         }) else { return }
         currentGeometry = geometry
         updateFrame(for: controller.state, from: .collapsed, animated: false)
+    }
+
+    /// Honore la cible explicite tant qu'elle est connectée. Si elle disparaît, Ledge revient
+    /// temporairement sur l'écran intégré sans effacer le choix, puis la retrouve à la reconnexion.
+    private func resolvedTargetScreen() -> NSScreen? {
+        let identifier = controller.targetScreenIdentifier
+        if !identifier.isEmpty {
+            return NSScreen.screen(identifier: identifier) ?? NSScreen.withNotch ?? NSScreen.main
+        }
+
+        let legacyName = controller.targetScreenName
+        if !legacyName.isEmpty {
+            return NSScreen.screen(named: legacyName) ?? NSScreen.withNotch ?? NSScreen.main
+        }
+        return NSScreen.withNotch ?? NSScreen.main
     }
 
     // MARK: — Frame
@@ -159,14 +169,15 @@ public final class NotchWindow: NSPanel {
         animated: Bool,
         onComplete: @escaping () -> Void
     ) {
-        guard animated else {
+        let shouldAnimate = animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        guard shouldAnimate else {
             setFrame(frame, display: true, animate: false)
             onComplete()
             return
         }
         NSAnimationContext.runAnimationGroup { context in
             context.duration = duration
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            context.timingFunction = NotchWindowLayout.expansionTiming
             self.animator().setFrame(frame, display: true)
         } completionHandler: { onComplete() }
     }
@@ -185,18 +196,17 @@ public final class NotchWindow: NSPanel {
         }
     }
 
-    private func applyExpanded(geometry: NotchGeometry, from: NotchState, animated: Bool) {
-        let size = CGSize(width: controller.expandedWidth, height: Layout.navbarHeight + Layout.contentHeight)
-        // Depuis ambient : le fond SwiftUI changerait de forme abruptement pendant l'animation
-        // → on pose un fond noir opaque pour masquer la transition, révélé à la fin comme d'habitude.
-        if animated && from == .ambient {
-            backgroundColor = .black
-        }
+    private func applyExpanded(geometry: NotchGeometry, from _: NotchState, animated: Bool) {
+        let size = CGSize(
+            width: controller.expandedWidth,
+            height: controller.navigationHeight + controller.expandedContentHeight
+        )
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
-            duration: Layout.openDuration * controller.animationScale,
+            duration: NotchWindowLayout.openDuration * controller.animationScale,
             animated: animated
         ) { [weak self] in
+            self?.controller.expansionDidFinish()
             self?.revealClearBackground()
         }
         addGlobalClickMonitor()
@@ -204,10 +214,10 @@ public final class NotchWindow: NSPanel {
 
     private func applyPeeking(geometry: NotchGeometry, animated: Bool) {
         removeGlobalClickMonitor()
-        let size = CGSize(width: controller.expandedWidth, height: Layout.navbarHeight)
+        let size = CGSize(width: controller.expandedWidth, height: controller.navigationHeight)
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
-            duration: Layout.peekDuration * controller.animationScale,
+            duration: NotchWindowLayout.peekDuration * controller.animationScale,
             animated: animated
         ) { [weak self] in
             self?.revealClearBackground()
@@ -218,12 +228,12 @@ public final class NotchWindow: NSPanel {
         removeGlobalClickMonitor()
         // Fenêtre qui entoure l'encoche (plus large des deux côtés), barre fine en dessous.
         let size = CGSize(
-            width: max(Layout.hudMinWidth, controller.notchWidth + Layout.hudSideMargin),
-            height: controller.notchHeight + Layout.hudBottomMargin
+            width: max(NotchWindowLayout.hudMinWidth, controller.notchWidth + NotchWindowLayout.hudSideMargin),
+            height: controller.notchHeight + NotchWindowLayout.hudBottomMargin
         )
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
-            duration: Layout.peekDuration * controller.animationScale,
+            duration: NotchWindowLayout.peekDuration * controller.animationScale,
             animated: animated
         ) { [weak self] in
             self?.revealClearBackground()
@@ -241,7 +251,7 @@ public final class NotchWindow: NSPanel {
         )
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
-            duration: Layout.ambientDuration * controller.animationScale,
+            duration: NotchWindowLayout.ambientDuration * controller.animationScale,
             animated: animated
         ) { [weak self] in
             self?.revealClearBackground()
@@ -265,7 +275,7 @@ public final class NotchWindow: NSPanel {
             // Fermeture symétrique à l'ouverture : la fenêtre se rétracte, puis redevient transparente.
             transitionFrame(
                 to: frame,
-                duration: Layout.closeDuration * controller.animationScale,
+                duration: NotchWindowLayout.closeDuration * controller.animationScale,
                 animated: true
             ) { [weak self] in
                 self?.revealClearBackground()
@@ -274,7 +284,7 @@ public final class NotchWindow: NSPanel {
             // Depuis peek / hud / ambient : rétrécir directement, fond déjà transparent.
             transitionFrame(
                 to: frame,
-                duration: Layout.peekDuration * controller.animationScale,
+                duration: NotchWindowLayout.peekDuration * controller.animationScale,
                 animated: true
             ) { [weak self] in
                 self?.updateTrackingArea()
@@ -376,19 +386,4 @@ public final class NotchWindow: NSPanel {
         globalClickMonitor.map { NSEvent.removeMonitor($0) }
         globalClickMonitor = nil
     }
-}
-
-// MARK: — Constantes
-
-private enum Layout {
-    static let navbarHeight: CGFloat = 44
-    static let contentHeight: CGFloat = 200
-    static let openDuration: TimeInterval = 0.40
-    static let closeDuration: TimeInterval = 0.34
-    static let peekDuration: TimeInterval = 0.20
-    static let ambientDuration: TimeInterval = 0.30
-    // HUD : la fenêtre déborde de chaque côté de l'encoche, barre fine en dessous.
-    static let hudMinWidth: CGFloat = 280
-    static let hudSideMargin: CGFloat = 170
-    static let hudBottomMargin: CGFloat = 34
 }

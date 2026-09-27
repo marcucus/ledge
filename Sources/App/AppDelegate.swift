@@ -13,6 +13,7 @@ import TimerModule
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notchWindow: NotchWindow?
     private var settingsWindowController: SettingsWindowController?
+    private var onboardingWindowController: OnboardingWindowController?
     private var systemObserver: SystemObserver?
     private var shortcutManager: GlobalShortcutManager?
     private(set) var updaterController: SPUStandardUpdaterController?
@@ -29,12 +30,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let window = NotchWindow()
         let settingsWC = SettingsWindowController()
         window.controller.openSettings = { settingsWC.show() }
+        let onboardingWC = OnboardingWindowController {
+            settingsWC.show(section: .permissions)
+        }
 
         setupStatusItem()
         buildAndRegisterModules(in: window)
         installObservers(for: window)
         notchWindow = window
         settingsWindowController = settingsWC
+        onboardingWindowController = onboardingWC
+
+        if !SettingsStore.shared.hasCompletedOnboarding {
+            DispatchQueue.main.async { [weak onboardingWC] in
+                onboardingWC?.show()
+            }
+        }
     }
 
     /// Instancie les modules, câble leurs contributions ambient, et les enregistre dans la fenêtre.
@@ -188,38 +199,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         item.button?.image?.isTemplate = true
 
         let menu = NSMenu()
-
-        let settingsItem = NSMenuItem(
-            title: NSLocalizedString("action.settings", bundle: localizationBundle, comment: ""),
-            action: #selector(openSettings),
-            keyEquivalent: ","
-        )
-        menu.addItem(settingsItem)
-
+        menu.addItem(makeMenuItem(titleKey: "action.settings", action: #selector(openSettings), key: ","))
+        menu.addItem(makeMenuItem(titleKey: "onboarding.menu", action: #selector(openOnboarding)))
         menu.addItem(.separator())
-
-        let updateItem = NSMenuItem(
-            title: NSLocalizedString("settings.about.checkUpdates", bundle: localizationBundle, comment: ""),
-            action: #selector(checkForUpdatesAction),
-            keyEquivalent: ""
-        )
-        menu.addItem(updateItem)
-
+        menu.addItem(makeMenuItem(titleKey: "settings.about.checkUpdates", action: #selector(checkForUpdatesAction)))
         menu.addItem(.separator())
-
-        let quitItem = NSMenuItem(
-            title: NSLocalizedString("action.quit", bundle: localizationBundle, comment: ""),
-            action: #selector(NSApplication.terminate(_:)),
-            keyEquivalent: "q"
-        )
-        menu.addItem(quitItem)
-
+        menu.addItem(makeMenuItem(titleKey: "action.quit", action: #selector(NSApplication.terminate(_:)), key: "q"))
         item.menu = menu
         statusItem = item
     }
 
+    private func makeMenuItem(titleKey: String, action: Selector, key: String = "") -> NSMenuItem {
+        NSMenuItem(
+            title: NSLocalizedString(titleKey, bundle: localizationBundle, comment: ""),
+            action: action,
+            keyEquivalent: key
+        )
+    }
+
     @objc private func openSettings() {
         settingsWindowController?.show()
+    }
+
+    @objc private func openOnboarding() {
+        onboardingWindowController?.show()
     }
 
     @objc private func checkForUpdatesAction() {

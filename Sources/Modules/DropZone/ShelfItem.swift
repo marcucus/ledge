@@ -5,6 +5,7 @@ public struct ShelfItem: Identifiable {
     public let url: URL
     public let displayName: String
     public var icon: NSImage?
+    public var isAvailable: Bool { FileManager.default.fileExists(atPath: url.path) }
 
     public init(url: URL) {
         id = UUID()

@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-25T22:35:47Z",
+  "title": "Design System: Ledge",
+  "extensions": {
+    "colorMeta": {
+      "notch-black": {
+        "role": "neutral",
+        "displayName": "Noir encoche",
+        "canonical": "#000000",
+        "tonalRamp": ["#000000", "#08090B", "#101315"]
+      },
+      "optical-graphite": {
+        "role": "neutral",
+        "displayName": "Graphite optique",
+        "canonical": "#101315",
+        "tonalRamp": ["#08090B", "#101315", "#202426"]
+      },
+      "spectral-violet": {
+        "role": "primary",
+        "displayName": "Violet spectral",
+        "canonical": "#8B6FF7",
+        "tonalRamp": ["#4A397F", "#8B6FF7", "#C6B9FF"]
+      }
+    },
+    "typographyMeta": {
+      "title": {"displayName": "Titre natif", "purpose": "Titres de modules et de pages."},
+      "body": {"displayName": "Corps natif", "purpose": "Contenu et explications."},
+      "label": {"displayName": "Libellé compact", "purpose": "Navigation et métadonnées."}
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "notch-expand",
+        "value": "460ms cubic-bezier(0.16, 0.88, 0.28, 1)",
+        "purpose": "Déployer la matière noire depuis l’encoche."
+      },
+      {
+        "name": "notch-collapse",
+        "value": "320ms cubic-bezier(0.16, 0.88, 0.28, 1)",
+        "purpose": "Résorber le panneau dans l’encoche."
+      },
+      {
+        "name": "reduce-motion",
+        "value": "0ms",
+        "purpose": "Appliquer immédiatement la géométrie finale lorsque macOS réduit les animations."
+      }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Notch Panel",
+      "kind": "custom",
+      "refersTo": "notch-panel",
+      "description": "Surface noire attachée à l’encoche, dessinée nativement par NotchPanelShape.",
+      "html": "<div class=\"ds-notch-panel\">Ledge</div>",
+      "css": ".ds-notch-panel { background:#000; color:#f0efea; padding:14px; border-radius:0 0 14px 14px; }"
+    },
+    {
+      "name": "Layout Choice",
+      "kind": "button",
+      "refersTo": "layout-choice",
+      "description": "Choix Concentrée, Panoramique ou Immersive dans Apparence.",
+      "html": "<button class=\"ds-layout-choice\">Panoramique</button>",
+      "css": ".ds-layout-choice { background:#101315; color:#f0efea; padding:10px; border:1.5px solid #8b6ff7; border-radius:10px; } .ds-layout-choice:focus-visible { outline:2px solid #c6b9ff; outline-offset:2px; }"
+    },
+    {
+      "name": "Module Navigation",
+      "kind": "nav",
+      "description": "Modules répartis sur les épaules de l’encoche.",
+      "html": "<nav class=\"ds-module-nav\"><button class=\"is-active\">Média</button><button>Timers</button></nav>",
+      "css": ".ds-module-nav { display:flex; gap:4px; background:#000; color:#f0efea; } .ds-module-nav button { background:transparent; color:inherit; padding:8px 10px; border:0; border-bottom:2px solid transparent; } .ds-module-nav button:hover { background:rgba(255,255,255,.04); } .ds-module-nav .is-active { border-bottom-color:#8b6ff7; } .ds-module-nav button:focus-visible { outline:2px solid #c6b9ff; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Le banc optique",
+    "overview": "Ledge est une matière noire continue qui se déploie depuis l’encoche du Mac. Le graphite, les coutures fines et un accent spectral rare hiérarchisent l’action sans détacher l’interface du matériel.",
+    "keyCharacteristics": [
+      "Noir continu avec l’encoche",
+      "Accent réservé aux états actifs",
+      "Trois dispositions, une seule identité",
+      "Expansion amortie depuis le bord supérieur"
+    ],
+    "rules": [
+      {"name": "Signal rare", "body": "L’accent indique un état ou une progression et ne remplit jamais le panneau.", "section": "colors"},
+      {"name": "Plan continu", "body": "Une fonction rejoint la surface existante avant de demander un nouveau conteneur.", "section": "elevation"}
+    ],
+    "dos": [
+      "Partir de l’encoche pour toute géométrie du panneau.",
+      "Conserver une variante sans mouvement et des libellés VoiceOver."
+    ],
+    "donts": [
+      "Ne pas employer de fond clair sous l’encoche.",
+      "Ne pas détacher une toolbar ou une popover de la barre des menus.",
+      "Ne pas multiplier cartes, glows, dégradés ou accents."
+    ]
+  }
+}
