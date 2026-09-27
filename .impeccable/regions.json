@@ -1,0 +1,32 @@
+{
+  "regions": [
+    {"id":"desktop-ground","kind":"texture","grid":"A3:A4","note":"sample of the dark macOS desktop environment behind the app; environment only, not app chrome"},
+    {"id":"menu-bar","kind":"chrome","grid":"A0:J0","note":"native macOS menu bar framing the notch and app panel"},
+    {"id":"notch-shoulders","kind":"chrome","grid":"B0:I0","note":"continuous black navigation shoulders physically joined to the centered hardware notch"},
+    {"id":"module-navigation","kind":"control","grid":"B0:I0","note":"module icons and short labels distributed across both notch shoulders"},
+    {"id":"media-panel-ground","kind":"chrome","grid":"B1:I2","note":"wide continuous black media workspace attached directly below the notch shoulders"},
+    {"id":"album-artwork","kind":"image","grid":"C1:C2","note":"square album artwork for the currently playing track"},
+    {"id":"track-title","kind":"text","grid":"D1:E1","note":"large current track title A Moment Apart"},
+    {"id":"track-metadata","kind":"text","grid":"D1:E2","note":"artist and album metadata beneath the current track title"},
+    {"id":"media-progress","kind":"control","grid":"F1:H1","note":"thin waveform progress control with time values"},
+    {"id":"media-controls","kind":"control","grid":"F2:H2","note":"playback controls and compact volume control"},
+    {"id":"settings-sidebar-ground","kind":"chrome","grid":"C3:C9","note":"graphite settings sidebar joined to the dark window"},
+    {"id":"settings-identity","kind":"text","grid":"C3:C3","note":"Ledge app identity and short line in the settings sidebar"},
+    {"id":"settings-navigation","kind":"control","grid":"C4:C7","note":"settings destinations with Apparence selected"},
+    {"id":"settings-detail-ground","kind":"texture","grid":"D4:E4","note":"clean sample of the continuous dark graphite detail surface"},
+    {"id":"appearance-title","kind":"text","grid":"D3:E3","note":"Appearance page title"},
+    {"id":"appearance-subtitle","kind":"text","grid":"D3:F3","note":"short explanation beneath the Appearance page title"},
+    {"id":"state-preview-labels","kind":"text","grid":"D4:D6","note":"Repos, Aperçu and Étendu labels with short explanations"},
+    {"id":"state-preview","kind":"control","grid":"E4:H6","note":"three live black notch previews demonstrating rest, preview and expanded states"},
+    {"id":"theme-label","kind":"text","grid":"D6:D7","note":"theme control label"},
+    {"id":"theme-picker","kind":"control","grid":"F6:H6","note":"segmented theme picker with dark selected"},
+    {"id":"accent-label","kind":"text","grid":"D7:E7","note":"accent color control label"},
+    {"id":"accent-picker","kind":"control","grid":"F7:H7","note":"violet mint and system accent choices"},
+    {"id":"intensity-label","kind":"text","grid":"D7:E8","note":"module intensity setting label"},
+    {"id":"intensity-slider","kind":"control","grid":"F7:H8","note":"thin violet intensity slider and value"},
+    {"id":"always-show-copy","kind":"text","grid":"D8:F8","note":"always show Ledge title and supporting explanation"},
+    {"id":"always-show-toggle","kind":"control","grid":"H8:H8","note":"violet enabled switch"},
+    {"id":"animation-copy","kind":"text","grid":"D8:F9","note":"animation title and supporting explanation"},
+    {"id":"animation-picker","kind":"control","grid":"H8:H9","note":"compact animation speed picker"}
+  ]
+}

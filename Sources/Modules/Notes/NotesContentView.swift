@@ -31,6 +31,7 @@ struct NotesContentView: View {
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
             .help(Text("notes.action.clear", bundle: localizationBundle))
+            .accessibilityLabel(Text("notes.action.clear", bundle: localizationBundle))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)

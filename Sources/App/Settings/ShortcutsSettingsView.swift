@@ -43,7 +43,6 @@ struct ShortcutsSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(Text("settings.section.shortcuts", bundle: localizationBundle))
     }
 
     private func shortcutRow(

@@ -21,8 +21,14 @@ public struct NotchPanelShape: Shape {
 
     public func path(in rect: CGRect) -> Path {
         var path = Path()
-        let ear = topEar
-        let bottom = bottomRadius
+        // La fenêtre AppKit change de taille à chaque image de l'animation. Les rayons doivent
+        // donc rester valides même quand sa hauteur est encore proche de celle de l'encoche.
+        // Sans ce bornage, `ear + bottom` dépasse la hauteur disponible et les deux segments
+        // verticaux se croisent brièvement — surtout visible avec la composition Immersive.
+        let ear = min(max(topEar, 0), rect.width / 2, rect.height / 2)
+        let availableHeight = max(rect.height - ear, 0)
+        let availableHalfWidth = max((rect.width - ear * 2) / 2, 0)
+        let bottom = min(max(bottomRadius, 0), availableHeight, availableHalfWidth)
 
         // ── Coin haut-gauche (flare out vers le menu bar)
         path.move(to: CGPoint(x: rect.minX, y: rect.minY))

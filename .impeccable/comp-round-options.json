@@ -1,0 +1,45 @@
+{
+  "title": "Choisir la composition finale de Ledge",
+  "question": "Les trois variantes gardent le noir et la continuité avec l’encoche. Laquelle doit guider l’implémentation ?",
+  "options": [
+    {
+      "id": "original",
+      "label": "Concentration verticale",
+      "kicker": "DIRECTION CHOISIE",
+      "lineage": "banc optique compact",
+      "thesis": "Le module actif descend directement depuis l’encoche dans une colonne très focalisée.",
+      "palette": ["#08090B", "#EEEDE8", "#7C63FF"],
+      "materials": ["verre noir", "graphite", "coutures fines"],
+      "viewport": "Panneau compact à gauche et Réglages sombres à droite, avec une hiérarchie simple et concentrée.",
+      "risk": "La colonne peut paraître plus proche d’une fenêtre suspendue que d’une extension de la barre des menus.",
+      "comp": ".impeccable/mocks/decision/assigned.png"
+    },
+    {
+      "id": "wide",
+      "label": "Ailes continues",
+      "kicker": "CONTINUITÉ MAXIMALE",
+      "lineage": "barre des menus étendue",
+      "thesis": "La matière noire s’étire horizontalement depuis l’encoche avant d’ouvrir un large espace de travail.",
+      "palette": ["#050506", "#EDECE7", "#8063FF"],
+      "materials": ["verre noir continu", "aluminium satiné", "traits hairline"],
+      "viewport": "Les modules occupent les deux ailes de l’encoche ; Média devient une large scène et les Réglages montrent clairement repos, aperçu et étendu.",
+      "risk": "La largeur peut prendre trop de place si chaque module ne sait pas exploiter l’espace.",
+      "comp": ".impeccable/mocks/variation-wide.png"
+    },
+    {
+      "id": "cinematic",
+      "label": "Descente cinématique",
+      "kicker": "CONTENU IMMERSIF",
+      "lineage": "instrument optique à ouverture verticale",
+      "thesis": "L’encoche reste l’axe architectural tandis que le contenu descend en une seule surface immersive.",
+      "palette": ["#050506", "#F0EFEA", "#7857F6"],
+      "materials": ["verre noir sans joint", "image plein cadre", "coutures métalliques"],
+      "viewport": "La navigation vit dans les épaules de l’encoche, l’image Média occupe le tiers supérieur et les contrôles restent sur un pont noir calme.",
+      "risk": "Le grand visuel fonctionne très bien pour Média mais devra être adapté avec discipline aux modules sans image.",
+      "comp": ".impeccable/mocks/variation-cinematic.png"
+    }
+  ],
+  "buildPath": {"value": "comp", "toggle": false},
+  "canon": false,
+  "steer": true
+}

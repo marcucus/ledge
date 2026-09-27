@@ -12,6 +12,9 @@ public final class ShortcutsModule: NotchModule {
 
     public private(set) var shortcuts: [String] = []
     public private(set) var isLoading = false
+    public private(set) var loadFailed = false
+    public private(set) var runningShortcutName: String?
+    public private(set) var lastRunFailedName: String?
 
     public init() {}
 
@@ -36,30 +39,43 @@ public final class ShortcutsModule: NotchModule {
     /// Recharge la liste des raccourcis disponibles depuis `shortcuts list`.
     public func refresh() async {
         isLoading = true
-        shortcuts = await Self.listShortcuts()
+        let result = await Self.listShortcuts()
+        switch result {
+        case let .success(names):
+            shortcuts = names
+            loadFailed = false
+        case .failure:
+            loadFailed = true
+        }
         isLoading = false
     }
 
     /// Lance un raccourci par son nom, en tâche de fond (fire-and-forget).
     public func run(_ name: String) {
-        Task.detached {
-            await Self.runShortcut(named: name)
+        guard runningShortcutName == nil else { return }
+        runningShortcutName = name
+        lastRunFailedName = nil
+        Task {
+            let succeeded = await Self.runShortcut(named: name)
+            runningShortcutName = nil
+            if !succeeded { lastRunFailedName = name }
         }
     }
 
     // MARK: — Process helpers
 
-    private nonisolated static func listShortcuts() async -> [String] {
+    private nonisolated static func listShortcuts() async -> Result<[String], ProcessFailure> {
         let output = await runProcess(arguments: ["list"])
-        guard let output else { return [] }
-        return output
+        guard let output else { return .failure(.commandFailed) }
+        let names = output
             .split(separator: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
+        return .success(names)
     }
 
-    private nonisolated static func runShortcut(named name: String) async {
-        _ = await runProcess(arguments: ["run", name])
+    private nonisolated static func runShortcut(named name: String) async -> Bool {
+        await runProcess(arguments: ["run", name]) != nil
     }
 
     /// Exécute `/usr/bin/shortcuts <arguments>` hors du thread principal et renvoie sa sortie standard,
@@ -91,5 +107,9 @@ public final class ShortcutsModule: NotchModule {
                 continuation.resume(returning: String(data: data, encoding: .utf8))
             }
         }
+    }
+
+    private enum ProcessFailure: Error {
+        case commandFailed
     }
 }

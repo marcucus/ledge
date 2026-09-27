@@ -1,3 +1,4 @@
+import Core
 import SwiftUI
 
 // MARK: — SystemPeekView
@@ -7,37 +8,39 @@ struct SystemPeekView: View {
     var module: SystemModule
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 5) {
             batteryIcon
             if let pct = module.battery.percentage {
                 Text("\(pct)%")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.9))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white.opacity(0.82))
                     .lineLimit(1)
                     .fixedSize()
-                if module.battery.isCharging {
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.green)
-                }
             }
         }
         .fixedSize()
-        .padding(.trailing, 4)
+        .padding(.horizontal, 8)
+        .frame(height: 28)
+        .background(statusBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     // MARK: — Battery icon
 
     private var batteryIcon: some View {
         Image(systemName: batteryIconName)
-            .font(.system(size: 13, weight: .medium))
+            .font(.system(size: 14, weight: .medium))
             .foregroundStyle(batteryColor)
     }
 
     private var batteryIconName: String {
         guard let pct = module.battery.percentage else { return "battery.0" }
+        if module.battery.isCharging { return "battery.100.bolt" }
         switch pct {
-        case 75...: return module.battery.isCharging ? "battery.100.bolt" : "battery.100"
+        case 75...: return "battery.100"
         case 50...: return "battery.75"
         case 25...: return "battery.50"
         default: return "battery.25"
@@ -50,16 +53,20 @@ struct SystemPeekView: View {
         return pct < 20 ? .red : .white.opacity(0.9)
     }
 
-    // MARK: — CPU badge
+    private var statusBackground: Color {
+        guard let pct = module.battery.percentage else { return .white.opacity(0.035) }
+        if module.battery.isCharging { return .green.opacity(0.1) }
+        return pct < 20 ? .red.opacity(0.11) : .white.opacity(0.045)
+    }
 
-    private var cpuBadge: some View {
-        HStack(spacing: 3) {
-            Image(systemName: "cpu")
-                .imageScale(.small)
-                .foregroundStyle(.secondary)
-            Text("\(Int(module.cpu.usage * 100))%")
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
+    private var accessibilityLabel: Text {
+        guard let pct = module.battery.percentage else {
+            return Text("system.gauge.battery", bundle: localizationBundle)
         }
+        let key = module.battery.isCharging
+            ? "system.battery.accessibility.charging"
+            : "system.battery.accessibility"
+        let format = NSLocalizedString(key, bundle: localizationBundle, comment: "")
+        return Text(String(format: format, pct))
     }
 }

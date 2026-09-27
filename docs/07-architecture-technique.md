@@ -49,19 +49,20 @@ Budget indicatif visé :
 3. On en tire un `CGRect` de l'encoche en coordonnées écran → on ancre la fenêtre dessous.
 4. **Recalcul** sur `NSApplication.didChangeScreenParametersNotification` (changement de
    résolution, branchement d'écran, etc.).
-5. **Fallback** : si non détecté (modèle inconnu, écran externe), on bascule sur la
-   **pseudo-encoche** / le mode manuel des Paramètres. Aucune constante codée en dur :
-   même le fallback a des valeurs par défaut *paramétrables*.
+5. **Fallback** : sur un écran sans encoche, Ledge utilise une pseudo-encoche centrée en haut de
+   l'écran, avec la géométrie de repli centralisée dans `NotchGeometry.fallbackSize`.
 
 ## Choix 1 — Multi-écran / écran sans encoche
 
-- L'app observe `didChangeScreenParametersNotification` et le déplacement du curseur (si
-  l'option « suivre le curseur » est active).
-- Selon le réglage (cf. [Paramètres](06-ecran-parametres.md)) :
-  - **Écran intégré** : fenêtre sur l'écran à encoche uniquement.
-  - **Suivre le curseur / principal** : on repositionne la fenêtre sur l'écran cible ; s'il
-    n'a pas d'encoche → **pseudo-encoche** rendue par l'app (un rectangle noir arrondi en haut centre).
-  - **Tous les écrans** : une fenêtre par écran (coût mémoire un peu plus élevé → prévenir).
+- L'app observe `didChangeScreenParametersNotification` pour réagir au branchement, au
+  débranchement et aux changements de résolution.
+- Par défaut, la fenêtre reste sur l'écran intégré doté de l'encoche physique.
+- Réglages → Affichage permet de choisir explicitement n'importe quel écran connecté. La cible est
+  enregistrée par identifiant CoreGraphics persistant, pas seulement par son nom.
+- Sur un écran externe, une **pseudo-encoche** est rendue au centre du bord supérieur.
+- Si la cible est déconnectée, Ledge revient temporairement sur l'écran du Mac sans oublier le
+  choix, puis retrouve automatiquement l'écran externe à sa reconnexion.
+- Les modes « suivre le curseur » et « une fenêtre par écran » ne sont pas implémentés.
 
 ## Choix 2 — Plein écran
 

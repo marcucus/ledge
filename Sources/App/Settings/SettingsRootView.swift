@@ -3,8 +3,13 @@ import SwiftUI
 
 struct SettingsRootView: View {
     var store: SettingsStore
-    @State private var selection: SettingsSection? = .general
+    @State private var selection: SettingsSection?
     @AppStorage("preferredLanguage") private var language: String = "system"
+
+    init(store: SettingsStore, initialSelection: SettingsSection = .general) {
+        self.store = store
+        _selection = State(initialValue: initialSelection)
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -12,7 +17,10 @@ struct SettingsRootView: View {
         } detail: {
             SettingsDetailView(section: selection ?? .general, store: store)
         }
-        .frame(minWidth: 620, minHeight: 440)
+        .frame(minWidth: 720, minHeight: 520)
+        .background(Color.black)
+        .tint(store.hudAccentColor)
+        .preferredColorScheme(.dark)
         .id(language)
     }
 }

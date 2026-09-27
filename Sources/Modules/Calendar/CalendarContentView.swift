@@ -16,8 +16,10 @@ public struct CalendarContentView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if module.authorizationDenied {
+            if module.accessState == .denied {
                 permissionRequiredView
+            } else if module.accessState == .notDetermined {
+                permissionRequestView
             } else if let event = module.nextEvent {
                 eventView(event)
             } else {
@@ -27,6 +29,17 @@ public struct CalendarContentView: View {
         .padding(12)
         .onAppear { module.beginPolling() }
         .onDisappear { module.endPolling() }
+    }
+
+    private var permissionRequestView: some View {
+        ModuleEmptyState(
+            icon: "calendar.badge.plus",
+            titleKey: "calendar.permission.request",
+            detailKey: "calendar.permission.request.detail",
+            actionKey: "calendar.permission.request.action"
+        ) {
+            Task { await module.requestAccessAndRefresh() }
+        }
     }
 
     // MARK: — Event
@@ -51,11 +64,11 @@ public struct CalendarContentView: View {
     // MARK: — Empty state
 
     private var emptyView: some View {
-        Text("calendar.empty", bundle: localizationBundle)
-            .font(.footnote)
-            .foregroundStyle(.tertiary)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.vertical, 4)
+        ModuleEmptyState(
+            icon: "calendar.badge.checkmark",
+            titleKey: "calendar.empty",
+            detailKey: "calendar.empty.detail"
+        )
     }
 
     // MARK: — Permission required
