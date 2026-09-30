@@ -8,6 +8,11 @@ public struct DropZoneContentView: View {
 
     private let columns = [GridItem(.adaptive(minimum: 64, maximum: 80), spacing: 8)]
 
+    /// Ancre réelle de la barre d'actions, capturée via `anchorNSView` (voir `ViewAnchorReader`).
+    /// Remplace `NSApplication.shared.keyWindow?.contentView`, invalide ici car `NotchWindow`
+    /// est un panneau non activable qui ne devient jamais la fenêtre clé.
+    @State private var actionBarAnchorView: NSView?
+
     public init(module: DropZoneModule) {
         self.module = module
     }
@@ -105,7 +110,7 @@ public struct DropZoneContentView: View {
     private var actionBar: some View {
         HStack(spacing: 8) {
             actionButton(label: "dropzone.action.airdrop", icon: "airplayaudio") {
-                guard let view = findNSView() else { return }
+                guard let view = actionBarAnchorView else { return }
                 module.shareViaAirDrop(from: view)
             }
             actionButton(label: "dropzone.action.save", icon: "folder") {
@@ -116,6 +121,7 @@ public struct DropZoneContentView: View {
                 module.clearAll()
             }
         }
+        .anchorNSView { actionBarAnchorView = $0 }
     }
 
     private func actionButton(
@@ -154,18 +160,6 @@ public struct DropZoneContentView: View {
             handled = true
         }
         return handled
-    }
-
-    private func shouldAccept(url: URL) -> Bool {
-        if SettingsStore.shared.dropZoneAcceptFolders { return true }
-        var isDir: ObjCBool = false
-        FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
-        return !isDir.boolValue
-    }
-
-    /// Finds the underlying NSView to anchor NSSharingServicePicker
-    private func findNSView() -> NSView? {
-        NSApplication.shared.keyWindow?.contentView
     }
 }
 
@@ -210,6 +204,20 @@ private struct ShelfItemView: View {
                 .padding(12)
         }
         .onDisappear { hoverPreviewTask?.cancel() }
+        // L'aperçu ne dépendait que du survol — inutilisable au clavier ou avec VoiceOver
+        // (doc 13, Jalon 4, item 24). `.focusable()` + Espace reproduit le raccourci Quick
+        // Look standard du Finder ; l'action nommée offre le même bascule via le rotor
+        // VoiceOver, qui n'intercepte pas toujours les frappes clavier brutes.
+        .focusable(item.isAvailable)
+        .onKeyPress(.space) {
+            guard item.isAvailable else { return .ignored }
+            isPreviewVisible.toggle()
+            return .handled
+        }
+        .accessibilityAction(named: Text("dropzone.action.preview", bundle: localizationBundle)) {
+            guard item.isAvailable else { return }
+            isPreviewVisible.toggle()
+        }
     }
 
     private var iconView: some View {

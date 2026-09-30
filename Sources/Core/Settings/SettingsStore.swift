@@ -4,10 +4,13 @@ import SwiftUI
 @Observable public final class SettingsStore {
     public static let shared = SettingsStore()
 
-    private let defaults: UserDefaults
+    // Accès `internal` (plutôt que `private`) pour rester lisible depuis
+    // `SettingsStore+Reset.swift` (doc 13, Jalon 4, item 27).
+    let defaults: UserDefaults
 
+    // "system" est volontairement absent : jamais enregistré comme onglet (ModuleCatalog).
     public static let defaultModuleOrder = [
-        "media", "timers", "dropzone", "clipboard", "system", "shortcuts", "calendar", "notes",
+        "media", "timers", "dropzone", "clipboard", "shortcuts", "calendar", "notes",
     ]
 
     // MARK: — General
@@ -20,13 +23,19 @@ import SwiftUI
         didSet { defaults.set(collapseDelay, forKey: Keys.collapseDelay) }
     }
 
+    public var hotZoneSize: HotZoneSize {
+        didSet { defaults.set(hotZoneSize.rawValue, forKey: Keys.hotZoneSize) }
+    }
+
     // MARK: — Modules
 
     public var moduleOrder: [String] {
         didSet { defaults.set(moduleOrder, forKey: Keys.moduleOrder) }
     }
 
-    private var disabledModuleIDs: Set<String> {
+    // Accès `internal` (plutôt que `private`) pour rester modifiable depuis
+    // `SettingsStore+Reset.swift` (doc 13, Jalon 4, item 27).
+    var disabledModuleIDs: Set<String> {
         didSet { defaults.set(Array(disabledModuleIDs), forKey: Keys.disabledModules) }
     }
 
@@ -162,6 +171,20 @@ import SwiftUI
         didSet { defaults.set(clipboardPersistEnabled, forKey: Keys.clipboardPersistEnabled) }
     }
 
+    /// Identifiants de bundle des apps dont les copies ne sont jamais capturées (doc 13,
+    /// Jalon 3, item 18). Stocke des identifiants (stables si l'app est déplacée), pas des
+    /// chemins, contrairement à `launcherApps`.
+    public var clipboardExcludedApps: [String] {
+        didSet { defaults.set(clipboardExcludedApps, forKey: Keys.clipboardExcludedApps) }
+    }
+
+    /// État d'exécution (pas persisté) : voir `ClipboardPersistenceIssue` et
+    /// `SettingsStore+ClipboardRuntime.swift`.
+    public var clipboardPersistenceIssue: ClipboardPersistenceIssue?
+    /// Observé par `ClipboardModule` pour retenter un persist/clear en échec (voir
+    /// `requestClipboardPersistenceRetry()` dans `SettingsStore+ClipboardRuntime.swift`).
+    public var clipboardPersistenceRetryToken = 0
+
     // MARK: — Timer / Pomodoro
 
     public var timerSoundEnabled: Bool {
@@ -170,6 +193,17 @@ import SwiftUI
 
     public var timerAlertVisualOnly: Bool {
         didSet { defaults.set(timerAlertVisualOnly, forKey: Keys.timerAlertVisualOnly) }
+    }
+
+    /// Affiche brièvement le peek du module Timer à la fin d'un minuteur, en plus de la
+    /// notification système (doc 13, Jalon 3, item 20). Utile quand les notifications sont
+    /// discrètes ou masquées (Ne pas déranger).
+    public var timerFinishedPeekEnabled: Bool {
+        didSet { defaults.set(timerFinishedPeekEnabled, forKey: Keys.timerFinishedPeekEnabled) }
+    }
+
+    public var timerFinishedPeekDuration: Double {
+        didSet { defaults.set(timerFinishedPeekDuration, forKey: Keys.timerFinishedPeekDuration) }
     }
 
     public var pomodoroWorkDuration: Double {
@@ -260,6 +294,8 @@ import SwiftUI
         self.defaults = defaults
         hasCompletedOnboarding = defaults.bool(forKey: Keys.hasCompletedOnboarding)
         collapseDelay = defaults.double(forKey: Keys.collapseDelay).nonZero ?? 0.6
+        let storedHotZoneSize = defaults.object(forKey: Keys.hotZoneSize) as? Int
+        hotZoneSize = HotZoneSize(rawValue: storedHotZoneSize ?? -1) ?? .standard
         moduleOrder = (defaults.array(forKey: Keys.moduleOrder) as? [String]) ?? Self.defaultModuleOrder
         disabledModuleIDs = Set(defaults.stringArray(forKey: Keys.disabledModules) ?? [])
         hudReplaceSystem = defaults.object(forKey: Keys.hudReplaceSystem) as? Bool ?? true
@@ -295,6 +331,8 @@ import SwiftUI
         clickBehavior = ClickBehavior(rawValue: defaults.object(forKey: Keys.clickBehavior) as? Int ?? -1) ?? .expand
         timerSoundEnabled = defaults.object(forKey: Keys.timerSoundEnabled) as? Bool ?? true
         timerAlertVisualOnly = defaults.object(forKey: Keys.timerAlertVisualOnly) as? Bool ?? false
+        timerFinishedPeekEnabled = defaults.object(forKey: Keys.timerFinishedPeekEnabled) as? Bool ?? true
+        timerFinishedPeekDuration = defaults.double(forKey: Keys.timerFinishedPeekDuration).nonZero ?? 4
         globalShortcutEnabled = defaults.object(forKey: Keys.globalShortcutEnabled) as? Bool ?? true
         shortcutOpenClose = defaults.shortcut(forKey: Keys.shortcutOpenClose) ?? .defaultOpenClose
         shortcutPaste = defaults.shortcut(forKey: Keys.shortcutPaste) ?? .defaultPaste
@@ -302,6 +340,7 @@ import SwiftUI
         shortcutOpenMedia = defaults.shortcut(forKey: Keys.shortcutOpenMedia) ?? .defaultOpenMedia
         clipboardMaxItems = defaults.object(forKey: Keys.clipboardMaxItems) as? Int ?? 50
         clipboardPersistEnabled = defaults.object(forKey: Keys.clipboardPersistEnabled) as? Bool ?? false
+        clipboardExcludedApps = defaults.stringArray(forKey: Keys.clipboardExcludedApps) ?? []
         pomodoroWorkDuration = defaults.double(forKey: Keys.pomodoroWorkDuration).nonZero ?? 25
         pomodoroShortBreakDuration = defaults.double(forKey: Keys.pomodoroShortBreakDuration).nonZero ?? 5
         pomodoroLongBreakDuration = defaults.double(forKey: Keys.pomodoroLongBreakDuration).nonZero ?? 15
@@ -331,9 +370,12 @@ import SwiftUI
 
 // MARK: — UserDefaults keys
 
-private enum Keys {
+// Accès `internal` (plutôt que `private`) pour rester lisible depuis
+// `SettingsStore+Reset.swift` (doc 13, Jalon 4, item 27), qui doit supprimer chaque clé.
+enum Keys {
     static let hasCompletedOnboarding = "hasCompletedOnboarding"
     static let collapseDelay = "collapseDelay"
+    static let hotZoneSize = "hotZoneSize"
     static let moduleOrder = "moduleOrder"
     static let disabledModules = "disabledModules"
     static let hudReplaceSystem = "hudReplaceSystem"
@@ -358,6 +400,8 @@ private enum Keys {
     static let clickBehavior = "clickBehavior"
     static let timerSoundEnabled = "timerSoundEnabled"
     static let timerAlertVisualOnly = "timerAlertVisualOnly"
+    static let timerFinishedPeekEnabled = "timerFinishedPeekEnabled"
+    static let timerFinishedPeekDuration = "timerFinishedPeekDuration"
     static let globalShortcutEnabled = "globalShortcutEnabled"
     static let shortcutOpenClose = "shortcutOpenClose"
     static let shortcutPaste = "shortcutPaste"
@@ -365,6 +409,7 @@ private enum Keys {
     static let shortcutOpenMedia = "shortcutOpenMedia"
     static let clipboardMaxItems = "clipboardMaxItems"
     static let clipboardPersistEnabled = "clipboardPersistEnabled"
+    static let clipboardExcludedApps = "clipboardExcludedApps"
     static let pomodoroWorkDuration = "pomodoroWorkDuration"
     static let pomodoroShortBreakDuration = "pomodoroShortBreakDuration"
     static let pomodoroLongBreakDuration = "pomodoroLongBreakDuration"
@@ -381,12 +426,4 @@ private enum Keys {
     static let systemShowAccessoryBattery = "systemShowAccessoryBattery"
     static let dropZoneAcceptFolders = "dropZoneAcceptFolders"
     static let appProfiles = "appProfiles"
-}
-
-// MARK: — Helpers
-
-private extension Double {
-    var nonZero: Double? {
-        self == 0 ? nil : self
-    }
 }

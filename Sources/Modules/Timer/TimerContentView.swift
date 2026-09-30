@@ -64,18 +64,29 @@ public struct TimerContentView: View {
 
     private var wheelPicker: some View {
         HStack(spacing: 0) {
-            wheelUnit(values: Array(0...23), selection: $hours, unit: "h")
+            wheelUnit(values: Array(0...23), selection: $hours, unit: "h", accessibilityLabelKey: "timer.wheel.hours")
             colon
-            wheelUnit(values: Array(0...59), selection: $minutes, unit: "m")
+            wheelUnit(
+                values: Array(0...59), selection: $minutes, unit: "m", accessibilityLabelKey: "timer.wheel.minutes"
+            )
             colon
-            wheelUnit(values: Array(0...59), selection: $seconds, unit: "s")
+            wheelUnit(
+                values: Array(0...59), selection: $seconds, unit: "s", accessibilityLabelKey: "timer.wheel.seconds"
+            )
         }
         .overlay(centerBand)
     }
 
-    private func wheelUnit(values: [Int], selection: Binding<Int>, unit: String) -> some View {
+    private func wheelUnit(
+        values: [Int], selection: Binding<Int>, unit: String, accessibilityLabelKey: String
+    ) -> some View {
         VStack(spacing: 2) {
-            WheelColumn(values: values, selection: selection, rowHeight: wheelRowHeight)
+            WheelColumn(
+                values: values,
+                selection: selection,
+                rowHeight: wheelRowHeight,
+                accessibilityLabelKey: accessibilityLabelKey
+            )
             Text(unit)
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
@@ -199,13 +210,17 @@ private struct WheelColumn: View {
     let values: [Int]
     @Binding var selection: Int
     let rowHeight: CGFloat
+    /// Clé localisée pour l'unité ("Heures"/"Minutes"/"Secondes"), annoncée par VoiceOver —
+    /// distincte du label court affiché sous la molette ("h"/"m"/"s").
+    let accessibilityLabelKey: String
 
     @State private var scrollID: Int?
 
-    init(values: [Int], selection: Binding<Int>, rowHeight: CGFloat) {
+    init(values: [Int], selection: Binding<Int>, rowHeight: CGFloat, accessibilityLabelKey: String) {
         self.values = values
         self._selection = selection
         self.rowHeight = rowHeight
+        self.accessibilityLabelKey = accessibilityLabelKey
         // Position initiale = valeur sélectionnée → la molette est centrée dès le 1er rendu
         // (sinon `onAppear` arrive après le layout et la molette reste en haut, sur 00).
         self._scrollID = State(initialValue: selection.wrappedValue)
@@ -237,6 +252,25 @@ private struct WheelColumn: View {
         }
         .onChange(of: selection) { _, newValue in
             if scrollID != newValue { scrollID = newValue }
+        }
+        // Un ScrollView à cibler au doigt est peu praticable avec VoiceOver : exposé comme un
+        // seul élément ajustable (valeur + incrément/décrément) plutôt qu'une liste de lignes
+        // de texte sans action dédiée (doc 13, Jalon 4, item 22).
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(LocalizedStringKey(accessibilityLabelKey), bundle: localizationBundle))
+        .accessibilityValue(Text(String(selection)))
+        .accessibilityAdjustableAction(adjustSelection)
+    }
+
+    private func adjustSelection(_ direction: AccessibilityAdjustmentDirection) {
+        guard let minValue = values.first, let maxValue = values.last else { return }
+        switch direction {
+        case .increment:
+            selection = min(selection + 1, maxValue)
+        case .decrement:
+            selection = max(selection - 1, minValue)
+        @unknown default:
+            break
         }
     }
 }

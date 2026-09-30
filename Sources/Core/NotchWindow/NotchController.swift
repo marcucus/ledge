@@ -1,6 +1,8 @@
 import SwiftUI
 import Foundation
 
+// La machine à états centralise volontairement les transitions, l'ambient, le HUD et le plein écran.
+// swiftlint:disable:next type_body_length
 @MainActor @Observable public final class NotchController {
     public private(set) var state: NotchState = .collapsed
     public private(set) var modules: [any NotchModule] = []
@@ -25,8 +27,15 @@ import Foundation
     private var collapseTask: Task<Void, Never>?
     private var hudTask: Task<Void, Never>?
     @ObservationIgnored private var isDragHovering = false
+    @ObservationIgnored private var dragHoveredModuleID: String?
     @ObservationIgnored private var isPointerInsidePanel = false
     @ObservationIgnored private var isTransientInteractionActive = false
+    @ObservationIgnored private var isSuppressingFullscreenContent = false
+    /// Identifiants des modules réellement démarrés (`start()` appelé, `stop()` pas encore).
+    /// Source de vérité du cycle de vie : distincte de `visibleModules`, qui ne pilote que l'UI.
+    /// Voir `NotchController+ModuleLifecycle.swift`. `internal` (pas `private`) : lu/écrit depuis
+    /// cette extension, dans un autre fichier du même module.
+    @ObservationIgnored var startedModuleIDs: Set<String> = []
 
     /// Largeur d'une pill ambient (pixel, même dans NotchWindow Layout).
     public static let ambientPillWidth: CGFloat = 44
@@ -52,7 +61,8 @@ import Foundation
 
     /// Ordre et règle d'activation à appliquer : ceux du profil actif si un `AppProfile`
     /// correspond à `activeBundleID`, sinon les réglages globaux (`SettingsStore`).
-    private func moduleVisibilityRules() -> (order: [String], isEnabled: (any NotchModule) -> Bool) {
+    /// `internal` : aussi utilisée par `NotchController+ModuleLifecycle.swift`.
+    func moduleVisibilityRules() -> (order: [String], isEnabled: (any NotchModule) -> Bool) {
         if let bundleID = activeBundleID,
            let profile = settings.appProfiles.first(where: { $0.bundleID == bundleID }) {
             return (profile.moduleOrder, { !profile.disabledModuleIDs.contains($0.id) })
@@ -150,6 +160,21 @@ import Foundation
         }
     }
 
+    /// Progression écoulée du timer affiché autour de l'encoche, entre 0 et 1.
+    public var timerRingProgress: Double? {
+        guard timerRingActive else { return nil }
+        for source in ambientSources.values {
+            if case let .timer(_, remainingProgress) = source.content.kind {
+                return min(1, max(0, 1 - remainingProgress))
+            }
+        }
+        return nil
+    }
+
+    public var hotZoneHorizontalInset: CGFloat { settings.hotZoneSize.horizontalInset }
+
+    public var hotZoneBottomInset: CGFloat { settings.hotZoneSize.bottomInset }
+
     /// Comportement plein écran courant.
     public var fullscreenBehavior: FullscreenBehavior { settings.fullscreenBehavior }
 
@@ -166,8 +191,25 @@ import Foundation
     public func register(modules: [any NotchModule]) {
         self.modules = modules
         selectedModuleID = contentModules.first?.id ?? ""
-        modules.forEach { $0.start() }
+        refreshModuleActivation()
     }
+
+    /// Configure un rendu déterministe destiné aux captures marketing. Cette voie interne au
+    /// package évite de démarrer les observateurs des modules et n'est jamais appelée par l'app.
+    package func configureMarketingCapture(
+        modules: [any NotchModule],
+        selectedModuleID: String,
+        state: NotchState,
+        ambientContent: AmbientContent? = nil
+    ) {
+        self.modules = modules
+        self.selectedModuleID = selectedModuleID
+        self.state = state
+        self.ambientContent = ambientContent
+        isExpansionSettled = state == .expanded
+    }
+
+    // MARK: — Cycle de vie des modules : voir `NotchController+ModuleLifecycle.swift`.
 
     public func selectModule(id: String) {
         guard contentModules.contains(where: { $0.id == id }) else { return }
@@ -179,6 +221,7 @@ import Foundation
     public func updateActiveProfile(bundleID: String?) {
         guard bundleID != activeBundleID else { return }
         activeBundleID = bundleID
+        applyModuleActivation()
         if !contentModules.contains(where: { $0.id == selectedModuleID }) {
             selectedModuleID = contentModules.first?.id ?? ""
         }
@@ -205,7 +248,7 @@ import Foundation
             bestIsTimerInRingMode = false
         }
 
-        if ambientContent != nil && !bestIsTimerInRingMode {
+        if ambientContent != nil && !bestIsTimerInRingMode && !suppressesTransientContentInFullscreen {
             if state == .collapsed { transition(to: .ambient) }
         } else if state == .ambient {
             transition(to: .collapsed)
@@ -223,7 +266,7 @@ import Foundation
 
     public func showHUD(_ content: HUDContent) {
         hudTask?.cancel()
-        guard state != .expanded else { return }
+        guard state != .expanded, !suppressesTransientContentInFullscreen else { return }
         hudContent = content
         if state == .collapsed || state == .hud || state == .ambient {
             transition(to: .hud)
@@ -233,6 +276,28 @@ import Foundation
             guard let self, !Task.isCancelled else { return }
             hudContent = nil
             if state == .hud {
+                transition(to: fallbackState)
+            }
+        }
+    }
+
+    /// Affiche brièvement le peek d'un module désigné (ex. fin de minuteur) puis revient à
+    /// l'état précédent — même mécanique que `showHUD`, mais pour `.peeking` plutôt que `.hud`
+    /// (doc 13, Jalon 3, item 20). `collapseTask` est le même que celui de `scheduleCollapse` :
+    /// une interaction utilisateur pendant le peek (survol, clic) l'annule normalement.
+    public func showPeek(selecting moduleID: String, duration: TimeInterval) {
+        guard state != .expanded, !suppressesTransientContentInFullscreen else { return }
+        guard contentModules.contains(where: { $0.id == moduleID }) else { return }
+        collapseTask?.cancel()
+        hudTask?.cancel()
+        selectModule(id: moduleID)
+        if state == .collapsed || state == .hud || state == .ambient {
+            transition(to: .peeking)
+        }
+        collapseTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(duration))
+            guard let self, !Task.isCancelled else { return }
+            if state == .peeking {
                 transition(to: fallbackState)
             }
         }
@@ -251,8 +316,10 @@ import Foundation
 
     /// Appelé quand un drag de fichier entre dans la zone de proximité de l'encoche.
     public func dragApproachNotch(preferredModuleID: String) {
+        guard startedModuleIDs.contains(preferredModuleID) else { return }
         guard !isDragHovering else { return }
         isDragHovering = true
+        dragHoveredModuleID = preferredModuleID
         collapseTask?.cancel()
         selectModule(id: preferredModuleID)
         if state == .collapsed || state == .ambient {
@@ -265,6 +332,7 @@ import Foundation
     public func dragLeftProximity() {
         guard isDragHovering else { return }
         isDragHovering = false
+        dragHoveredModuleID = nil
         onDragHoverChange?(false)
         collapseTask?.cancel()
         collapseTask = Task { [weak self] in
@@ -272,6 +340,16 @@ import Foundation
             guard let self, !Task.isCancelled else { return }
             transition(to: fallbackState)
         }
+    }
+
+    /// Termine immédiatement un drag piloté par un module qui vient d'être désactivé.
+    func moduleDidStop(id: String) {
+        guard isDragHovering, dragHoveredModuleID == id else { return }
+        isDragHovering = false
+        dragHoveredModuleID = nil
+        onDragHoverChange?(false)
+        collapseTask?.cancel()
+        transition(to: fallbackState)
     }
 
     public func cursorExited() {
@@ -319,12 +397,32 @@ import Foundation
         transition(to: fallbackState)
     }
 
+    /// Applique la politique plein écran sans modifier le comportement normal au survol.
+    public func updateFullscreenStatus(isActive: Bool) {
+        let wasSuppressing = isSuppressingFullscreenContent
+        isSuppressingFullscreenContent = isActive && settings.fullscreenBehavior != .overlay
+
+        if isSuppressingFullscreenContent {
+            collapseTask?.cancel()
+            hudTask?.cancel()
+            hudContent = nil
+            transition(to: .collapsed)
+        } else if wasSuppressing, state == .collapsed {
+            transition(to: fallbackState)
+        }
+    }
+
     /// État de repli en quittant expanded/peek/hud : ambient si un contenu doit y être montré,
     /// sinon collapsed. Un timer en mode anneau ne compte pas (il reste collapsed, l'anneau suffit).
     private var fallbackState: NotchState {
+        guard !suppressesTransientContentInFullscreen else { return .collapsed }
         guard let content = ambientContent else { return .collapsed }
         if case .timer = content.kind, settings.showRingWhenTimerActive { return .collapsed }
         return .ambient
+    }
+
+    private var suppressesTransientContentInFullscreen: Bool {
+        isSuppressingFullscreenContent
     }
 
     private func transition(to newState: NotchState) {

@@ -5,6 +5,10 @@ import SwiftUI
 struct GeneralSettingsView: View {
     var store: SettingsStore
     @AppStorage("preferredLanguage") private var preferredLanguage: String = "system"
+    // doc 13, Jalon 4, item 26 : SMAppService.register()/unregister() peut échouer
+    // silencieusement (ex. profil MDM qui interdit le lancement au démarrage) ; on
+    // affiche désormais l'erreur au lieu de l'avaler avec `try?`.
+    @State private var launchAtLoginErrorMessage: String?
 
     var body: some View {
         Form {
@@ -12,14 +16,34 @@ struct GeneralSettingsView: View {
                 Toggle(isOn: Binding(
                     get: { SMAppService.mainApp.status == .enabled },
                     set: { shouldEnable in
-                        if shouldEnable {
-                            try? SMAppService.mainApp.register()
-                        } else {
-                            try? SMAppService.mainApp.unregister()
+                        do {
+                            if shouldEnable {
+                                try SMAppService.mainApp.register()
+                            } else {
+                                try SMAppService.mainApp.unregister()
+                            }
+                            launchAtLoginErrorMessage = nil
+                        } catch {
+                            launchAtLoginErrorMessage = error.localizedDescription
                         }
                     }
                 )) {
                     Text("settings.general.launchAtLogin", bundle: localizationBundle)
+                }
+
+                if let launchAtLoginErrorMessage {
+                    Text(
+                        String(
+                            format: NSLocalizedString(
+                                "settings.general.launchAtLoginError.format",
+                                bundle: localizationBundle,
+                                comment: ""
+                            ),
+                            launchAtLoginErrorMessage
+                        )
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.red)
                 }
             }
 
@@ -53,6 +77,10 @@ struct GeneralSettingsView: View {
 
             Section {
                 collapseDelayRow
+            }
+
+            Section {
+                hotZoneRow
             }
 
             Section {
@@ -98,13 +126,32 @@ struct GeneralSettingsView: View {
         .pickerStyle(.segmented)
     }
 
+    private var hotZoneRow: some View {
+        Picker(selection: Binding(
+            get: { store.hotZoneSize },
+            set: { store.hotZoneSize = $0 }
+        )) {
+            Text("settings.general.hotZone.precise", bundle: localizationBundle).tag(HotZoneSize.precise)
+            Text("settings.general.hotZone.standard", bundle: localizationBundle).tag(HotZoneSize.standard)
+            Text("settings.general.hotZone.generous", bundle: localizationBundle).tag(HotZoneSize.generous)
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("settings.general.hotZone", bundle: localizationBundle)
+                Text("settings.general.hotZone.detail", bundle: localizationBundle)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .pickerStyle(.menu)
+    }
+
     private var languageRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("settings.general.language", bundle: localizationBundle)
                 Spacer()
                 Picker("", selection: $preferredLanguage) {
-                    Text("System").tag("system")
+                    Text("settings.general.language.system", bundle: localizationBundle).tag("system")
                     Text("Français").tag("fr")
                     Text("English").tag("en")
                 }

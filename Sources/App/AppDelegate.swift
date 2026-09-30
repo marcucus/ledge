@@ -50,13 +50,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Instancie les modules, câble leurs contributions ambient, et les enregistre dans la fenêtre.
     @MainActor private func buildAndRegisterModules(in window: NotchWindow) {
+        let assembly = AppModuleAssembly()
         // Module Système masqué pour le moment : conservé comme source de statut (batterie dans
         // la NavBar) et démarré manuellement, mais retiré des onglets (absent de register()).
-        let systemModule = SystemModule()
+        let systemModule = assembly.systemModule
         window.controller.statusModule = systemModule
         systemModule.start()
 
-        let dropZoneModule = DropZoneModule()
+        let dropZoneModule = assembly.dropZoneModule
         dropZoneModule.onAmbientUpdate = { [weak window] content in
             window?.controller.setAmbient(content, sourceID: "dropzone", priority: 1)
         }
@@ -64,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             dropZoneModule?.isDragActive = active
         }
 
-        let mediaModule = MediaModule()
+        let mediaModule = assembly.mediaModule
         mediaModule.onBecameActive = { [weak window] in
             window?.controller.selectModule(id: "media")
         }
@@ -72,19 +73,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window?.controller.setAmbient(content, sourceID: "media", priority: 3)
         }
 
-        let timerModule = TimerModule()
-        timerModule.onAmbientUpdate = { [weak window] content in
-            window?.controller.setAmbient(content, sourceID: "timers", priority: 2)
-        }
+        let timerModule = assembly.timerModule
+        configureTimerModule(timerModule, in: window)
         self.timerModule = timerModule
 
-        let clipboardModule = ClipboardModule()
+        let clipboardModule = assembly.clipboardModule
         self.clipboardModule = clipboardModule
 
-        window.register(modules: [
-            mediaModule, timerModule, dropZoneModule, clipboardModule,
-            ShortcutsModule(), CalendarModule(), NotesModule(),
-        ])
+        window.register(modules: assembly.navigationModules)
+    }
+
+    /// Minuteur : ambient + peek de fin configurable (doc 13, Jalon 3, item 20). Extrait de
+    /// `buildAndRegisterModules(in:)` pour rester sous le seuil SwiftLint de longueur de fonction.
+    @MainActor private func configureTimerModule(_ module: TimerModule, in window: NotchWindow) {
+        module.onAmbientUpdate = { [weak window] content in
+            window?.controller.setAmbient(content, sourceID: "timers", priority: 2)
+        }
+        module.onFinished = { [weak window] in
+            guard SettingsStore.shared.timerFinishedPeekEnabled else { return }
+            window?.controller.showPeek(
+                selecting: "timers",
+                duration: SettingsStore.shared.timerFinishedPeekDuration
+            )
+        }
     }
 
     /// Sparkle nécessite un vrai `.app` bundle — ne pas démarrer depuis `swift run`.

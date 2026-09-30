@@ -27,6 +27,20 @@ let package = Package(
             exclude: ["Info.plist"],
             resources: [.process("Resources")]
         ),
+        .executableTarget(
+            name: "MarketingCapture",
+            dependencies: [
+                "Core",
+                "MediaModule",
+                "TimerModule",
+                "DropZoneModule",
+                "ClipboardModule",
+                "ShortcutsModule",
+                "CalendarModule",
+                "NotesModule",
+            ],
+            path: "Sources/MarketingCapture"
+        ),
         .target(
             name: "Core",
             path: "Sources/Core",
@@ -103,6 +117,26 @@ let package = Package(
             name: "DropZoneModuleTests",
             dependencies: ["DropZoneModule"],
             path: "Tests/DropZoneModuleTests"
+        ),
+        .testTarget(
+            name: "CalendarModuleTests",
+            dependencies: ["CalendarModule"],
+            path: "Tests/CalendarModuleTests"
+        ),
+        .testTarget(
+            name: "NotesModuleTests",
+            dependencies: ["NotesModule"],
+            path: "Tests/NotesModuleTests"
+        ),
+        .testTarget(
+            name: "ShortcutsModuleTests",
+            dependencies: ["ShortcutsModule"],
+            path: "Tests/ShortcutsModuleTests"
+        ),
+        .testTarget(
+            name: "AppTests",
+            dependencies: ["App"],
+            path: "Tests/AppTests"
         ),
     ]
 )

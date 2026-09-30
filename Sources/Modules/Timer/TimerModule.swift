@@ -20,23 +20,39 @@ public final class TimerModule: NotchModule {
     public private(set) var entries: [TimerEntry] = []
     public private(set) var pomodoroState: PomodoroState = .init()
     public var onAmbientUpdate: ((AmbientContent?) -> Void)?
+    /// Appelé quand un minuteur (ou une phase Pomodoro) se termine, en plus de la notification
+    /// système — laisse à l'appelant (voir `AppDelegate`) la décision d'afficher ou non un peek
+    /// selon `SettingsStore.timerFinishedPeekEnabled` (doc 13, Jalon 3, item 20).
+    public var onFinished: (() -> Void)?
 
     @ObservationIgnored private nonisolated(unsafe) var dispatchTimers: [UUID: DispatchSourceTimer] = [:]
     @ObservationIgnored private var pomodoroEntryID: UUID?
     @ObservationIgnored private var didRequestNotificationPermission = false
+    @ObservationIgnored private let persistenceStore: TimerPersistenceStore
+    @ObservationIgnored private var isStarted = false
 
-    public init() {}
+    /// `persistenceStore` est injectable pour les tests (répertoire temporaire isolé) ; en
+    /// production, l'appel sans argument résout toujours `Application Support/Ledge`.
+    public init(persistenceStore: TimerPersistenceStore = TimerPersistenceStore()) {
+        self.persistenceStore = persistenceStore
+    }
 
     // MARK: — NotchModule
 
-    public func start() {}
+    /// Restaure les timers actifs laissés par une session précédente (doc 13, Jalon 3, item 19).
+    public func start() {
+        guard !isStarted else { return }
+        isStarted = true
+        restoreOrResumeTimers()
+    }
 
     public func stop() {
+        guard isStarted else { return }
+        isStarted = false
         for (_, source) in dispatchTimers {
             source.cancel()
         }
         dispatchTimers.removeAll()
-        entries.removeAll()
         updateAmbient()
     }
 
@@ -46,6 +62,15 @@ public final class TimerModule: NotchModule {
 
     public func makeContentView() -> AnyView {
         AnyView(TimerContentView(module: self))
+    }
+
+    // MARK: — Capture marketing
+
+    /// Injecte des timers de démonstration directement dans l'état observable, sans passer par
+    /// `DispatchSourceTimer` ni la persistance disque — utilisé uniquement par `MarketingCapture`
+    /// pour produire des rendus déterministes (cf. docs/PLAN-REFONTE-FIDELITE.md).
+    package func configureMarketingCapture(entries: [TimerEntry]) {
+        self.entries = entries
     }
 
     deinit {
@@ -70,6 +95,7 @@ public final class TimerModule: NotchModule {
     public func addTimer(label: String, duration: TimeInterval) -> UUID {
         let entry = TimerEntry(label: label, duration: duration)
         entries.append(entry)
+        persist()
         return entry.id
     }
 
@@ -86,6 +112,21 @@ public final class TimerModule: NotchModule {
         stopDispatchTimer(for: id)
         entries.removeAll { $0.id == id }
         updateAmbient()
+        persist()
+    }
+
+    /// Suppression destructive explicite, distincte de `stop()` qui ne fait que suspendre
+    /// l'activité lors d'une désactivation globale ou par profil d'app.
+    public func clearAllTimers() {
+        for (_, source) in dispatchTimers {
+            source.cancel()
+        }
+        dispatchTimers.removeAll()
+        entries.removeAll()
+        pomodoroEntryID = nil
+        pomodoroState.reset()
+        updateAmbient()
+        clearPersisted()
     }
 
     public func startPomodoro() {
@@ -108,6 +149,7 @@ public final class TimerModule: NotchModule {
         requestNotificationPermissionIfNeeded()
         scheduleDispatchTimer(for: id)
         updateAmbient()
+        persist()
     }
 
     private func pauseEntry(_ id: UUID) {
@@ -119,6 +161,7 @@ public final class TimerModule: NotchModule {
         entries[index].scheduledEndDate = nil
         stopDispatchTimer(for: id)
         updateAmbient()
+        persist()
     }
 
     private func stopEntry(_ id: UUID) {
@@ -129,6 +172,7 @@ public final class TimerModule: NotchModule {
         entries[index].scheduledEndDate = nil
         stopDispatchTimer(for: id)
         updateAmbient()
+        persist()
     }
 
     private func resetEntry(_ id: UUID) {
@@ -139,9 +183,14 @@ public final class TimerModule: NotchModule {
         entries[index].remaining = entries[index].duration
         entries[index].scheduledEndDate = nil
         updateAmbient()
+        persist()
     }
 
     private func updateAmbient() {
+        guard isStarted else {
+            onAmbientUpdate?(nil)
+            return
+        }
         if let running = entries.first(where: { $0.isRunning }) {
             let progress = running.duration > 0 ? running.remaining / running.duration : 0
             onAmbientUpdate?(.init(
@@ -189,10 +238,12 @@ public final class TimerModule: NotchModule {
             entries[index].scheduledEndDate = nil
             stopDispatchTimer(for: id)
             sendFinishedNotification(for: entries[index])
+            onFinished?()
             if id == pomodoroEntryID {
                 advancePomodoro()
             } else {
                 updateAmbient()
+                persist()
             }
         } else {
             updateAmbient()
@@ -207,6 +258,40 @@ public final class TimerModule: NotchModule {
         guard let entry = entries.last else { return }
         pomodoroEntryID = entry.id
         startEntry(entry.id)
+    }
+
+    // MARK: — Persistance (doc 13, Jalon 3, item 19)
+
+    /// Recharge les timers laissés actifs par une session précédente. Les timers en cours
+    /// reprennent leur `DispatchSourceTimer` et sont immédiatement resynchronisés : si
+    /// l'échéance est déjà passée pendant que Ledge était fermé, `synchronizeTimer` les termine
+    /// tout de suite (notification comprise) au lieu de les afficher figés à 0 sans réagir.
+    private func restoreOrResumeTimers() {
+        if entries.isEmpty, let state = try? persistenceStore.load(), !state.entries.isEmpty {
+            entries = state.entries
+            pomodoroEntryID = state.pomodoroEntryID
+            pomodoroState = state.pomodoroState
+        }
+        let now = Date()
+        for entry in entries where entry.isRunning {
+            scheduleDispatchTimer(for: entry.id)
+            synchronizeTimer(id: entry.id, now: now)
+        }
+        updateAmbient()
+    }
+
+    /// Best-effort : un échec d'écriture ne doit jamais empêcher un timer de fonctionner
+    /// normalement en mémoire (contrairement au presse-papiers, cet état est régénérable sans
+    /// perte grave — voir `TimerPersistenceStore`).
+    private func persist() {
+        let state = PersistedTimerState(
+            entries: entries, pomodoroEntryID: pomodoroEntryID, pomodoroState: pomodoroState
+        )
+        try? persistenceStore.save(state)
+    }
+
+    private func clearPersisted() {
+        try? persistenceStore.clear()
     }
 
     // MARK: — Notifications
@@ -246,8 +331,8 @@ public final class TimerModule: NotchModule {
 
 // MARK: — Pomodoro
 
-public struct PomodoroState {
-    public enum Phase { case work, shortBreak, longBreak }
+public struct PomodoroState: Codable {
+    public enum Phase: Codable { case work, shortBreak, longBreak }
     public var phase: Phase = .work
     public var completedWorkSessions: Int = 0
 

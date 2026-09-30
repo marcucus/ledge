@@ -259,6 +259,16 @@ private struct ToggleButton: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(toggle.isOn ? .primary : .secondary)
+        // L'état on/off n'était visible qu'à la couleur de fond — inaccessible à VoiceOver
+        // (doc 13, Jalon 4, item 23). Ce module reste actuellement retiré des onglets (voir
+        // doc 13, Jalon 2, point 11), mais corriger ce point évite de réintroduire le problème
+        // si `SystemContentView` est un jour réintégrée.
+        .accessibilityLabel(Text(LocalizedStringKey(toggle.labelKey), bundle: localizationBundle))
+        .accessibilityValue(
+            toggle.isOn
+                ? Text("accessibility.enabled", bundle: localizationBundle)
+                : Text("accessibility.disabled", bundle: localizationBundle)
+        )
     }
 }
 

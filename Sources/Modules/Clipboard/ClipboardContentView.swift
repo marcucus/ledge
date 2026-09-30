@@ -114,8 +114,8 @@ struct ClipboardContentView: View {
             ScrollView(.vertical) {
                 LazyVStack(spacing: 0) {
                     ForEach(displayedItems) { item in
-                        ClipboardRowView(item: item) {
-                            module.paste(item: item)
+                        ClipboardRowView(item: item) { asPlainText in
+                            module.paste(item: item, asPlainText: asPlainText)
                         } onTogglePin: {
                             module.togglePin(item)
                         }
@@ -152,12 +152,17 @@ struct ClipboardContentView: View {
 
 private struct ClipboardRowView: View {
     let item: ClipboardItem
-    let onTap: () -> Void
+    /// `asPlainText` reflète ⌘+clic (mockup doc 03) : lu depuis `NSEvent.modifierFlags` au
+    /// moment du clic, dans l'action du `Button` — l'état des modificateurs y est encore fiable
+    /// juste après l'évènement qui a déclenché l'action.
+    let onTap: (_ asPlainText: Bool) -> Void
     let onTogglePin: () -> Void
 
     var body: some View {
         HStack(spacing: 10) {
-            Button(action: onTap) {
+            Button {
+                onTap(NSEvent.modifierFlags.contains(.command))
+            } label: {
                 HStack(spacing: 10) {
                     icon
                         .frame(width: 20)
@@ -170,6 +175,7 @@ private struct ClipboardRowView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .help(Text("clipboard.action.paste.hint", bundle: localizationBundle))
             pinButton
         }
         .padding(.horizontal, 12)

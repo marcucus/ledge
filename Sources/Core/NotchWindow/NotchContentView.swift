@@ -67,6 +67,11 @@ struct NotchContentView: View {
             // Ring timer
             if state == .collapsed {
                 TimerRingView(controller: controller)
+                    .frame(
+                        width: controller.notchWidth + NotchController.timerRingInset * 2,
+                        height: controller.notchHeight + NotchController.timerRingInset
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
         }
     }
@@ -195,25 +200,26 @@ struct HUDBar: View {
 
 struct TimerRingView: View {
     let controller: NotchController
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        if controller.timerRingActive {
-            if reduceMotion {
-                ring(alpha: 0.8)
-            } else {
-                TimelineView(.animation) { (context: TimelineViewDefaultContext) in
-                    let elapsed = context.date.timeIntervalSinceReferenceDate
-                    ring(alpha: 0.5 + 0.4 * sin(elapsed * .pi * 0.8))
-                }
+        if let progress = controller.timerRingProgress {
+            ZStack {
+                ring
+                    .stroke(.white.opacity(0.16), lineWidth: 1.5)
+                ring
+                    .trim(from: 0, to: max(0.015, progress))
+                    .stroke(
+                        controller.appAccentColor,
+                        style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
+                    )
             }
+            .padding(.horizontal, NotchController.timerRingInset)
+            .padding(.bottom, NotchController.timerRingInset)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("timer.ring.accessibility", bundle: localizationBundle))
+            .accessibilityValue(Text("\(Int(progress * 100))%"))
         }
     }
 
-    private func ring(alpha: Double) -> some View {
-        NotchPanelShape(topEar: 0, bottomRadius: 10)
-            .stroke(controller.appAccentColor.opacity(alpha), lineWidth: 1.5)
-            .padding(.horizontal, NotchController.timerRingInset)
-            .padding(.bottom, NotchController.timerRingInset)
-    }
+    private var ring: NotchPanelShape { NotchPanelShape(topEar: 0, bottomRadius: 10) }
 }
