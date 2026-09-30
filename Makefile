@@ -88,6 +88,12 @@ app:
 	  [ -d "$$b" ] && cp -r "$$b" $(RES_DIR)/ && echo "  ressources: $$b" || true; \
 	done
 
+	# Notice de la dépendance distribuée avec l'app.
+	@if [ -f ".build/checkouts/Sparkle/LICENSE" ]; then \
+	  cp ".build/checkouts/Sparkle/LICENSE" "$(RES_DIR)/Sparkle-LICENSE.txt"; \
+	  echo "  licence: Sparkle-LICENSE.txt"; \
+	fi
+
 	# Sparkle.framework (si disponible)
 	@if [ -d "$(SPARKLE_FW)" ]; then \
 	  echo "  Sparkle.framework → Frameworks/"; \
