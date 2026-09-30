@@ -108,8 +108,9 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
 - Version bundle locale actuelle : `0.3.0` (build `3`), candidate non publiée. La version publique
   GitHub est `0.2.0` ; elle ne doit pas être remplacée ni republier ses assets.
 - Le bundle `0.3.0` a été reconstruit avec `make app`; build, 95 tests et SwiftLint sont verts
-  (hors deux avertissements historiques de longueur de fichier). La CI locale est écrite mais doit
-  encore être commitée puis validée sur GitHub.
+  (hors deux avertissements historiques de longueur de fichier). La CI et la candidate sont
+  commitées sur `codex/release-0.3.0`, mais le push reste bloqué par un jeton HTTPS sans scope
+  `workflow` et l'absence de clé SSH autorisée ; l'exécution distante reste donc à valider.
 - La clé publique Sparkle est renseignée. `SUFeedURL` est injectée dans le bundle de distribution
   par `SPARKLE_FEED_URL`; le bundle de développement n'active pas Sparkle sans cette valeur.
 - `make release` crée un DMG signé ad hoc, génère l'appcast Sparkle EdDSA, crée une GitHub Release

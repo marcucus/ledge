@@ -12,8 +12,9 @@
 - `swiftlint lint --quiet Sources Tests` : aucune erreur.
 - Deux avertissements de longueur de fichier subsistent : `SettingsStore.swift` (429 lignes) et
   `NotchController.swift` (443 lignes).
-- La branche locale est synchronisée avec `origin/main`, mais le répertoire de travail contient
-  **66 chemins modifiés ou non suivis**, dont la CI de l'application.
+- La candidate est découpée sur `codex/release-0.3.0` en quatre commits cohérents. Le push reste
+  bloqué : le jeton HTTPS courant n'a pas le scope `workflow` requis pour modifier la CI et aucune
+  clé SSH autorisée n'est disponible sur cette machine.
 
 ## P0 — Corriger avant la recette de release
 
@@ -85,8 +86,8 @@ d'observation actives.
 
 ### 6. Finaliser et publier la CI de l'application
 
-- [ ] Découper les changements actuels en commits cohérents sans mélanger les sujets.
-- [ ] Ajouter et commiter `.github/workflows/ci.yml`.
+- [x] Découper les changements actuels en commits cohérents sans mélanger les sujets.
+- [x] Ajouter et commiter `.github/workflows/ci.yml`.
 - [ ] Pousser la branche candidate et obtenir une exécution distante verte.
 - [x] Ajouter un smoke test `make app` dans la CI macOS.
 - [x] Vérifier dans ce smoke test le `Info.plist`, les localisations, la licence Sparkle et
@@ -101,6 +102,11 @@ d'observation actives.
 - [ ] Vérifier que l'appcast contient la bonne version, le build, la signature EdDSA, la taille et
   l'URL du DMG attendu.
 - [ ] Comparer le SHA-256 calculé avec les métadonnées qui seront publiées.
+
+Le bundle et le DMG locaux ont été produits et vérifiés. Le DMG pèse **3 517 998 octets** et son
+SHA-256 est `06317dedc755e9a19f6b164c4086db52b387f6fa54b27e4d5cfb5b583025774e`.
+`make direct-appcast` reste bloqué au moment où l'outil Sparkle demande la clé privée EdDSA au
+Trousseau macOS ; l'ancien `dist/appcast.xml` n'a donc pas été pris pour une preuve de la 0.3.0.
 
 ### 8. Effectuer la recette sur le Mac de développement
 
@@ -118,6 +124,10 @@ d'observation actives.
 - [ ] Tester le lancement à la connexion et la réinitialisation des réglages.
 - [ ] Ouvrir tous les liens juridiques depuis l'app.
 - [ ] Mesurer CPU et RAM au repos, pendant un timer et pendant une lecture média.
+
+Mesure locale partielle au repos après lancement de `dist/Ledge.app` : **0,0 % CPU** et environ
+**100 Mo RSS**. Les mesures pendant un timer et une lecture média restent à effectuer avec les
+scénarios fonctionnels ci-dessus.
 
 ### 9. Effectuer la recette indispensable sur un second Mac
 
