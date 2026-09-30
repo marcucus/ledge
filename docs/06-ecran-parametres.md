@@ -35,14 +35,17 @@ ou un raccourci global.
 GÉNÉRAL
   ☑ Lancer au démarrage de session
   ☑ Masquer l'icône du Dock (mode agent)
-  Sensibilité de la hot zone     [—————●———]  (petite ↔ large)
-  Délai d'ouverture au survol     [ 0,4 s ▾ ]
-  ☑ Peek automatique sur événement (global)
-       Durée du peek              [ 2 s ▾ ]
+  Zone de survol                  [ Standard ▾ ]
+       └─ Précise · Standard · Large
+  Délai de fermeture              [ 0,6 s ▾ ]
+  Action au clic                  [ Ouvrir | Aperçu ]
   Langue                          [ 🌐 Système (Français) ▾ ]
        └─ Système · Français · English · Español · Deutsch · …
-  [ Réinitialiser tous les réglages ]
+  [ Réinitialiser tous les réglages ]   (prévu)
 ```
+
+Le survol ouvre immédiatement le panneau complet. Il n'existe volontairement aucun délai
+d'ouverture ni aperçu intermédiaire automatique.
 
 ### Langue — comportement
 

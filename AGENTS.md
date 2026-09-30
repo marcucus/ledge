@@ -59,6 +59,9 @@ développeur débutant en Swift.
 - Les API privées et les permissions sont isolées derrière des abstractions et échouent sans
   planter l'application.
 - L'historique du presse-papiers reste en RAM par défaut; la persistance disque est un opt-in.
+- Un module désactivé (réglages globaux ou profil d'app actif) doit être réellement arrêté
+  (`stop()`), pas seulement masqué de la navigation — voir `NotchController+ModuleLifecycle.swift`
+  et [doc 11](docs/11-extensibilite-modules.md).
 - Aucun texte visible en dur. Toute nouvelle chaîne doit être ajoutée en anglais et en français.
 - Aucun force-unwrap de production, aucun état global mutable supplémentaire, aucun couplage entre
   modules.
@@ -82,13 +85,31 @@ Avant une relance manuelle, arrêter l'instance existante avec `killall Ledge`. 
 distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make notarize` et
 `make appcast` selon les secrets disponibles.
 
-## État vérifié le 27 septembre 2026
+## État vérifié le 30 septembre 2026
 
 - Branche `main`, commit observé `fa5f726`.
-- `swift test` compile et exécute **41 tests dans 8 suites**, tous verts.
-- SwiftLint est vert sur `Sources` et `Tests` au 27 septembre 2026.
-- Version bundle actuelle : `0.2.0` (build `2`), candidate locale non publiée. La version publique
-  observée sur GitHub/Vercel reste `0.1.0` tant que la nouvelle release n'est pas publiée.
+- Jalons 3 et 4 de finalisation (doc 13) ajoutés dans une session sans toolchain Swift (agent
+  cloud) : chiffrement du presse-papiers, identité de source média, persistance des timers,
+  accessibilité média/timer/Système, Quick Look au clavier, localisation de « Système », erreurs de
+  lancement à la connexion et réinitialisation des réglages (voir
+  [doc 09](docs/09-avancement-et-contexte.md)). Un premier `swift build` a révélé deux bugs de
+  niveau d'accès introduits par l'agent (`SettingsStore.defaults`, `TimerPersistenceStore` et son
+  `init(directory:)` déclarés `private`/`internal` alors qu'exposés dans une API publique),
+  corrigés dans la foulée avec un avertissement de longueur de fonction dans
+  `AppDelegate.buildAndRegisterModules(in:)` (câblage du minuteur extrait dans `makeTimerModule(in:)`).
+- `swift test` compile et exécute **95 tests dans 14 suites**, tous verts. Les nouvelles suites
+  couvrent aussi Calendrier, Notes, Raccourcis et l'assemblage des modules de l'app.
+- SwiftLint est vert sur `Sources` et `Tests` (aucune erreur), avec deux avertissements de longueur
+  de fichier : `SettingsStore.swift` et `NotchController.swift` (429 lignes chacun), au-delà du
+  seuil de 400 lignes (pas l'erreur à 500) ; restructuration reportée plutôt que refactorée sans
+  pouvoir compiler. `Tests/CoreTests/NotchControllerTests.swift` (425 lignes) n'est pas concerné :
+  `.swiftlint.yml` scope l'analyse à `included: Sources`, qui prime sur les répertoires passés à la
+  CLI — passer `Tests` en argument ne l'y fait donc pas réellement analyser.
+- Version bundle locale actuelle : `0.3.0` (build `3`), candidate non publiée. La version publique
+  GitHub est `0.2.0` ; elle ne doit pas être remplacée ni republier ses assets.
+- Le bundle `0.3.0` a été reconstruit avec `make app`; build, 95 tests et SwiftLint sont verts
+  (hors deux avertissements historiques de longueur de fichier). La CI locale est écrite mais doit
+  encore être commitée puis validée sur GitHub.
 - La clé publique Sparkle est renseignée. `SUFeedURL` est injectée dans le bundle de distribution
   par `SPARKLE_FEED_URL`; le bundle de développement n'active pas Sparkle sans cette valeur.
 - `make release` crée un DMG signé ad hoc, génère l'appcast Sparkle EdDSA, crée une GitHub Release
@@ -109,6 +130,8 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   Les DMG et appcasts sont des assets de release, jamais des fichiers suivis par Git.
 - Les promesses du site doivent suivre le code réel : macOS 14+, modules réellement visibles,
   permissions réellement requises, version publiée réelle et limites connues.
+- Au 30 septembre 2026, l'accueil, l'appcast, le téléchargement et les quatre routes juridiques du
+  site public répondent correctement. Le blocage Vercel observé la veille est résolu.
 
 ## Fin de tâche
 

@@ -26,6 +26,32 @@ public protocol NotchModule: AnyObject {
 `makeContentView()` retournent `EmptyView()` par défaut — un module minimal n'a donc que
 3 propriétés à fournir.
 
+### Contrat précis de `start()`/`stop()` (depuis le Jalon 2 de [doc 13](13-audit-finalisation.md))
+
+Trois notions distinctes régissent la présence d'un module :
+
+- **visible** — apparaît dans la navigation. Purement UI (`NotchController.visibleModules`),
+  jamais stocké pour lui-même.
+- **enabled** — activé par les réglages globaux ou par l'`AppProfile` de l'app au premier
+  plan. `NotchController` est la seule source de vérité qui relie `enabled` au cycle de vie
+  réel : `start()` est appelé exactement quand un module devient activé, `stop()` exactement
+  quand il cesse de l'être (voir
+  [`NotchController+ModuleLifecycle.swift`](../Sources/Core/NotchWindow/NotchController+ModuleLifecycle.swift)).
+  Un module **ne doit jamais** démarrer son activité ailleurs qu'à `start()`, ni continuer à
+  observer/capturer quoi que ce soit après `stop()` — c'est ce qui garantit, par exemple,
+  qu'un presse-papiers désactivé ne capture plus rien.
+- **destructive** — `stop()` suspend l'activité mais ne doit pas supprimer les données métier
+  persistées : un profil d'app peut désactiver temporairement un module. Toute suppression
+  définitive doit passer par une action explicite distincte (par exemple
+  `TimerModule.clearAllTimers()`). À la reprise, le module resynchronise son état depuis les
+  échéances ou données persistées.
+- **captureEnabled** — cas particulier du presse-papiers, où « activé » et « capture » sont
+  une seule et même chose : voir `ClipboardModule.stop()`.
+
+Un module qui échoue à respecter ceci (par exemple un observateur démarré dans `init()`) rend
+son toggle « activé » dans Réglages → Modules trompeur — exactement le bug corrigé par le
+Jalon 2.
+
 ## Anatomie d'un module existant
 
 Chaque module vit dans `Sources/Modules/<Nom>/` comme une **cible SPM autonome** qui ne
@@ -45,7 +71,9 @@ Exemple complet et simple à lire : [`Sources/Modules/Timer/`](../Sources/Module
    `dependencies` de la cible `App`.
 2. **[`ModuleCatalog.swift`](../Sources/App/Settings/ModuleCatalog.swift)** — une `Entry`
    (icône, libellés localisés, vue de réglages optionnelle) pour que le module apparaisse
-   dans l'écran Réglages → Modules.
+   dans l'écran Réglages → Modules. N'ajouter une `Entry` que si le module est réellement
+   enregistré comme onglet dans `AppDelegate` : sinon son toggle « activé » n'aurait aucun
+   effet (cf. la décision prise pour Système, qui reste volontairement hors catalogue).
 3. **[`AppDelegate.swift`](../Sources/App/AppDelegate.swift)** — instancier le module et
    l'ajouter au tableau passé à `window.register(modules:)`.
 

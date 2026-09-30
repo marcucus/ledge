@@ -3,23 +3,29 @@
 > Le *où on en est*. Les docs 01–08 décrivent la **vision** ; celui-ci décrit l'**état réel
 > du code** à un instant donné. À mettre à jour au fil des avancées.
 >
-> Dernière mise à jour : **2026-09-25**
+> Dernière mise à jour : **2026-09-30**
 
 ## Vue d'ensemble
 
 Ledge est passé de la phase **conception** (docs 01–08) à une phase **implémentation
 active**. Le socle technique (V0) et le premier module riche (Média, V1) sont en place, et les
-les huit modules existent au moins en version fonctionnelle. Le travail récent porte sur le
+huit modules existent au moins en version fonctionnelle. Le travail récent porte sur le
 **polissage** (média, alignement de la NavBar) et sur une **nouvelle fonctionnalité système** :
 le HUD volume/luminosité maison qui remplace celui de macOS.
 
+Le 29 septembre 2026, les informations juridiques ont également été reliées au produit : la page
+À propos et la dernière étape de l'onboarding ouvrent les mentions légales, la politique de
+confidentialité, les conditions d'utilisation et les licences tierces publiées par `ledge-site`.
+Le bundle construit par `make app` inclut désormais la licence complète de Sparkle. Ledge reste
+gratuit et publié par Adrien Marques en personne physique, à titre non professionnel.
+
 | Phase roadmap | État | Détail |
 |---|---|---|
-| **V0** — Fenêtre + 3 états + animation | ✅ Fait | Fenêtre ancrée, machine à états, hot zone, détection dynamique de l'encoche. |
+| **V0** — Fenêtre + 5 états + animation | ✅ Fait | Fenêtre ancrée, machine à états, hot zone, détection dynamique de l'encoche. |
 | **V1** — Module Média | ✅ Fonctionnel | Lecture, contrôles, pochette (partiel), barre de progression scrubbable. |
 | **V2** — Timers + Drop Zone | ✅ Présent | Modules implémentés. |
 | **V3** — Presse-papiers + Système | ✅ Présent | Modules implémentés + HUD volume/luminosité (nouveau). |
-| **V4** — Paramètres complets | ✅ Fait | Réglages multi-sections, onboarding, permissions centralisées, i18n et accessibilité. |
+| **V4** — Paramètres complets | ✅ Fait | Réglages multi-sections, onboarding, permissions centralisées, i18n, accessibilité et réinitialisation complète. |
 
 ## Pile technique réelle
 
@@ -44,7 +50,7 @@ Conforme à la [doc 07](07-architecture-technique.md), avec quelques précisions
 |---|---|---|
 | Fenêtre encoche | [NotchWindow.swift](../Sources/Core/NotchWindow/NotchWindow.swift) | `NSPanel`, ancrage, frames par état, hot zone (tracking area), monitors de clic/drag global. |
 | Machine à états | [NotchController.swift](../Sources/Core/NotchWindow/NotchController.swift) | `@Observable`, transitions, gestion du survol, du drag de fichiers et du HUD. |
-| États | [NotchState.swift](../Sources/Core/NotchWindow/NotchState.swift) | `collapsed` · `peeking` · `hud` · `expanded`. |
+| États | [NotchState.swift](../Sources/Core/NotchWindow/NotchState.swift) | `collapsed` · `ambient` · `peeking` · `hud` · `expanded`. |
 | Contenu racine | [NotchContentView.swift](../Sources/Core/NotchWindow/NotchContentView.swift) | Aiguille NavBar / HUDBar / module selon l'état. |
 | Forme | [NotchPanelShape.swift](../Sources/Core/NotchWindow/NotchPanelShape.swift) | Tracé arrondi du panneau (oreilles + rayon bas). |
 | Géométrie | [NotchGeometry/](../Sources/Core/NotchGeometry/) | Détection dynamique de l'encoche (`safeAreaInsets`, zones auxiliaires). |
@@ -55,13 +61,26 @@ Conforme à la [doc 07](07-architecture-technique.md), avec quelques précisions
 
 ### Les états de l'encoche
 
-- **collapsed** — au repos, fenêtre à la taille exacte de l'encoche physique.
+- **collapsed** — au repos, rendu à la taille de l'encoche et zone de survol invisible configurable.
 - **ambient** — extension latérale discrète pour musique, timer ou Drop Zone.
 - **peeking** — aperçu compact (largeur expanded, hauteur NavBar).
 - **hud** — barre compacte volume/luminosité : fenêtre qui **entoure l'encoche**
   (`notchWidth + 170` de large, `notchHeight + 34` de haut), barre fine centrée **sous**
   l'encoche. Auto-dismiss après 1,6 s.
-- **expanded** — panneau complet (744 px de large, NavBar 44 px + contenu 180 px).
+- **expanded** — panneau complet : 580 px en Concentrée, 920 px en Panoramique et 744 px en
+  Immersive, avec une hauteur adaptée à chaque composition.
+
+Le survol passe directement de `collapsed` ou `ambient` à `expanded`. `peeking` reste disponible
+comme comportement explicite au clic ; ce n'est pas une étape automatique.
+
+### Robustesse des interactions centrales (27 septembre 2026)
+
+- fermeture du panneau par Échap, clic dans une autre app ou clic dans une autre fenêtre de Ledge ;
+- zone de survol Précise, Standard ou Large, sans polling global de la souris ;
+- détection événementielle du plein écran et application des modes Accessible, Masqué et Overlay ;
+- suppression de l'ambient et du HUD en plein écran hors Overlay ;
+- anneau de timer fondé sur la progression réelle, mis à jour par le tick du timer sans animation
+  continue à haute fréquence.
 
 ## État par module
 
@@ -71,7 +90,10 @@ Conforme à la [doc 07](07-architecture-technique.md), avec quelques précisions
 | ⏱️ **Timers** | [TimerModule](../Sources/Modules/Timer/TimerModule.swift), [TimerContentView](../Sources/Modules/Timer/TimerContentView.swift) | ✅ Présent | Minuteurs/Pomodoro, anneau, notifications. |
 | 📁 **Drop Zone** | [DropZoneModule](../Sources/Modules/DropZone/DropZoneModule.swift) | ✅ Présent | Étagère de fichiers ; ouverture auto au drag de fichiers près de l'encoche. |
 | 📋 **Presse-papiers** | [ClipboardModule](../Sources/Modules/Clipboard/ClipboardModule.swift) | ✅ Présent | Historique de copies (seul polling toléré). |
-| ⚙️ **Système** | [SystemModule](../Sources/Modules/System/SystemModule.swift), [SystemObserver](../Sources/Modules/System/SystemObserver.swift) | ✅ Présent | Jauges (batterie/CPU/RAM), toggles rapides, **+ HUD volume/luminosité**. |
+| ⚙️ **Système** | [SystemModule](../Sources/Modules/System/SystemModule.swift), [SystemObserver](../Sources/Modules/System/SystemObserver.swift) | ✅ Source transverse | Batterie et HUD actifs ; onglet volontairement masqué de la navigation. |
+| ⚡ **Raccourcis** | [ShortcutsModule](../Sources/Modules/Shortcuts/ShortcutsModule.swift) | ✅ Présent | Liste et lancement des raccourcis Shortcuts avec erreurs visibles. |
+| 📅 **Calendrier** | [CalendarModule](../Sources/Modules/Calendar/CalendarModule.swift) | ✅ Présent | Prochain événement, permission contextuelle et polling arrêté sans autorisation. |
+| 📝 **Notes** | [NotesModule](../Sources/Modules/Notes/NotesModule.swift) | ✅ Présent | Note locale simple persistée dans les préférences. |
 
 ## Focus : le HUD volume / luminosité (travail récent)
 
@@ -172,8 +194,110 @@ et **remplacer** l'overlay natif de macOS.
   que lorsque l’accès est accordé.
 - Raccourcis distingue une liste vide d’un échec de la commande système et affiche aussi l’échec
   éventuel d’un lancement.
-- La suite couvre 41 tests dans 8 suites, dont les cas de veille, grille vide, module masqué pendant
+- La suite couvre 95 tests dans 14 suites, dont les cas de veille, grille vide, module masqué pendant
   sa sélection, élément épinglé et fichier de Drop Zone devenu indisponible.
+
+## Cycle de vie et confidentialité des modules (Jalon 2, 27 septembre 2026)
+
+- `NotchController` relie désormais réellement `enabled` (réglages globaux ou profil d'app actif)
+  au cycle de vie des modules : `register(modules:)` ne démarre que les modules activés, et tout
+  changement d'activation (toggle dans Réglages → Modules, ou changement d'app au premier plan
+  avec un `AppProfile` correspondant) appelle `stop()`/`start()` en conséquence — voir
+  [`NotchController+ModuleLifecycle.swift`](../Sources/Core/NotchWindow/NotchController+ModuleLifecycle.swift)
+  et le contrat précis dans [doc 11](11-extensibilite-modules.md).
+- Conséquence directe pour la confidentialité : désactiver le presse-papiers (globalement ou via
+  un profil d'app, par exemple pour une app bancaire) arrête réellement `ClipboardSource` — plus
+  aucune capture tant qu'il reste désactivé. Avant ce correctif, seule la navigation était masquée ;
+  le module continuait de tourner en arrière-plan.
+- Le module Système reste volontairement hors du catalogue des Réglages → Modules (décision
+  produit) : son toggle « activé » et son écran de réglages complets étaient trompeurs, puisque le
+  module n'a jamais été un onglet réel — seule la pastille batterie de la NavBar l'utilise. Les
+  jauges CPU/RAM/réseau, l'indicateur micro, la batterie d'accessoires et le lanceur restent
+  fonctionnels dans le code mais assumés comme non exposés.
+- Les erreurs de persistance du presse-papiers (lecture, écriture, suppression du fichier
+  `clipboard-history.json`) ne sont plus silencieuses : `ClipboardHistoryStore` lève désormais des
+  erreurs, `ClipboardModule` les expose via `SettingsStore.clipboardPersistenceIssue`, et
+  Réglages → Presse-papiers affiche un message explicite avec un bouton « Réessayer » — la capture
+  en mémoire continue de fonctionner normalement pendant ce temps.
+
+## Fiabilisation des modules et accessibilité (Jalon 3 et 4, 27 septembre 2026)
+
+**Jalon 3 — fiabiliser les modules**
+
+- L'ancrage du partage dans la Drop Zone utilise désormais `ViewAnchorReader`
+  (`Sources/Core/ModuleKit/ViewAnchorReader.swift`), un `NSViewRepresentable` qui capture le vrai
+  `NSView` sous la barre d'action — nécessaire car `NotchWindow` est un panel non-activating qui
+  ne devient jamais `keyWindow`.
+- Une collision de nom de fichier lors d'une copie depuis la Drop Zone ne remplace plus le fichier
+  existant : `DropZoneModule.uniqueDestination` ajoute un suffixe façon Finder (« nom 2 », « nom 3 »…).
+- L'identification Apple Music/Spotify reposait sur deux booléens conservés entre notifications ;
+  avec les deux lecteurs ouverts, une notification Apple Music sans rapport (ex. « Stopped »)
+  pouvait écraser l'état affiché de Spotify, et une commande comme le seek pouvait partir vers le
+  mauvais lecteur. Remplacé par un état explicite `MediaSourceIdentity` avec un résolveur pur et
+  testé (`Tests/MediaModuleTests/MediaSourceIdentityTests.swift`). Le test manuel des deux lecteurs
+  ouverts simultanément est documenté dans [doc 12](12-recette-release-candidate.md).
+- L'historique du presse-papiers est chiffré sur disque (AES-GCM via CryptoKit, clé générée et
+  conservée dans le Trousseau macOS par `ClipboardHistoryKeyStore`) au lieu d'être stocké en JSON en
+  clair ; un ancien fichier en clair est lu une dernière fois puis ré-écrit chiffré de façon
+  transparente. Nouveau réglage d'exclusion d'apps par bundle identifier et collage en texte brut
+  (⌘+clic sur un élément).
+- Les timers actifs (minuteurs et Pomodoro) sont désormais persistés entre les lancements de
+  l'app (`TimerPersistenceStore`), et un timer déjà expiré au relancement se termine immédiatement
+  plutôt que de rester bloqué. Nouveau réglage de peek configurable en fin de minuteur (activable,
+  durée 2–10 s), en plus de la notification système.
+
+**Jalon 4 — accessibilité et réglages**
+
+- La barre de progression du module Média expose sa valeur à VoiceOver et répond aux actions
+  d'ajustement (±15 s), sans dépendre d'un `Slider` natif.
+- Les molettes H:M:S du réglage de minuteur exposent chacune une valeur et des actions
+  d'ajustement bornées à leurs valeurs min/max.
+- Le bouton on/off du module Système expose son état à l'accessibilité (actuellement du code mort
+  documenté comme tel : l'onglet Système a été retiré de la navigation au Jalon 2).
+- L'aperçu QuickLook d'un fichier dans la Drop Zone, jusque-là déclenché uniquement par un survol
+  de souris avec un délai de 450 ms, est maintenant accessible au clavier (barre d'espace) et via
+  une action VoiceOver nommée.
+- « Système », l'option de langue automatique du sélecteur, était un littéral anglais non localisé ;
+  il utilise désormais une clé de localisation comme le reste de l'interface.
+- Un échec d'enregistrement du lancement à la connexion (`SMAppService.register()`/`unregister()`)
+  était avalé silencieusement par `try?` ; l'erreur est maintenant affichée sous le réglage
+  correspondant.
+- Nouvelle option **« Réinitialiser tous les réglages »** dans Réglages → À propos, avec
+  confirmation : `SettingsStore.resetToDefaults()` (voir
+  [`SettingsStore+Reset.swift`](../Sources/Core/Settings/SettingsStore+Reset.swift)) supprime
+  toutes les clés `UserDefaults` connues puis relit les valeurs par défaut via une instance
+  jetable de `SettingsStore` construite sur les mêmes `UserDefaults` — réutilise la logique de
+  `init(defaults:)` plutôt que de dupliquer une cinquantaine de valeurs par défaut dans un second
+  endroit qui pourrait diverger.
+
+**P0 de finalisation — cycle de vie et persistance (30 septembre 2026)**
+
+- La migration d'un ancien historique de presse-papiers en clair ne peut plus réussir à moitié :
+  l'écriture AES-GCM atomique est obligatoire, son échec remonte comme `.loadFailed`, et le fichier
+  original reste intact. Le chemin d'erreur et son état récupérable sont testés avec un writer
+  injectable qui simule un disque non inscriptible.
+- `TimerModule.stop()` suspend désormais les sources sans vider les entrées ni leur persistance.
+  `start()` resynchronise les échéances conservées ; seule l'action explicite
+  `clearAllTimers()` supprime définitivement les minuteurs. Le scénario profil d'app est couvert.
+- Une Drop Zone désactivée globalement ou par profil ne peut plus ouvrir ni sélectionner le panneau.
+  Son arrêt annule le drag courant et retire sa contribution ambient.
+- Les observations du presse-papiers et les tâches asynchrones de Média/Raccourcis utilisent un
+  état de démarrage et une génération invalidée par `stop()`, empêchant tout callback retardé ou
+  double réarmement après un cycle `start()`/`stop()`.
+
+⚠️ **Point de vigilance restant** : `SettingsStore.swift` (429 lignes) et `NotchController.swift`
+(443 lignes) dépassent le seuil d'avertissement SwiftLint de 400 lignes (l'erreur est à 500, non
+atteinte) ; une extraction a été jugée trop risquée à faire sans pouvoir compiler et donc reportée.
+`Tests/CoreTests/NotchControllerTests.swift` (425 lignes) n'est en revanche **pas** signalé par
+SwiftLint : `.swiftlint.yml` scope l'analyse à `included: Sources`, qui prime sur les répertoires
+passés en argument à la CLI — `Tests` n'est donc pas réellement analysé même quand la commande
+l'inclut explicitement. `swift build && swift test && swiftlint lint --quiet Sources Tests` ont
+depuis été exécutés : build ✅, 95 tests dans 14 suites ✅, SwiftLint sans erreur
+(seulement les deux avertissements de longueur de fichier ci-dessus). Deux bugs de niveau d'accès
+introduits pendant cette session (`SettingsStore.defaults` et `TimerPersistenceStore`/son
+`init(directory:)` déclarés `private`/`internal` alors qu'exposés dans une API publique) et un
+avertissement de longueur de fonction (`AppDelegate.buildAndRegisterModules(in:)`, câblage du
+minuteur extrait dans `makeTimerModule(in:)`) ont été corrigés après ce premier retour de build.
 
 ## Construire & lancer
 
@@ -187,7 +311,13 @@ réinstalle le tap au changement d'application, sans nécessiter de relance.
 
 ## Prochaines étapes suggérées
 
-1. Valider Apple Music en lecture réelle : pochette, seek, resynchronisation et permission Automation.
-2. Vérifier et corriger les trois comportements plein écran, puis les transitions veille/réveil.
-3. Tester le parcours Gatekeeper « Ouvrir quand même » sur une autre machine.
-4. Continuer la passe de robustesse sur les erreurs et opérations impossibles des modules.
+La version publique est `0.2.0`. La candidate locale suivante est `0.3.0` (build `3`) ; elle ne doit
+être publiée qu'après la recette de [doc 12](12-recette-release-candidate.md).
+
+1. Commiter la candidate et valider la nouvelle CI GitHub Actions sur le flux `dev → rc → main`.
+2. Valider Apple Music en lecture réelle : pochette, seek, resynchronisation et permission Automation.
+3. Valider manuellement les trois comportements plein écran et les transitions veille/réveil sur
+   écran interne et externe.
+4. Tester Gatekeeper puis une mise à jour Sparkle `0.2.0` → `0.3.0` sur un autre Mac.
+5. Compléter ensuite les tests des cibles App, Calendrier, Notes et Raccourcis sans retarder la
+   recette manuelle de la candidate.
