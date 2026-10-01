@@ -3,9 +3,11 @@ import Core
 import SwiftUI
 
 final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
+    private let settings: SettingsStore
     private let onOpenPermissions: () -> Void
 
-    init(onOpenPermissions: @escaping () -> Void) {
+    init(settings: SettingsStore, onOpenPermissions: @escaping () -> Void) {
+        self.settings = settings
         self.onOpenPermissions = onOpenPermissions
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 680, height: 470),
@@ -39,7 +41,7 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func finish(shouldOpenPermissions: Bool) {
-        SettingsStore.shared.hasCompletedOnboarding = true
+        settings.hasCompletedOnboarding = true
         close()
         if shouldOpenPermissions {
             onOpenPermissions()
@@ -47,7 +49,7 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func windowWillClose(_: Notification) {
-        SettingsStore.shared.hasCompletedOnboarding = true
+        settings.hasCompletedOnboarding = true
         NSApp.setActivationPolicy(.accessory)
     }
 }

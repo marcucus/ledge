@@ -3,7 +3,10 @@ import Core
 import SwiftUI
 
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
-    convenience init() {
+    private let settings: SettingsStore
+
+    init(settings: SettingsStore) {
+        self.settings = settings
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 780, height: 560),
             styleMask: [.titled, .closable, .resizable, .miniaturizable],
@@ -15,16 +18,21 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.backgroundColor = .black
         window.center()
         window.setFrameAutosaveName("SettingsWindow")
-        self.init(window: window)
+        super.init(window: window)
         window.delegate = self
-        let hostingView = NSHostingView(rootView: SettingsRootView(store: SettingsStore.shared))
+        let hostingView = NSHostingView(rootView: SettingsRootView(store: settings))
         window.contentView = hostingView
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) {
+        nil
     }
 
     func show(section: SettingsSection = .general) {
         guard let window else { return }
         window.contentView = NSHostingView(
-            rootView: SettingsRootView(store: SettingsStore.shared, initialSelection: section)
+            rootView: SettingsRootView(store: settings, initialSelection: section)
         )
         NSApp.setActivationPolicy(.regular)
         // Le bundle n'a pas d'icône Dock par défaut, et l'icône posée au lancement (mode accessoire)

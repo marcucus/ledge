@@ -4,6 +4,24 @@ import Foundation
 import Testing
 
 struct DropZoneModuleTests {
+    @Test @MainActor func injectedSettingsControlFolderAcceptance() throws {
+        let suiteName = "ledge.dropzone.tests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Unable to create isolated UserDefaults suite")
+            return
+        }
+        defer { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
+        let settings = SettingsStore(defaults: defaults)
+        settings.dropZoneAcceptFolders = false
+        let module = DropZoneModule(settings: settings)
+        let directory = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        module.addURLs([directory])
+
+        #expect(module.items.isEmpty)
+    }
+
     @Test @MainActor func stopClearsDragStateAndAmbientContribution() {
         let module = DropZoneModule()
         var updates: [AmbientContent?] = []

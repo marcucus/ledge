@@ -3,15 +3,10 @@ import Foundation
 import SwiftUI
 import UserNotifications
 
-public enum TimerAction {
-    case start(id: UUID)
-    case pause(id: UUID)
-    case stop(id: UUID)
-    case reset(id: UUID)
-}
-
 @MainActor
 @Observable
+// La logique reste centralisée, mais les vues, modèles et stockage sont chacun dans leur fichier.
+// swiftlint:disable:next type_body_length
 public final class TimerModule: NotchModule {
     public let id = "timers"
     public let tabIcon = "timer"
@@ -19,6 +14,7 @@ public final class TimerModule: NotchModule {
 
     public private(set) var entries: [TimerEntry] = []
     public private(set) var pomodoroState: PomodoroState = .init()
+    public private(set) var persistenceIssue: TimerPersistenceIssue?
     public var onAmbientUpdate: ((AmbientContent?) -> Void)?
     /// Appelé quand un minuteur (ou une phase Pomodoro) se termine, en plus de la notification
     /// système — laisse à l'appelant (voir `AppDelegate`) la décision d'afficher ou non un peek
@@ -29,11 +25,16 @@ public final class TimerModule: NotchModule {
     @ObservationIgnored private var pomodoroEntryID: UUID?
     @ObservationIgnored private var didRequestNotificationPermission = false
     @ObservationIgnored private let persistenceStore: TimerPersistenceStore
+    @ObservationIgnored private let settings: SettingsStore
     @ObservationIgnored private var isStarted = false
 
     /// `persistenceStore` est injectable pour les tests (répertoire temporaire isolé) ; en
     /// production, l'appel sans argument résout toujours `Application Support/Ledge`.
-    public init(persistenceStore: TimerPersistenceStore = TimerPersistenceStore()) {
+    public init(
+        settings: SettingsStore = .shared,
+        persistenceStore: TimerPersistenceStore = TimerPersistenceStore()
+    ) {
+        self.settings = settings
         self.persistenceStore = persistenceStore
     }
 
@@ -129,10 +130,22 @@ public final class TimerModule: NotchModule {
         clearPersisted()
     }
 
+    public func retryPersistence() {
+        switch persistenceIssue {
+        case .loadFailed: restoreOrResumeTimers()
+        case .saveFailed: persist()
+        case .clearFailed: clearPersisted()
+        case nil: break
+        }
+    }
+
     public func startPomodoro() {
         if let old = pomodoroEntryID { removeTimer(id: old) }
         pomodoroState.reset()
-        addTimer(label: pomodoroState.currentPhaseLabel, duration: pomodoroState.currentPhaseDuration)
+        addTimer(
+            label: pomodoroState.currentPhaseLabel,
+            duration: pomodoroState.currentPhaseDuration(settings: settings)
+        )
         guard let entry = entries.last else { return }
         pomodoroEntryID = entry.id
         startEntry(entry.id)
@@ -195,7 +208,7 @@ public final class TimerModule: NotchModule {
             let progress = running.duration > 0 ? running.remaining / running.duration : 0
             onAmbientUpdate?(.init(
                 kind: .timer(label: remainingLabel(running.remaining), progress: progress),
-                accentColor: SettingsStore.shared.hudAccentColor
+                accentColor: settings.hudAccentColor
             ))
         } else {
             onAmbientUpdate?(nil)
@@ -254,7 +267,10 @@ public final class TimerModule: NotchModule {
         entries.removeAll { $0.id == pomodoroEntryID }
         pomodoroEntryID = nil
         pomodoroState.advance()
-        addTimer(label: pomodoroState.currentPhaseLabel, duration: pomodoroState.currentPhaseDuration)
+        addTimer(
+            label: pomodoroState.currentPhaseLabel,
+            duration: pomodoroState.currentPhaseDuration(settings: settings)
+        )
         guard let entry = entries.last else { return }
         pomodoroEntryID = entry.id
         startEntry(entry.id)
@@ -267,10 +283,18 @@ public final class TimerModule: NotchModule {
     /// l'échéance est déjà passée pendant que Ledge était fermé, `synchronizeTimer` les termine
     /// tout de suite (notification comprise) au lieu de les afficher figés à 0 sans réagir.
     private func restoreOrResumeTimers() {
-        if entries.isEmpty, let state = try? persistenceStore.load(), !state.entries.isEmpty {
-            entries = state.entries
-            pomodoroEntryID = state.pomodoroEntryID
-            pomodoroState = state.pomodoroState
+        if entries.isEmpty {
+            do {
+                let state = try persistenceStore.load()
+                persistenceIssue = nil
+                if !state.entries.isEmpty {
+                    entries = state.entries
+                    pomodoroEntryID = state.pomodoroEntryID
+                    pomodoroState = state.pomodoroState
+                }
+            } catch {
+                persistenceIssue = .loadFailed
+            }
         }
         let now = Date()
         for entry in entries where entry.isRunning {
@@ -280,25 +304,32 @@ public final class TimerModule: NotchModule {
         updateAmbient()
     }
 
-    /// Best-effort : un échec d'écriture ne doit jamais empêcher un timer de fonctionner
-    /// normalement en mémoire (contrairement au presse-papiers, cet état est régénérable sans
-    /// perte grave — voir `TimerPersistenceStore`).
     private func persist() {
         let state = PersistedTimerState(
             entries: entries, pomodoroEntryID: pomodoroEntryID, pomodoroState: pomodoroState
         )
-        try? persistenceStore.save(state)
+        do {
+            try persistenceStore.save(state)
+            persistenceIssue = nil
+        } catch {
+            persistenceIssue = .saveFailed
+        }
     }
 
     private func clearPersisted() {
-        try? persistenceStore.clear()
+        do {
+            try persistenceStore.clear()
+            persistenceIssue = nil
+        } catch {
+            persistenceIssue = .clearFailed
+        }
     }
 
     // MARK: — Notifications
 
     private func requestNotificationPermissionIfNeeded() {
         guard !didRequestNotificationPermission,
-              !SettingsStore.shared.timerAlertVisualOnly,
+              !settings.timerAlertVisualOnly,
               Bundle.main.bundlePath.hasSuffix(".app")
         else { return }
         didRequestNotificationPermission = true
@@ -310,7 +341,6 @@ public final class TimerModule: NotchModule {
 
     private func sendFinishedNotification(for entry: TimerEntry) {
         guard Bundle.main.bundlePath.hasSuffix(".app") else { return }
-        let settings = SettingsStore.shared
         if settings.timerAlertVisualOnly { return }
         let content = UNMutableNotificationContent()
         content.title = entry.label
@@ -326,45 +356,5 @@ public final class TimerModule: NotchModule {
             trigger: nil
         )
         UNUserNotificationCenter.current().add(request)
-    }
-}
-
-// MARK: — Pomodoro
-
-public struct PomodoroState: Codable {
-    public enum Phase: Codable { case work, shortBreak, longBreak }
-    public var phase: Phase = .work
-    public var completedWorkSessions: Int = 0
-
-    public var currentPhaseLabel: String {
-        switch phase {
-        case .work: "Pomodoro"
-        case .shortBreak: NSLocalizedString("timer.pomodoro.shortBreak", bundle: localizationBundle, comment: "")
-        case .longBreak: NSLocalizedString("timer.pomodoro.longBreak", bundle: localizationBundle, comment: "")
-        }
-    }
-
-    public var currentPhaseDuration: TimeInterval {
-        let settings = SettingsStore.shared
-        switch phase {
-        case .work: return settings.pomodoroWorkDuration * 60
-        case .shortBreak: return settings.pomodoroShortBreakDuration * 60
-        case .longBreak: return settings.pomodoroLongBreakDuration * 60
-        }
-    }
-
-    public mutating func reset() {
-        phase = .work
-        completedWorkSessions = 0
-    }
-
-    public mutating func advance() {
-        switch phase {
-        case .work:
-            completedWorkSessions += 1
-            phase = completedWorkSessions % 4 == 0 ? .longBreak : .shortBreak
-        case .shortBreak, .longBreak:
-            phase = .work
-        }
     }
 }

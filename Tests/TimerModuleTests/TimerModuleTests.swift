@@ -5,6 +5,8 @@ import Testing
 
 @MainActor
 struct TimerModuleTests {
+    private enum PersistenceFailure: Error { case expected }
+
     /// Répertoire temporaire isolé : ces tests ne doivent jamais toucher le vrai
     /// `Application Support/Ledge` de la machine (timers réels de l'utilisateur), même
     /// indirectement via les appels à `persist()` déclenchés par `addAndStart`/`send` (doc 13,
@@ -152,6 +154,53 @@ struct TimerModuleTests {
         controller.updateActiveProfile(bundleID: nil)
         #expect(module.entries.first?.isRunning == true)
         #expect(module.entries.first?.scheduledEndDate == endDate)
+    }
+
+    @Test func saveFailureIsVisibleAndRetryable() {
+        var shouldFail = true
+        let store = TimerPersistenceStore(
+            load: { .empty },
+            save: { _ in if shouldFail { throw PersistenceFailure.expected } },
+            clear: {}
+        )
+        let module = TimerModule(persistenceStore: store)
+
+        module.addTimer(label: "Retry", duration: 60)
+        #expect(module.persistenceIssue == .saveFailed)
+
+        shouldFail = false
+        module.retryPersistence()
+        #expect(module.persistenceIssue == nil)
+    }
+
+    @Test func loadFailureIsVisible() {
+        let store = TimerPersistenceStore(
+            load: { throw PersistenceFailure.expected },
+            save: { _ in },
+            clear: {}
+        )
+        let module = TimerModule(persistenceStore: store)
+
+        module.start()
+
+        #expect(module.persistenceIssue == .loadFailed)
+    }
+
+    @Test func clearFailureIsVisibleAndRetryable() {
+        var shouldFail = true
+        let store = TimerPersistenceStore(
+            load: { .empty },
+            save: { _ in },
+            clear: { if shouldFail { throw PersistenceFailure.expected } }
+        )
+        let module = TimerModule(persistenceStore: store)
+
+        module.clearAllTimers()
+        #expect(module.persistenceIssue == .clearFailed)
+
+        shouldFail = false
+        module.retryPersistence()
+        #expect(module.persistenceIssue == nil)
     }
 
     @Test func progressAlwaysStaysInUnitRange() {

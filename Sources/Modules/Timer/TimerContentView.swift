@@ -19,14 +19,46 @@ public struct TimerContentView: View {
     }
 
     public var body: some View {
-        HStack(spacing: 12) {
-            setupColumn
-            Divider().opacity(0.4)
-            runningColumn
+        VStack(spacing: 8) {
+            if let issue = module.persistenceIssue {
+                persistenceBanner(issue)
+            }
+            HStack(spacing: 12) {
+                setupColumn
+                Divider().opacity(0.4)
+                runningColumn
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func persistenceBanner(_ issue: TimerPersistenceIssue) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            Text(LocalizedStringKey(persistenceMessageKey(issue)), bundle: localizationBundle)
+                .font(.caption)
+                .lineLimit(2)
+            Spacer()
+            Button {
+                module.retryPersistence()
+            } label: {
+                Text("action.retry", bundle: localizationBundle)
+            }
+            .buttonStyle(.borderless)
+        }
+        .padding(8)
+        .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func persistenceMessageKey(_ issue: TimerPersistenceIssue) -> String {
+        switch issue {
+        case .loadFailed: "timer.persistence.error.load"
+        case .saveFailed: "timer.persistence.error.save"
+        case .clearFailed: "timer.persistence.error.clear"
+        }
     }
 
     // MARK: — Left column : timers en cours

@@ -7,7 +7,7 @@ struct ClipboardModuleSettingsView: View {
 
     /// Reflète `store.clipboardExcludedApps` localement pour piloter `.onDelete`/insertion sans
     /// aller-retour ; réécrit vers `store` à chaque modification (même schéma que
-    /// `SystemModuleSettingsView.launcherApps`).
+    /// les applications exclues du presse-papiers).
     @State private var excludedApps: [String] = []
 
     var body: some View {

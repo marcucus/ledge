@@ -11,6 +11,7 @@ import SystemModule
 import TimerModule
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private let settings = SettingsStore.shared
     private var notchWindow: NotchWindow?
     private var settingsWindowController: SettingsWindowController?
     private var onboardingWindowController: OnboardingWindowController?
@@ -28,9 +29,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupUpdater()
 
         let window = NotchWindow()
-        let settingsWC = SettingsWindowController()
+        let settingsWC = SettingsWindowController(settings: settings)
         window.controller.openSettings = { settingsWC.show() }
-        let onboardingWC = OnboardingWindowController {
+        let onboardingWC = OnboardingWindowController(settings: settings) {
             settingsWC.show(section: .permissions)
         }
 
@@ -41,7 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindowController = settingsWC
         onboardingWindowController = onboardingWC
 
-        if !SettingsStore.shared.hasCompletedOnboarding {
+        if !settings.hasCompletedOnboarding {
             DispatchQueue.main.async { [weak onboardingWC] in
                 onboardingWC?.show()
             }
@@ -50,7 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Instancie les modules, câble leurs contributions ambient, et les enregistre dans la fenêtre.
     @MainActor private func buildAndRegisterModules(in window: NotchWindow) {
-        let assembly = AppModuleAssembly()
+        let assembly = AppModuleAssembly(settings: settings)
         // Module Système masqué pour le moment : conservé comme source de statut (batterie dans
         // la NavBar) et démarré manuellement, mais retiré des onglets (absent de register()).
         let systemModule = assembly.systemModule
@@ -89,11 +90,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         module.onAmbientUpdate = { [weak window] content in
             window?.controller.setAmbient(content, sourceID: "timers", priority: 2)
         }
-        module.onFinished = { [weak window] in
-            guard SettingsStore.shared.timerFinishedPeekEnabled else { return }
+        module.onFinished = { [weak self, weak window] in
+            guard self?.settings.timerFinishedPeekEnabled == true else { return }
             window?.controller.showPeek(
                 selecting: "timers",
-                duration: SettingsStore.shared.timerFinishedPeekDuration
+                duration: self?.settings.timerFinishedPeekDuration ?? 4
             )
         }
     }
@@ -130,7 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Raccourcis globaux, personnalisables depuis Réglages → Raccourcis.
     @MainActor private func makeShortcutManager(for window: NotchWindow) -> GlobalShortcutManager {
-        let manager = GlobalShortcutManager(settings: .shared)
+        let manager = GlobalShortcutManager(settings: settings)
 
         manager.onOpenClose = { [weak window] in window?.controller.panelClicked() }
 
@@ -164,11 +165,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     private func observeShortcutSettings(_ manager: GlobalShortcutManager) {
         withObservationTracking {
-            _ = SettingsStore.shared.globalShortcutEnabled
-            _ = SettingsStore.shared.shortcutOpenClose
-            _ = SettingsStore.shared.shortcutPaste
-            _ = SettingsStore.shared.shortcutNewTimer
-            _ = SettingsStore.shared.shortcutOpenMedia
+            _ = settings.globalShortcutEnabled
+            _ = settings.shortcutOpenClose
+            _ = settings.shortcutPaste
+            _ = settings.shortcutNewTimer
+            _ = settings.shortcutOpenMedia
         } onChange: { [weak self, weak manager] in
             Task { @MainActor [weak self, weak manager] in
                 guard let manager else { return }
@@ -180,13 +181,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Branche le HUD volume/luminosité sur la fenêtre encoche.
     @MainActor private func makeSystemObserver(for window: NotchWindow) -> SystemObserver {
-        let observer = SystemObserver(settings: .shared)
-        observer.onVolumeChange = { [weak window] value, isMuted in
-            let tint = SettingsStore.shared.hudAccentColor
+        let observer = SystemObserver(settings: settings)
+        observer.onVolumeChange = { [weak self, weak window] value, isMuted in
+            guard let tint = self?.settings.hudAccentColor else { return }
             window?.controller.showHUD(HUDContent(kind: .volume, value: value, isMuted: isMuted, tint: tint))
         }
-        observer.onBrightnessChange = { [weak window] value in
-            let tint = SettingsStore.shared.hudAccentColor
+        observer.onBrightnessChange = { [weak self, weak window] value in
+            guard let tint = self?.settings.hudAccentColor else { return }
             window?.controller.showHUD(HUDContent(kind: .brightness, value: value, tint: tint))
         }
         observer.start()

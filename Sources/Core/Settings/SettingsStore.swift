@@ -173,7 +173,7 @@ import SwiftUI
 
     /// Identifiants de bundle des apps dont les copies ne sont jamais capturées (doc 13,
     /// Jalon 3, item 18). Stocke des identifiants (stables si l'app est déplacée), pas des
-    /// chemins, contrairement à `launcherApps`.
+    /// chemins de fichiers.
     public var clipboardExcludedApps: [String] {
         didSet { defaults.set(clipboardExcludedApps, forKey: Keys.clipboardExcludedApps) }
     }
@@ -230,12 +230,6 @@ import SwiftUI
         didSet { defaults.set(targetScreenName, forKey: Keys.targetScreenName) }
     }
 
-    // MARK: — System launcher
-
-    public var launcherApps: [String] {
-        didSet { defaults.set(launcherApps, forKey: Keys.launcherApps) }
-    }
-
     // MARK: — Ambient / Media
 
     public var ambientShowArtwork: Bool {
@@ -244,34 +238,6 @@ import SwiftUI
 
     public var ambientShowProgress: Bool {
         didSet { defaults.set(ambientShowProgress, forKey: Keys.ambientShowProgress) }
-    }
-
-    // MARK: — System gauges
-
-    public var systemShowCPU: Bool {
-        didSet { defaults.set(systemShowCPU, forKey: Keys.systemShowCPU) }
-    }
-
-    public var systemShowRAM: Bool {
-        didSet { defaults.set(systemShowRAM, forKey: Keys.systemShowRAM) }
-    }
-
-    public var systemShowBattery: Bool {
-        didSet { defaults.set(systemShowBattery, forKey: Keys.systemShowBattery) }
-    }
-
-    public var systemShowNetwork: Bool {
-        didSet { defaults.set(systemShowNetwork, forKey: Keys.systemShowNetwork) }
-    }
-
-    /// Indicateur de confidentialité : micro en cours d'utilisation.
-    public var systemShowMicrophoneIndicator: Bool {
-        didSet { defaults.set(systemShowMicrophoneIndicator, forKey: Keys.systemShowMicrophoneIndicator) }
-    }
-
-    /// Jauge batterie des accessoires Bluetooth (AirPods, souris, clavier…).
-    public var systemShowAccessoryBattery: Bool {
-        didSet { defaults.set(systemShowAccessoryBattery, forKey: Keys.systemShowAccessoryBattery) }
     }
 
     // MARK: — DropZone
@@ -346,15 +312,8 @@ import SwiftUI
         pomodoroLongBreakDuration = defaults.double(forKey: Keys.pomodoroLongBreakDuration).nonZero ?? 15
         targetScreenIdentifier = defaults.string(forKey: Keys.targetScreenIdentifier) ?? ""
         targetScreenName = defaults.string(forKey: Keys.targetScreenName) ?? ""
-        launcherApps = (defaults.stringArray(forKey: Keys.launcherApps)) ?? Self.defaultLauncherApps
         ambientShowArtwork = defaults.object(forKey: Keys.ambientShowArtwork) as? Bool ?? true
         ambientShowProgress = defaults.object(forKey: Keys.ambientShowProgress) as? Bool ?? false
-        systemShowCPU = defaults.object(forKey: Keys.systemShowCPU) as? Bool ?? true
-        systemShowRAM = defaults.object(forKey: Keys.systemShowRAM) as? Bool ?? true
-        systemShowBattery = defaults.object(forKey: Keys.systemShowBattery) as? Bool ?? true
-        systemShowNetwork = defaults.object(forKey: Keys.systemShowNetwork) as? Bool ?? true
-        systemShowMicrophoneIndicator = defaults.object(forKey: Keys.systemShowMicrophoneIndicator) as? Bool ?? true
-        systemShowAccessoryBattery = defaults.object(forKey: Keys.systemShowAccessoryBattery) as? Bool ?? true
         dropZoneAcceptFolders = defaults.object(forKey: Keys.dropZoneAcceptFolders) as? Bool ?? true
         appProfiles = defaults.codable([AppProfile].self, forKey: Keys.appProfiles) ?? []
     }
@@ -366,64 +325,4 @@ import SwiftUI
     public func setModule(_ id: String, enabled: Bool) {
         if enabled { disabledModuleIDs.remove(id) } else { disabledModuleIDs.insert(id) }
     }
-}
-
-// MARK: — UserDefaults keys
-
-// Accès `internal` (plutôt que `private`) pour rester lisible depuis
-// `SettingsStore+Reset.swift` (doc 13, Jalon 4, item 27), qui doit supprimer chaque clé.
-enum Keys {
-    static let hasCompletedOnboarding = "hasCompletedOnboarding"
-    static let collapseDelay = "collapseDelay"
-    static let hotZoneSize = "hotZoneSize"
-    static let moduleOrder = "moduleOrder"
-    static let disabledModules = "disabledModules"
-    static let hudReplaceSystem = "hudReplaceSystem"
-    static let hudBrightnessManualOnly = "hudBrightnessManualOnly"
-    static let hudUseSystemAccent = "hudUseSystemAccent"
-    static let hudAccentColorComponents = "hudAccentColorComponents"
-    static let panelComposition = "panelComposition"
-    static let focusedModulePlacements = "focusedModulePlacements"
-    static let panoramicModulePlacements = "panoramicModulePlacements"
-    static let immersiveModulePlacements = "immersiveModulePlacements"
-    static let focusedShowsModuleGrid = "focusedShowsModuleGrid"
-    static let panoramicShowsModuleGrid = "panoramicShowsModuleGrid"
-    static let immersiveShowsModuleGrid = "immersiveShowsModuleGrid"
-    static let compositionModuleOrders = "compositionModuleOrders"
-    static let legacyPanelWidth = "panelWidth"
-    static let cornerRadius = "cornerRadius"
-    static let panelOpacity = "panelOpacity"
-    static let notchDetectionMode = "notchDetectionMode"
-    static let fullscreenBehavior = "fullscreenBehavior"
-    static let showRingWhenTimerActive = "showRingWhenTimerActive"
-    static let animationSpeed = "animationSpeed"
-    static let clickBehavior = "clickBehavior"
-    static let timerSoundEnabled = "timerSoundEnabled"
-    static let timerAlertVisualOnly = "timerAlertVisualOnly"
-    static let timerFinishedPeekEnabled = "timerFinishedPeekEnabled"
-    static let timerFinishedPeekDuration = "timerFinishedPeekDuration"
-    static let globalShortcutEnabled = "globalShortcutEnabled"
-    static let shortcutOpenClose = "shortcutOpenClose"
-    static let shortcutPaste = "shortcutPaste"
-    static let shortcutNewTimer = "shortcutNewTimer"
-    static let shortcutOpenMedia = "shortcutOpenMedia"
-    static let clipboardMaxItems = "clipboardMaxItems"
-    static let clipboardPersistEnabled = "clipboardPersistEnabled"
-    static let clipboardExcludedApps = "clipboardExcludedApps"
-    static let pomodoroWorkDuration = "pomodoroWorkDuration"
-    static let pomodoroShortBreakDuration = "pomodoroShortBreakDuration"
-    static let pomodoroLongBreakDuration = "pomodoroLongBreakDuration"
-    static let targetScreenIdentifier = "targetScreenIdentifier"
-    static let targetScreenName = "targetScreenName"
-    static let launcherApps = "launcherApps"
-    static let ambientShowArtwork = "ambientShowArtwork"
-    static let ambientShowProgress = "ambientShowProgress"
-    static let systemShowCPU = "systemShowCPU"
-    static let systemShowRAM = "systemShowRAM"
-    static let systemShowBattery = "systemShowBattery"
-    static let systemShowNetwork = "systemShowNetwork"
-    static let systemShowMicrophoneIndicator = "systemShowMicrophoneIndicator"
-    static let systemShowAccessoryBattery = "systemShowAccessoryBattery"
-    static let dropZoneAcceptFolders = "dropZoneAcceptFolders"
-    static let appProfiles = "appProfiles"
 }

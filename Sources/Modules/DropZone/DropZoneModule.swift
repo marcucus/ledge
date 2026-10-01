@@ -17,8 +17,11 @@ public final class DropZoneModule: NotchModule {
 
     public var onAmbientUpdate: ((AmbientContent?) -> Void)?
     @ObservationIgnored private var isStarted = false
+    @ObservationIgnored private let settings: SettingsStore
 
-    public init() {}
+    public init(settings: SettingsStore = .shared) {
+        self.settings = settings
+    }
 
     // MARK: — NotchModule
 
@@ -58,7 +61,7 @@ public final class DropZoneModule: NotchModule {
 
     public func addURLs(_ urls: [URL]) {
         let filtered: [URL]
-        if SettingsStore.shared.dropZoneAcceptFolders {
+        if settings.dropZoneAcceptFolders {
             filtered = urls
         } else {
             filtered = urls.filter { url in

@@ -12,12 +12,17 @@ import TimerModule
 struct AppModuleAssembly {
     let systemModule = SystemModule()
     let mediaModule = MediaModule()
-    let timerModule = TimerModule()
-    let dropZoneModule = DropZoneModule()
+    let timerModule: TimerModule
+    let dropZoneModule: DropZoneModule
     let clipboardModule = ClipboardModule()
     let shortcutsModule = ShortcutsModule()
     let calendarModule = CalendarModule()
     let notesModule = NotesModule()
+
+    init(settings: SettingsStore = .shared) {
+        timerModule = TimerModule(settings: settings)
+        dropZoneModule = DropZoneModule(settings: settings)
+    }
 
     var navigationModules: [any NotchModule] {
         [
