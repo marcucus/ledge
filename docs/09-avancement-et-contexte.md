@@ -304,11 +304,12 @@ réinstalle le tap au changement d'application, sans nécessiter de relance.
 La version publique est `0.2.0`. La candidate locale suivante est `0.3.0` (build `3`) ; elle ne doit
 être publiée qu'après la recette de [doc 12](12-recette-release-candidate.md).
 
-1. Pousser les sept commits de `codex/release-0.3.0` avec un jeton disposant du scope `workflow`,
-   puis valider la nouvelle CI GitHub Actions sur le flux `dev → rc → main`.
+1. Pousser la candidate `codex/release-0.3.0`, puis valider la nouvelle CI GitHub Actions sur le
+   flux `dev → rc → main`. L'accès en écriture de l'app est de nouveau disponible ; celui du site
+   reste refusé en HTTP 403.
 2. Valider Apple Music en lecture réelle : pochette, seek, resynchronisation et permission Automation.
 3. Valider manuellement les trois comportements plein écran et les transitions veille/réveil sur
    écran interne et externe.
 4. Tester Gatekeeper puis une mise à jour Sparkle `0.2.0` → `0.3.0` sur un autre Mac.
-5. Déverrouiller/autoriser la clé privée Sparkle dans le Trousseau, relancer
-   `make direct-appcast`, puis valider le XML et ses métadonnées avant publication.
+5. Effectuer les recettes manuelles restantes avant d'exécuter `make release` : le DMG et
+   l'appcast EdDSA 0.3.0 sont désormais générés et validés par `make verify-release`.

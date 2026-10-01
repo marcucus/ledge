@@ -35,6 +35,20 @@ struct NotchControllerTests {
         return (controller, { UserDefaults.standard.removePersistentDomain(forName: suiteName) })
     }
 
+    private static func eventually(
+        timeout: Duration = .seconds(1),
+        condition: () -> Bool
+    ) async -> Bool {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while clock.now < deadline {
+            if condition() { return true }
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return condition()
+    }
+
     // MARK: — Ambient : priorité
 
     @Test func ambientHigherPriorityWins() {
@@ -301,8 +315,7 @@ struct NotchControllerTests {
         #expect(controller.state == .expanded)
 
         controller.setTransientInteractionActive(false)
-        try? await Task.sleep(for: .milliseconds(30))
-        #expect(controller.state == .collapsed)
+        #expect(await Self.eventually { controller.state == .collapsed })
     }
 
     @Test func hidingSelectedModuleFallsBackToAvailableContent() {

@@ -51,7 +51,7 @@ SPARKLE_FW    := $(SPARKLE_XCF)/macos-arm64_x86_64/Sparkle.framework
 GENERATE_APPCAST := $(shell find .build/artifacts -path "*/bin/generate_appcast" 2>/dev/null | head -1)
 
 .PHONY: all app direct-sign direct-dmg direct-appcast sign dmg notarize appcast \
-	release release-notarized dmg-image appcast-image measure-performance clean
+	release release-notarized dmg-image appcast-image verify-release measure-performance clean
 
 all: app
 
@@ -91,6 +91,7 @@ app:
 	# Notice de la dépendance distribuée avec l'app.
 	@if [ -f ".build/checkouts/Sparkle/LICENSE" ]; then \
 	  cp ".build/checkouts/Sparkle/LICENSE" "$(RES_DIR)/Sparkle-LICENSE.txt"; \
+	  chmod 644 "$(RES_DIR)/Sparkle-LICENSE.txt"; \
 	  echo "  licence: Sparkle-LICENSE.txt"; \
 	fi
 
@@ -218,8 +219,12 @@ ifeq ($(strip $(GENERATE_APPCAST)),)
 	$(error generate_appcast introuvable — exécuter `swift build` au moins une fois)
 endif
 	@echo "▸ Génération de l'appcast Sparkle…"
-	$(GENERATE_APPCAST) $(DIST_DIR)
+	rm -f $(DIST_DIR)/appcast.xml $(DIST_DIR)/*.delta
+	$(GENERATE_APPCAST) --maximum-deltas 0 $(DIST_DIR)
 	@echo "✓ $(DIST_DIR)/appcast.xml"
+
+verify-release:
+	@Scripts/verify-release-artifacts.sh
 
 # ─── 7. Publication ────────────────────────────────────────────────────────────
 # `release` ne dépend d'aucun compte Apple. `release-notarized` conserve le parcours

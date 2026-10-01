@@ -21,15 +21,29 @@ private actor StubShortcutsCommandRunner: ShortcutsCommandRunning {
 }
 
 @MainActor
+private func eventually(
+    timeout: Duration = .seconds(1),
+    condition: () -> Bool
+) async -> Bool {
+    let clock = ContinuousClock()
+    let deadline = clock.now.advanced(by: timeout)
+    while clock.now < deadline {
+        if condition() { return true }
+        await Task.yield()
+        try? await Task.sleep(for: .milliseconds(5))
+    }
+    return condition()
+}
+
+@MainActor
 struct ShortcutsModuleTests {
     @Test func startLoadsAndNormalizesShortcutNames() async {
         let runner = StubShortcutsCommandRunner(responses: [" Morning \n\nFocus\n"])
         let module = ShortcutsModule(commandRunner: runner)
 
         module.start()
-        try? await Task.sleep(for: .milliseconds(30))
 
-        #expect(module.shortcuts == ["Morning", "Focus"])
+        #expect(await eventually { module.shortcuts == ["Morning", "Focus"] })
         #expect(!module.loadFailed)
         #expect(await runner.calls == [["list"]])
     }
@@ -39,9 +53,8 @@ struct ShortcutsModuleTests {
         let module = ShortcutsModule(commandRunner: runner)
 
         module.start()
-        try? await Task.sleep(for: .milliseconds(30))
 
-        #expect(module.loadFailed)
+        #expect(await eventually { module.loadFailed })
         #expect(!module.isLoading)
     }
 
@@ -49,12 +62,11 @@ struct ShortcutsModuleTests {
         let runner = StubShortcutsCommandRunner(responses: ["One\n", nil])
         let module = ShortcutsModule(commandRunner: runner)
         module.start()
-        try? await Task.sleep(for: .milliseconds(30))
+        #expect(await eventually { module.shortcuts == ["One"] })
 
         module.run("One")
-        try? await Task.sleep(for: .milliseconds(30))
 
-        #expect(module.lastRunFailedName == "One")
+        #expect(await eventually { module.lastRunFailedName == "One" })
         #expect(await runner.calls == [["list"], ["run", "One"]])
     }
 

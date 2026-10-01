@@ -78,6 +78,7 @@ swift build
 swift test
 swiftlint lint --quiet Sources Tests
 make app
+make verify-release
 open dist/Ledge.app
 ```
 
@@ -85,7 +86,7 @@ Avant une relance manuelle, arrêter l'instance existante avec `killall Ledge`. 
 distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make notarize` et
 `make appcast` selon les secrets disponibles.
 
-## État vérifié le 30 septembre 2026
+## État vérifié le 1er octobre 2026
 
 - Branche `main`, commit observé `fa5f726`.
 - Jalons 3 et 4 de finalisation (doc 13) ajoutés dans une session sans toolchain Swift (agent
@@ -105,16 +106,18 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   la persistance et l'injection des réglages Drop Zone.
 - Version bundle locale actuelle : `0.3.0` (build `3`), candidate non publiée. La version publique
   GitHub est `0.2.0` ; elle ne doit pas être remplacée ni republier ses assets.
-- Le bundle `0.3.0` a été reconstruit avec `make app`; build, 99 tests et SwiftLint sont verts.
-  La CI et la candidate sont
-  commitées sur `codex/release-0.3.0`, mais le push reste bloqué par un jeton HTTPS sans scope
-  `workflow` et l'absence de clé SSH autorisée ; l'exécution distante reste donc à valider.
+- Le bundle `0.3.0`, son DMG et son appcast EdDSA ont été reconstruits. Build, 99 tests, SwiftLint,
+  `codesign`, `hdiutil`, `xmllint` et `make verify-release` sont verts. Les attentes asynchrones de
+  tests Raccourcis et de fermeture du panneau ne dépendent plus de délais fixes trop courts.
+- La branche candidate `codex/release-0.3.0` peut désormais être poussée avec l'identité HTTPS
+  courante. Le dépôt du site reste refusé en HTTP 403 ; les deux CI distantes restent à valider.
 - La clé publique Sparkle est renseignée. `SUFeedURL` est injectée dans le bundle de distribution
   par `SPARKLE_FEED_URL`; le bundle de développement n'active pas Sparkle sans cette valeur.
 - `make release` crée un DMG signé ad hoc, génère l'appcast Sparkle EdDSA, crée une GitHub Release
-  brouillon, téléverse les deux fichiers puis la publie. Une relance reprend un brouillon du même
-  commit et remplace ses assets partiels. Aucun compte Apple, bucket ou service payant n'est
-  requis. Le parcours Developer ID reste optionnel via `make release-notarized`.
+  brouillon, téléverse le DMG, l'appcast et tout delta référencé, puis la publie. Une relance reprend
+  un brouillon du même commit et remplace ses assets partiels. `make verify-release` contrôle le
+  paquet sans publication. Aucun compte Apple, bucket ou service payant n'est requis. Le parcours
+  Developer ID reste optionnel via `make release-notarized`.
 - Les fonctionnalités Apple Music et les permissions doivent être validées dans une vraie lecture
   et un bundle signé; les tests unitaires ne couvrent pas ce scénario système.
 

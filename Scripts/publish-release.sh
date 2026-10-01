@@ -31,6 +31,21 @@ sparkle_signature=$(xmllint --xpath \
 
 [[ -n "$sparkle_signature" ]] || { print -u2 "Signature Sparkle absente de l'appcast"; exit 1; }
 
+delta_output=$(xmllint --xpath \
+  "//*[local-name()='deltas']/*[local-name()='enclosure']/@url" \
+  "$APPCAST_PATH" 2>/dev/null | sed -E 's/[[:space:]]*url="([^"]+)"/\1\n/g' || true)
+delta_urls=(${(f)delta_output})
+delta_paths=()
+for delta_url in "${delta_urls[@]}"; do
+  [[ -n "$delta_url" ]] || continue
+  delta_name="${delta_url:t}"
+  delta_path="${APPCAST_PATH:h}/$delta_name"
+  [[ -f "$delta_path" ]] || {
+    print -u2 "Delta référencé par l'appcast mais introuvable : $delta_path"
+    exit 1
+  }
+  delta_paths+=("$delta_path")
+done
 command -v jq >/dev/null || { print -u2 "jq est requis pour publier sur GitHub"; exit 1; }
 
 [[ -z "$(git status --porcelain)" ]] || {
@@ -125,14 +140,20 @@ curl --fail --silent --show-error \
 
 dmg_name=$(basename "$DMG_PATH")
 
-# Une relance après un upload partiel remplace uniquement les deux assets du brouillon courant.
-for asset_id in $(print -r -- "$release_response" | jq -r \
-  --arg dmg "$dmg_name" '.assets[] | select(.name == $dmg or .name == "appcast.xml") | .id'); do
-  curl --fail --silent --show-error \
-    -X DELETE \
-    "${auth_headers[@]}" \
-    --output /dev/null \
-    "$api_url/releases/assets/$asset_id"
+# Une relance après un upload partiel remplace uniquement les assets générés pour cette release.
+asset_names=("$dmg_name" "appcast.xml")
+for delta_path in "${delta_paths[@]}"; do
+  asset_names+=("${delta_path:t}")
+done
+for asset_name in "${asset_names[@]}"; do
+  for asset_id in $(print -r -- "$release_response" | jq -r \
+    --arg name "$asset_name" '.assets[] | select(.name == $name) | .id'); do
+    curl --fail --silent --show-error \
+      -X DELETE \
+      "${auth_headers[@]}" \
+      --output /dev/null \
+      "$api_url/releases/assets/$asset_id"
+  done
 done
 
 curl --fail --silent --show-error \
@@ -150,6 +171,17 @@ curl --fail --silent --show-error \
   --data-binary "@$APPCAST_PATH" \
   --output /dev/null \
   "$upload_url?name=appcast.xml"
+
+for delta_path in "${delta_paths[@]}"; do
+  delta_name="${delta_path:t}"
+  curl --fail --silent --show-error \
+    -X POST \
+    "${auth_headers[@]}" \
+    -H "Content-Type: application/octet-stream" \
+    --data-binary "@$delta_path" \
+    --output /dev/null \
+    "$upload_url?name=$delta_name"
+done
 
 curl --fail --silent --show-error \
   -X PATCH \

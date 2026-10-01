@@ -95,18 +95,21 @@ d'observation actives.
 
 ### 7. Valider le paquet de distribution
 
-- [ ] Exécuter `make direct-appcast` pour la version `0.3.0` build `3`.
+- [x] Exécuter `make direct-appcast` pour la version `0.3.0` build `3`.
 - [x] Exécuter `codesign --verify --deep --strict dist/Ledge.app`.
 - [x] Exécuter `hdiutil verify dist/Ledge-0.3.0.dmg`.
-- [ ] Valider `dist/appcast.xml` avec `xmllint`.
-- [ ] Vérifier que l'appcast contient la bonne version, le build, la signature EdDSA, la taille et
+- [x] Valider `dist/appcast.xml` avec `xmllint`.
+- [x] Vérifier que l'appcast contient la bonne version, le build, la signature EdDSA, la taille et
   l'URL du DMG attendu.
-- [ ] Comparer le SHA-256 calculé avec les métadonnées qui seront publiées.
+- [x] Comparer le SHA-256 calculé avec les métadonnées qui seront publiées.
 
-Le bundle et le DMG locaux ont été produits et vérifiés. Le DMG pèse **3 517 998 octets** et son
-SHA-256 est `06317dedc755e9a19f6b164c4086db52b387f6fa54b27e4d5cfb5b583025774e`.
-`make direct-appcast` reste bloqué au moment où l'outil Sparkle demande la clé privée EdDSA au
-Trousseau macOS ; l'ancien `dist/appcast.xml` n'a donc pas été pris pour une preuve de la 0.3.0.
+Le bundle, le DMG et l'appcast ont été régénérés et vérifiés le **1er octobre 2026**. Le
+DMG pèse **3 434 842 octets** et son SHA-256 est
+`1dffa27718e326555d0e2a5176fe9618229045b949b29d2b2aaf93dcf4a60ab6`. L'appcast contient la
+version `0.3.0`, le build `3`, macOS `14.0` et une signature EdDSA. La génération désactive les
+deltas pour cette release et recrée l'appcast afin de ne conserver aucune ancienne référence. Le
+script de publication sait néanmoins téléverser chaque delta référencé et refuse un delta local
+manquant si cette option est réactivée.
 
 ### 8. Effectuer la recette sur le Mac de développement
 
@@ -142,9 +145,9 @@ scénarios fonctionnels ci-dessus.
 
 - [ ] Vérifier d'abord que les tâches bloquantes de `../ledge-site/docs/TACHES-FINALISATION.md`
   sont terminées.
-- [ ] Préparer un changelog utilisateur précis.
+- [x] Préparer un changelog utilisateur précis (`docs/RELEASE-NOTES-0.3.0.md`).
 - [ ] Exécuter explicitement `make release CHANGELOG="…"`.
-- [ ] Vérifier la GitHub Release, ses deux assets et ses métadonnées.
+- [ ] Vérifier la GitHub Release, ses assets et ses métadonnées.
 - [ ] Vérifier immédiatement le téléchargement public, l'appcast et la mise à jour Sparkle.
 
 ## P2 — Dette non bloquante

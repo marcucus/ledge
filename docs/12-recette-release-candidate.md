@@ -14,10 +14,10 @@
 - [x] `make app` — bundle construit avec la licence Sparkle incluse
 - [x] tests, ESLint et build de production de `ledge-site`
 - [ ] CI GitHub verte sur le commit candidat
-- [ ] `make direct-appcast` — DMG et appcast `0.3.0` signés
+- [x] `make direct-appcast` — DMG et appcast `0.3.0` signés
 - [x] `codesign --verify --deep --strict dist/Ledge.app`
 - [x] `hdiutil verify dist/Ledge-0.3.0.dmg`
-- [ ] validation XML de `dist/appcast.xml`
+- [x] validation XML de `dist/appcast.xml`
 - [x] pages juridiques publiques : mentions, confidentialité, conditions et licences en HTTP 200
 - [x] routes publiques : accueil `200`, appcast `200`, téléchargement `302` vers le DMG GitHub
 
@@ -82,7 +82,8 @@ cases ci-dessus et déploiement des pages juridiques du site.
 make release CHANGELOG="Décrire ici les changements de la version 0.3.0"
 ```
 
-Cette commande publie la GitHub Release, le DMG et l'appcast. Si un upload échoue, la même commande
-reprend uniquement le brouillon `v0.3.0` visant le même commit et remplace ses assets partiels. Elle
-refuse de modifier une release déjà publique ou un brouillon associé à un autre commit. Elle ne
-doit pas être lancée pour une simple vérification locale.
+Cette commande publie la GitHub Release, le DMG, l'appcast et chaque delta référencé par l'appcast.
+Si un upload échoue, la même commande reprend uniquement le brouillon `v0.3.0` visant le même
+commit et remplace ses assets partiels. Elle refuse de modifier une release déjà publique ou un
+brouillon associé à un autre commit, ainsi que de publier un appcast qui référence un delta local
+absent. Elle ne doit pas être lancée pour une simple vérification locale.
