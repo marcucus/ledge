@@ -12,7 +12,7 @@ import TimerModule
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = SettingsStore.shared
-    private var notchWindow: NotchWindow?
+    private var notchWindowCoordinator: NotchWindowCoordinator?
     private var settingsWindowController: SettingsWindowController?
     private var onboardingWindowController: OnboardingWindowController?
     private var systemObserver: SystemObserver?
@@ -28,17 +28,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setAppIcon()
         setupUpdater()
 
-        let window = NotchWindow()
         let settingsWC = SettingsWindowController(settings: settings)
-        window.controller.openSettings = { settingsWC.show() }
+        let coordinator = NotchWindowCoordinator(
+            settings: settings,
+            settingsWindowController: settingsWC
+        )
         let onboardingWC = OnboardingWindowController(settings: settings) {
             settingsWC.show(section: .permissions)
         }
 
         setupStatusItem()
-        buildAndRegisterModules(in: window)
-        installObservers(for: window)
-        notchWindow = window
+        coordinator.start()
+        timerModule = coordinator.assembly.timerModule
+        clipboardModule = coordinator.assembly.clipboardModule
+        installObservers(for: coordinator)
+        notchWindowCoordinator = coordinator
         settingsWindowController = settingsWC
         onboardingWindowController = onboardingWC
 
@@ -46,56 +50,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async { [weak onboardingWC] in
                 onboardingWC?.show()
             }
-        }
-    }
-
-    /// Instancie les modules, câble leurs contributions ambient, et les enregistre dans la fenêtre.
-    @MainActor private func buildAndRegisterModules(in window: NotchWindow) {
-        let assembly = AppModuleAssembly(settings: settings)
-        // Module Système masqué pour le moment : conservé comme source de statut (batterie dans
-        // la NavBar) et démarré manuellement, mais retiré des onglets (absent de register()).
-        let systemModule = assembly.systemModule
-        window.controller.statusModule = systemModule
-        systemModule.start()
-
-        let dropZoneModule = assembly.dropZoneModule
-        dropZoneModule.onAmbientUpdate = { [weak window] content in
-            window?.controller.setAmbient(content, sourceID: "dropzone", priority: 1)
-        }
-        window.controller.onDragHoverChange = { [weak dropZoneModule] active in
-            dropZoneModule?.isDragActive = active
-        }
-
-        let mediaModule = assembly.mediaModule
-        mediaModule.onBecameActive = { [weak window] in
-            window?.controller.selectModule(id: "media")
-        }
-        mediaModule.onAmbientUpdate = { [weak window] content in
-            window?.controller.setAmbient(content, sourceID: "media", priority: 3)
-        }
-
-        let timerModule = assembly.timerModule
-        configureTimerModule(timerModule, in: window)
-        self.timerModule = timerModule
-
-        let clipboardModule = assembly.clipboardModule
-        self.clipboardModule = clipboardModule
-
-        window.register(modules: assembly.navigationModules)
-    }
-
-    /// Minuteur : ambient + peek de fin configurable (doc 13, Jalon 3, item 20). Extrait de
-    /// `buildAndRegisterModules(in:)` pour rester sous le seuil SwiftLint de longueur de fonction.
-    @MainActor private func configureTimerModule(_ module: TimerModule, in window: NotchWindow) {
-        module.onAmbientUpdate = { [weak window] content in
-            window?.controller.setAmbient(content, sourceID: "timers", priority: 2)
-        }
-        module.onFinished = { [weak self, weak window] in
-            guard self?.settings.timerFinishedPeekEnabled == true else { return }
-            window?.controller.showPeek(
-                selecting: "timers",
-                duration: self?.settings.timerFinishedPeekDuration ?? 4
-            )
         }
     }
 
@@ -112,42 +66,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Branche les observateurs système (HUD, raccourcis globaux, app active).
-    @MainActor private func installObservers(for window: NotchWindow) {
-        systemObserver = makeSystemObserver(for: window)
-        shortcutManager = makeShortcutManager(for: window)
-        frontmostAppObserver = makeFrontmostAppObserver(for: window)
+    @MainActor private func installObservers(for coordinator: NotchWindowCoordinator) {
+        systemObserver = makeSystemObserver(for: coordinator)
+        shortcutManager = makeShortcutManager(for: coordinator)
+        frontmostAppObserver = makeFrontmostAppObserver(for: coordinator)
     }
 
     /// Bascule les modules visibles selon l'app au premier plan (profils par app).
-    @MainActor private func makeFrontmostAppObserver(for window: NotchWindow) -> FrontmostAppObserver {
+    @MainActor private func makeFrontmostAppObserver(
+        for coordinator: NotchWindowCoordinator
+    ) -> FrontmostAppObserver {
         let observer = FrontmostAppObserver()
-        observer.onActiveAppChange = { [weak window] bundleID in
-            window?.controller.updateActiveProfile(bundleID: bundleID)
+        observer.onActiveAppChange = { [weak coordinator] bundleID in
+            coordinator?.updateActiveProfile(bundleID: bundleID)
         }
-        window.controller.updateActiveProfile(bundleID: observer.currentBundleID)
+        coordinator.updateActiveProfile(bundleID: observer.currentBundleID)
         observer.start()
         return observer
     }
 
     /// Raccourcis globaux, personnalisables depuis Réglages → Raccourcis.
-    @MainActor private func makeShortcutManager(for window: NotchWindow) -> GlobalShortcutManager {
+    @MainActor private func makeShortcutManager(for coordinator: NotchWindowCoordinator) -> GlobalShortcutManager {
         let manager = GlobalShortcutManager(settings: settings)
 
-        manager.onOpenClose = { [weak window] in window?.controller.panelClicked() }
+        manager.onOpenClose = { [weak coordinator] in coordinator?.activeWindow?.controller.panelClicked() }
 
         manager.onPaste = { [weak self] in self?.clipboardModule?.pasteLatest() }
 
-        manager.onNewTimer = { [weak window] in
-            window?.controller.selectModule(id: "timers")
-            if window?.controller.state == .collapsed || window?.controller.state == .ambient {
-                window?.controller.cursorEntered()
+        manager.onNewTimer = { [weak coordinator] in
+            let controller = coordinator?.activeWindow?.controller
+            controller?.selectModule(id: "timers")
+            if controller?.state == .collapsed || controller?.state == .ambient {
+                controller?.cursorEntered()
             }
         }
 
-        manager.onOpenMedia = { [weak window] in
-            window?.controller.selectModule(id: "media")
-            if window?.controller.state == .collapsed || window?.controller.state == .ambient {
-                window?.controller.cursorEntered()
+        manager.onOpenMedia = { [weak coordinator] in
+            let controller = coordinator?.activeWindow?.controller
+            controller?.selectModule(id: "media")
+            if controller?.state == .collapsed || controller?.state == .ambient {
+                controller?.cursorEntered()
             }
         }
 
@@ -180,15 +138,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Branche le HUD volume/luminosité sur la fenêtre encoche.
-    @MainActor private func makeSystemObserver(for window: NotchWindow) -> SystemObserver {
+    @MainActor private func makeSystemObserver(for coordinator: NotchWindowCoordinator) -> SystemObserver {
         let observer = SystemObserver(settings: settings)
-        observer.onVolumeChange = { [weak self, weak window] value, isMuted in
+        observer.onVolumeChange = { [weak self, weak coordinator] value, isMuted in
             guard let tint = self?.settings.hudAccentColor else { return }
-            window?.controller.showHUD(HUDContent(kind: .volume, value: value, isMuted: isMuted, tint: tint))
+            coordinator?.showHUD(HUDContent(kind: .volume, value: value, isMuted: isMuted, tint: tint))
         }
-        observer.onBrightnessChange = { [weak self, weak window] value in
+        observer.onBrightnessChange = { [weak self, weak coordinator] value in
             guard let tint = self?.settings.hudAccentColor else { return }
-            window?.controller.showHUD(HUDContent(kind: .brightness, value: value, tint: tint))
+            coordinator?.showHUD(HUDContent(kind: .brightness, value: value, tint: tint))
         }
         observer.start()
         return observer

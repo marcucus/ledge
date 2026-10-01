@@ -16,6 +16,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.title = NSLocalizedString("settings.window.title", bundle: localizationBundle, comment: "")
         window.appearance = NSAppearance(named: .darkAqua)
         window.backgroundColor = .black
+        window.contentMinSize = SettingsWindowGeometry.minimumContentSize
         window.center()
         window.setFrameAutosaveName("SettingsWindow")
         super.init(window: window)
@@ -31,6 +32,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     func show(section: SettingsSection = .general) {
         guard let window else { return }
+        normalizeWindowGeometry(window)
         window.contentView = NSHostingView(
             rootView: SettingsRootView(store: settings, initialSelection: section)
         )
@@ -41,6 +43,16 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         showWindow(nil)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func normalizeWindowGeometry(_ window: NSWindow) {
+        let contentSize = SettingsWindowGeometry.normalizedContentSize(window.contentLayoutRect.size)
+        if contentSize != window.contentLayoutRect.size {
+            window.setContentSize(contentSize)
+        }
+        guard let visibleFrame = (window.screen ?? NSScreen.main)?.visibleFrame else { return }
+        let frame = SettingsWindowGeometry.constrainedFrame(window.frame, to: visibleFrame)
+        window.setFrame(frame, display: false)
     }
 
     private func applyDockIcon() {

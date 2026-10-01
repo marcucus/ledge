@@ -230,6 +230,18 @@ import SwiftUI
         didSet { defaults.set(targetScreenName, forKey: Keys.targetScreenName) }
     }
 
+    public var displayTargetMode: DisplayTargetMode {
+        didSet { defaults.set(displayTargetMode.rawValue, forKey: Keys.displayTargetMode) }
+    }
+
+    public var selectedScreenIdentifiers: [String] {
+        didSet { defaults.set(selectedScreenIdentifiers, forKey: Keys.selectedScreenIdentifiers) }
+    }
+
+    public var selectedScreenNames: [String: String] {
+        didSet { defaults.set(selectedScreenNames, forKey: Keys.selectedScreenNames) }
+    }
+
     // MARK: — Ambient / Media
 
     public var ambientShowArtwork: Bool {
@@ -310,8 +322,20 @@ import SwiftUI
         pomodoroWorkDuration = defaults.double(forKey: Keys.pomodoroWorkDuration).nonZero ?? 25
         pomodoroShortBreakDuration = defaults.double(forKey: Keys.pomodoroShortBreakDuration).nonZero ?? 5
         pomodoroLongBreakDuration = defaults.double(forKey: Keys.pomodoroLongBreakDuration).nonZero ?? 15
-        targetScreenIdentifier = defaults.string(forKey: Keys.targetScreenIdentifier) ?? ""
-        targetScreenName = defaults.string(forKey: Keys.targetScreenName) ?? ""
+        let legacyTargetIdentifier = defaults.string(forKey: Keys.targetScreenIdentifier) ?? ""
+        let legacyTargetName = defaults.string(forKey: Keys.targetScreenName) ?? ""
+        targetScreenIdentifier = legacyTargetIdentifier
+        targetScreenName = legacyTargetName
+        let storedTargetMode = defaults.object(forKey: Keys.displayTargetMode) as? Int
+        if let storedTargetMode, let mode = DisplayTargetMode(rawValue: storedTargetMode) {
+            displayTargetMode = mode
+        } else {
+            displayTargetMode = legacyTargetIdentifier.isEmpty ? .automatic : .selected
+        }
+        selectedScreenIdentifiers = defaults.stringArray(forKey: Keys.selectedScreenIdentifiers)
+            ?? (legacyTargetIdentifier.isEmpty ? [] : [legacyTargetIdentifier])
+        selectedScreenNames = defaults.dictionary(forKey: Keys.selectedScreenNames) as? [String: String]
+            ?? (legacyTargetIdentifier.isEmpty ? [:] : [legacyTargetIdentifier: legacyTargetName])
         ambientShowArtwork = defaults.object(forKey: Keys.ambientShowArtwork) as? Bool ?? true
         ambientShowProgress = defaults.object(forKey: Keys.ambientShowProgress) as? Bool ?? false
         dropZoneAcceptFolders = defaults.object(forKey: Keys.dropZoneAcceptFolders) as? Bool ?? true

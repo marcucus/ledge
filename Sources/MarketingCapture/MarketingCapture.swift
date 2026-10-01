@@ -250,12 +250,15 @@ struct MarketingCapture {
     @MainActor
     private static func makeShortcutsModule() -> ShortcutsModule {
         let module = ShortcutsModule()
-        module.configureMarketingCapture(shortcuts: [
-            "Résumer le presse-papiers",
-            "Basculer le Wi-Fi",
-            "Créer une note rapide",
-            "Exporter en PDF",
-        ])
+        module.configureMarketingCapture(
+            shortcuts: [
+                "Résumer le presse-papiers",
+                "Basculer le Wi-Fi",
+                "Créer une note rapide",
+                "Exporter en PDF",
+            ],
+            favorites: ["Basculer le Wi-Fi"]
+        )
         return module
     }
 

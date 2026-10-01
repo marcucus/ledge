@@ -65,6 +65,9 @@ extension SettingsStore {
         pomodoroLongBreakDuration = fresh.pomodoroLongBreakDuration
         targetScreenIdentifier = fresh.targetScreenIdentifier
         targetScreenName = fresh.targetScreenName
+        displayTargetMode = fresh.displayTargetMode
+        selectedScreenIdentifiers = fresh.selectedScreenIdentifiers
+        selectedScreenNames = fresh.selectedScreenNames
         ambientShowArtwork = fresh.ambientShowArtwork
         ambientShowProgress = fresh.ambientShowProgress
         dropZoneAcceptFolders = fresh.dropZoneAcceptFolders
@@ -89,7 +92,8 @@ extension Keys {
             shortcutOpenClose, shortcutPaste, shortcutNewTimer, shortcutOpenMedia,
             clipboardMaxItems, clipboardPersistEnabled, clipboardExcludedApps,
             pomodoroWorkDuration, pomodoroShortBreakDuration, pomodoroLongBreakDuration,
-            targetScreenIdentifier, targetScreenName, ambientShowArtwork, ambientShowProgress,
+            targetScreenIdentifier, targetScreenName, displayTargetMode, selectedScreenIdentifiers,
+            selectedScreenNames, ambientShowArtwork, ambientShowProgress,
             dropZoneAcceptFolders, appProfiles, legacyLauncherApps, legacySystemShowCPU,
             legacySystemShowRAM, legacySystemShowBattery, legacySystemShowNetwork,
             legacySystemShowMicrophoneIndicator, legacySystemShowAccessoryBattery,

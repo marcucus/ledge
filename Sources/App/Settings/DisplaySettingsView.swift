@@ -9,20 +9,22 @@ struct DisplaySettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker(selection: targetScreenBinding) {
-                    Text("settings.display.targetScreen.auto", bundle: localizationBundle)
-                        .tag("")
-                    ForEach(screens) { screen in
-                        Text(menuLabel(for: screen)).tag(screen.id)
-                    }
-                    if isSelectedScreenUnavailable {
-                        Text(unavailableMenuLabel).tag(store.targetScreenIdentifier)
-                    }
+                Picker(selection: targetModeBinding) {
+                    Text("settings.display.targetMode.automatic", bundle: localizationBundle)
+                        .tag(DisplayTargetMode.automatic)
+                    Text("settings.display.targetMode.all", bundle: localizationBundle)
+                        .tag(DisplayTargetMode.all)
+                    Text("settings.display.targetMode.selected", bundle: localizationBundle)
+                        .tag(DisplayTargetMode.selected)
                 } label: {
                     Text("settings.display.targetScreen", bundle: localizationBundle)
                 }
 
-                selectedScreenSummary
+                if store.displayTargetMode == .selected {
+                    screenSelection
+                }
+
+                selectionSummary
             } footer: {
                 Text("settings.display.targetScreen.hint", bundle: localizationBundle)
                     .foregroundStyle(.secondary)
@@ -51,156 +53,168 @@ struct DisplaySettingsView: View {
         ) { _ in refreshScreens() }
     }
 
-    private var targetScreenBinding: Binding<String> {
+    private var targetModeBinding: Binding<DisplayTargetMode> {
         Binding(
-            get: { store.targetScreenIdentifier },
-            set: { identifier in
-                store.targetScreenIdentifier = identifier
-                store.targetScreenName = screens.first(where: { $0.id == identifier })?.name ?? ""
+            get: { store.displayTargetMode },
+            set: { mode in
+                store.displayTargetMode = mode
+                if mode == .selected, store.selectedScreenIdentifiers.isEmpty,
+                   let defaultScreen = screens.first(where: \.isBuiltIn) ?? screens.first {
+                    select(defaultScreen, enabled: true)
+                }
             }
         )
     }
 
-    @ViewBuilder
-    private var selectedScreenSummary: some View {
-        if store.targetScreenIdentifier.isEmpty {
-            screenSummary(
-                icon: "laptopcomputer",
-                titleKey: "settings.display.targetScreen.auto.title",
-                detail: automaticScreenDetail,
-                statusKey: "settings.display.targetScreen.automatic"
-            )
-        } else if let screen = selectedScreen {
-            screenSummary(
-                icon: screen.isBuiltIn ? "laptopcomputer" : "display",
-                title: screen.name,
-                detail: screenDetail(screen),
-                statusKey: screen.hasNotch
+    private var screenSelection: some View {
+        VStack(spacing: 0) {
+            ForEach(screens) { screen in
+                Toggle(isOn: selectionBinding(for: screen)) {
+                    screenRow(screen)
+                }
+                .toggleStyle(.checkbox)
+                .padding(.vertical, 6)
+            }
+
+            ForEach(unavailableSelections, id: \.self) { identifier in
+                Toggle(isOn: unavailableSelectionBinding(identifier)) {
+                    unavailableRow(identifier)
+                }
+                .toggleStyle(.checkbox)
+                .padding(.vertical, 6)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func screenRow(_ screen: ScreenDescriptor) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: screen.isBuiltIn ? "laptopcomputer" : "display")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 24)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(screen.name).font(.body.weight(.medium))
+                Text(screenDetail(screen)).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(
+                screen.hasNotch
                     ? "settings.display.targetScreen.physicalNotch"
-                    : "settings.display.targetScreen.simulatedNotch"
+                    : "settings.display.targetScreen.simulatedNotch",
+                bundle: localizationBundle
             )
-        } else {
-            screenSummary(
-                icon: "display.trianglebadge.exclamationmark",
-                title: unavailableScreenName,
-                detailKey: "settings.display.targetScreen.unavailable.detail",
-                statusKey: "settings.display.targetScreen.unavailable"
-            )
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.secondary)
         }
     }
 
-    private func screenSummary(
-        icon: String,
-        title: String? = nil,
-        titleKey: LocalizedStringKey? = nil,
-        detail: String? = nil,
-        detailKey: LocalizedStringKey? = nil,
-        statusKey: LocalizedStringKey
-    ) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 28)
+    private func unavailableRow(_ identifier: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "display.trianglebadge.exclamationmark")
+                .foregroundStyle(.orange)
+                .frame(width: 24)
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 3) {
-                if let title {
-                    Text(title).font(.body.weight(.medium))
-                } else if let titleKey {
-                    Text(titleKey, bundle: localizationBundle).font(.body.weight(.medium))
-                }
-                if let detail {
-                    Text(detail).font(.footnote).foregroundStyle(.secondary)
-                } else if let detailKey {
-                    Text(detailKey, bundle: localizationBundle)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
+            Text(store.selectedScreenNames[identifier] ?? identifier)
+            Spacer()
+            Text("settings.display.targetScreen.unavailable", bundle: localizationBundle)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var selectionSummary: some View {
+        HStack(spacing: 10) {
+            Image(systemName: summaryIcon)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 24)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(summaryTitle).font(.body.weight(.medium))
+                Text("settings.display.targetScreen.summary.detail", bundle: localizationBundle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Spacer()
-            Text(statusKey, bundle: localizationBundle)
-                .font(.caption.weight(.medium))
+            Text(summaryCount)
+                .font(.caption.monospacedDigit().weight(.medium))
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
     }
 
-    private var selectedScreen: ScreenDescriptor? {
-        screens.first { $0.id == store.targetScreenIdentifier }
+    private var summaryIcon: String {
+        store.displayTargetMode == .all ? "rectangle.on.rectangle" : "display"
     }
 
-    private var isSelectedScreenUnavailable: Bool {
-        !store.targetScreenIdentifier.isEmpty && selectedScreen == nil
+    private var summaryTitle: String {
+        switch store.displayTargetMode {
+        case .automatic: localized("settings.display.targetMode.automatic")
+        case .all: localized("settings.display.targetMode.all")
+        case .selected: localized("settings.display.targetMode.selected")
+        }
     }
 
-    private var unavailableScreenName: String {
-        store.targetScreenName.isEmpty
-            ? NSLocalizedString("settings.display.targetScreen.unknown", bundle: localizationBundle, comment: "")
-            : store.targetScreenName
+    private var summaryCount: String {
+        let count: Int
+        switch store.displayTargetMode {
+        case .automatic: count = min(1, screens.count)
+        case .all: count = screens.count
+        case .selected: count = store.selectedScreenIdentifiers.count
+        }
+        return String(format: localized("settings.display.targetScreen.count.format"), count)
     }
 
-    private var unavailableMenuLabel: String {
-        String(
-            format: NSLocalizedString(
-                "settings.display.targetScreen.unavailable.format",
-                bundle: localizationBundle,
-                comment: ""
-            ),
-            unavailableScreenName
+    private var unavailableSelections: [String] {
+        let connected = Set(screens.map(\.id))
+        return store.selectedScreenIdentifiers.filter { !connected.contains($0) }
+    }
+
+    private func selectionBinding(for screen: ScreenDescriptor) -> Binding<Bool> {
+        Binding(
+            get: { store.selectedScreenIdentifiers.contains(screen.id) },
+            set: { select(screen, enabled: $0) }
         )
     }
 
-    private var automaticScreenDetail: String {
-        let screen = screens.first(where: \.isBuiltIn) ?? screens.first
-        return screen?.name ?? NSLocalizedString(
-            "settings.display.targetScreen.unknown",
-            bundle: localizationBundle,
-            comment: ""
+    private func unavailableSelectionBinding(_ identifier: String) -> Binding<Bool> {
+        Binding(
+            get: { store.selectedScreenIdentifiers.contains(identifier) },
+            set: { enabled in
+                guard !enabled else { return }
+                store.selectedScreenIdentifiers.removeAll { $0 == identifier }
+                store.selectedScreenNames[identifier] = nil
+            }
         )
     }
 
-    private func menuLabel(for screen: ScreenDescriptor) -> String {
-        let key = screen.isBuiltIn
-            ? "settings.display.targetScreen.builtIn.format"
-            : "settings.display.targetScreen.external.format"
-        let baseLabel = String(
-            format: NSLocalizedString(key, bundle: localizationBundle, comment: ""),
-            screen.name
-        )
-        let matches = screens.filter { $0.name == screen.name && $0.isBuiltIn == screen.isBuiltIn }
-        guard matches.count > 1, let index = matches.firstIndex(of: screen) else { return baseLabel }
-        return String(
-            format: NSLocalizedString(
-                "settings.display.targetScreen.duplicate.format",
-                bundle: localizationBundle,
-                comment: ""
-            ),
-            baseLabel,
-            index + 1
-        )
+    private func select(_ screen: ScreenDescriptor, enabled: Bool) {
+        if enabled {
+            if !store.selectedScreenIdentifiers.contains(screen.id) {
+                store.selectedScreenIdentifiers.append(screen.id)
+            }
+            store.selectedScreenNames[screen.id] = screen.name
+        } else {
+            store.selectedScreenIdentifiers.removeAll { $0 == screen.id }
+            store.selectedScreenNames[screen.id] = nil
+        }
     }
 
     private func screenDetail(_ screen: ScreenDescriptor) -> String {
         String(
-            format: NSLocalizedString(
-                "settings.display.targetScreen.resolution",
-                bundle: localizationBundle,
-                comment: ""
-            ),
+            format: localized("settings.display.targetScreen.resolution"),
             screen.width,
             screen.height
         )
     }
 
-    private func refreshScreens() {
-        screens = NSScreen.availableDescriptors
-        migrateLegacySelectionIfNeeded()
+    private func localized(_ key: String) -> String {
+        NSLocalizedString(key, bundle: localizationBundle, comment: "")
     }
 
-    private func migrateLegacySelectionIfNeeded() {
-        guard store.targetScreenIdentifier.isEmpty, !store.targetScreenName.isEmpty,
-              let legacyScreen = screens.first(where: { $0.name == store.targetScreenName })
-        else { return }
-        store.targetScreenIdentifier = legacyScreen.id
+    private func refreshScreens() {
+        screens = NSScreen.availableDescriptors
     }
 }

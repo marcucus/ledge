@@ -5,7 +5,8 @@ import SwiftUI
 // La fenêtre centralise volontairement le cycle de vie AppKit et ses transitions géométriques.
 // swiftlint:disable:next type_body_length
 public final class NotchWindow: NSPanel {
-    public let controller = NotchController(settings: .shared)
+    public let controller: NotchController
+    public let fixedTargetScreenIdentifier: String?
 
     private var currentGeometry: NotchGeometry?
     private var screenObserver: NSObjectProtocol?
@@ -18,7 +19,12 @@ public final class NotchWindow: NSPanel {
         self?.handleFullscreenChange(isFullscreen)
     }
 
-    public init() {
+    public init(
+        settings: SettingsStore = .shared,
+        targetScreenIdentifier: String? = nil
+    ) {
+        controller = NotchController(settings: settings)
+        fixedTargetScreenIdentifier = targetScreenIdentifier
         super.init(
             contentRect: .zero,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -64,8 +70,6 @@ public final class NotchWindow: NSPanel {
             applyCollectionBehavior(for: controller.fullscreenBehavior)
             _ = controller.expandedWidth
             _ = controller.expandedContentHeight
-            _ = controller.targetScreenIdentifier
-            _ = controller.targetScreenName
             _ = controller.hotZoneHorizontalInset
             _ = controller.hotZoneBottomInset
         } onChange: { [weak self] in
@@ -123,14 +127,17 @@ public final class NotchWindow: NSPanel {
     private func positionOnNotch() {
         let screen = resolvedTargetScreen()
         fullscreenMonitor.updateTargetScreen(screen)
-        guard let geometry = screen?.notchGeometry() ?? screen.map({ scr in
-            // Écran sans encoche : ancre une encoche simulée au centre du bord supérieur.
-            let bounds = scr.frame
+        guard let screen else { return }
+        let physicalGeometry = screen.notchGeometry()
+        controller.usesExternalDisplayIndicator = physicalGeometry == nil
+        let geometry = physicalGeometry ?? {
+            // Écran sans encoche : conserve une zone d'ancrage invisible au bord supérieur.
+            let bounds = screen.frame
             let size = NotchGeometry.fallbackSize
             let rect = CGRect(x: bounds.midX - size.width / 2, y: bounds.maxY - size.height,
                               width: size.width, height: size.height)
             return NotchGeometry(notchRect: rect, screenFrame: bounds)
-        }) else { return }
+        }()
         currentGeometry = geometry
         updateFrame(for: controller.state, from: .collapsed, animated: false)
     }
@@ -138,14 +145,8 @@ public final class NotchWindow: NSPanel {
     /// Honore la cible explicite tant qu'elle est connectée. Si elle disparaît, Ledge revient
     /// temporairement sur l'écran intégré sans effacer le choix, puis la retrouve à la reconnexion.
     private func resolvedTargetScreen() -> NSScreen? {
-        let identifier = controller.targetScreenIdentifier
-        if !identifier.isEmpty {
-            return NSScreen.screen(identifier: identifier) ?? NSScreen.withNotch ?? NSScreen.main
-        }
-
-        let legacyName = controller.targetScreenName
-        if !legacyName.isEmpty {
-            return NSScreen.screen(named: legacyName) ?? NSScreen.withNotch ?? NSScreen.main
+        if let fixedTargetScreenIdentifier {
+            return NSScreen.screen(identifier: fixedTargetScreenIdentifier)
         }
         return NSScreen.withNotch ?? NSScreen.main
     }

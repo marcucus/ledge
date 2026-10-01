@@ -8,7 +8,7 @@
 ## État courant au 30 septembre 2026
 
 - Les jalons historiques 0 à 3 et les jalons de finalisation 1 à 4 sont terminés.
-- L'application compte huit modules compilés, sept onglets visibles et 99 tests dans 14 suites.
+- L'application compte huit modules compilés, sept onglets visibles et 110 tests dans 17 suites.
 - La version publique est `0.2.0`. La candidate locale est `0.3.0` (build `3`).
 - Le plan actif est désormais le **jalon 5** de [l'audit de finalisation](13-audit-finalisation.md) :
   CI, recette manuelle, second Mac, mise à jour Sparkle et publication.

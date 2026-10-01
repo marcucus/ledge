@@ -12,6 +12,7 @@ import Foundation
     public private(set) var isExpansionSettled = false
     public var notchWidth: CGFloat = NotchGeometry.fallbackSize.width
     public var notchHeight: CGFloat = NotchGeometry.fallbackSize.height
+    public internal(set) var usesExternalDisplayIndicator = false
 
     public var onTransition: ((NotchState) -> Void)?
     public var openSettings: (() -> Void)?

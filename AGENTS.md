@@ -98,7 +98,7 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   `init(directory:)` déclarés `private`/`internal` alors qu'exposés dans une API publique),
   corrigés dans la foulée avec un avertissement de longueur de fonction dans
   `AppDelegate.buildAndRegisterModules(in:)` (câblage du minuteur extrait dans `makeTimerModule(in:)`).
-- `swift test` compile et exécute **99 tests dans 14 suites**, tous verts. Les nouvelles suites
+- `swift test` compile et exécute **110 tests dans 17 suites**, tous verts. Les nouvelles suites
   couvrent aussi Calendrier, Notes, Raccourcis et l'assemblage des modules de l'app.
 - SwiftLint est vert sur `Sources` et `Tests`, sans avertissement. `SettingsStore.swift` et
   `NotchController.swift` ont été ramenés sous 400 lignes par extraction des clés et du contenu
@@ -106,7 +106,7 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   la persistance et l'injection des réglages Drop Zone.
 - Version bundle locale actuelle : `0.3.0` (build `3`), candidate non publiée. La version publique
   GitHub est `0.2.0` ; elle ne doit pas être remplacée ni republier ses assets.
-- Le bundle `0.3.0`, son DMG et son appcast EdDSA ont été reconstruits. Build, 99 tests, SwiftLint,
+- Le bundle `0.3.0`, son DMG et son appcast EdDSA ont été reconstruits. Build, 110 tests, SwiftLint,
   `codesign`, `hdiutil`, `xmllint` et `make verify-release` sont verts. Les attentes asynchrones de
   tests Raccourcis et de fermeture du panneau ne dépendent plus de délais fixes trop courts.
 - Le vrai push de `codex/release-0.3.0` reste refusé : le PAT HTTPS n'a pas le scope `workflow`

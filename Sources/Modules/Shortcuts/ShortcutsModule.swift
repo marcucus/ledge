@@ -15,16 +15,25 @@ public final class ShortcutsModule: NotchModule {
     public private(set) var loadFailed = false
     public private(set) var runningShortcutName: String?
     public private(set) var lastRunFailedName: String?
+    public private(set) var lastRunSucceededName: String?
+    public private(set) var favoriteShortcutNames: Set<String>
     @ObservationIgnored private var isStarted = false
     @ObservationIgnored private var lifecycleGeneration = 0
+    @ObservationIgnored private var successFeedbackTask: Task<Void, Never>?
     @ObservationIgnored private let commandRunner: any ShortcutsCommandRunning
+    @ObservationIgnored private let defaults: UserDefaults
+    private static let favoriteShortcutNamesKey = "shortcutsFavoriteNames"
 
     public convenience init() {
-        self.init(commandRunner: SystemShortcutsCommandRunner())
+        self.init(commandRunner: SystemShortcutsCommandRunner(), defaults: .standard)
     }
 
-    init(commandRunner: any ShortcutsCommandRunning) {
+    init(commandRunner: any ShortcutsCommandRunning, defaults: UserDefaults = .standard) {
         self.commandRunner = commandRunner
+        self.defaults = defaults
+        favoriteShortcutNames = Set(
+            defaults.stringArray(forKey: Self.favoriteShortcutNamesKey) ?? []
+        )
     }
 
     // MARK: — NotchModule
@@ -41,8 +50,10 @@ public final class ShortcutsModule: NotchModule {
         guard isStarted else { return }
         isStarted = false
         lifecycleGeneration += 1
+        successFeedbackTask?.cancel()
         isLoading = false
         runningShortcutName = nil
+        lastRunSucceededName = nil
     }
 
     public func makePeekView() -> AnyView {
@@ -57,8 +68,12 @@ public final class ShortcutsModule: NotchModule {
 
     /// Injecte une liste de raccourcis de démonstration sans passer par `/usr/bin/shortcuts` —
     /// utilisé uniquement par `MarketingCapture` (cf. docs/PLAN-REFONTE-FIDELITE.md).
-    package func configureMarketingCapture(shortcuts: [String]) {
+    package func configureMarketingCapture(
+        shortcuts: [String],
+        favorites: Set<String> = []
+    ) {
         self.shortcuts = shortcuts
+        favoriteShortcutNames = favorites
         isLoading = false
         loadFailed = false
     }
@@ -88,14 +103,51 @@ public final class ShortcutsModule: NotchModule {
     /// Lance un raccourci par son nom, en tâche de fond (fire-and-forget).
     public func run(_ name: String) {
         guard isStarted, runningShortcutName == nil else { return }
+        successFeedbackTask?.cancel()
         runningShortcutName = name
         lastRunFailedName = nil
+        lastRunSucceededName = nil
         let generation = lifecycleGeneration
         Task {
             let succeeded = await runShortcut(named: name)
             guard isStarted, lifecycleGeneration == generation else { return }
             runningShortcutName = nil
-            if !succeeded { lastRunFailedName = name }
+            if succeeded {
+                showSuccessFeedback(for: name, generation: generation)
+            } else {
+                lastRunFailedName = name
+            }
+        }
+    }
+
+    public func isFavorite(_ name: String) -> Bool {
+        favoriteShortcutNames.contains(name)
+    }
+
+    public func toggleFavorite(_ name: String) {
+        if favoriteShortcutNames.contains(name) {
+            favoriteShortcutNames.remove(name)
+        } else {
+            favoriteShortcutNames.insert(name)
+        }
+        defaults.set(favoriteShortcutNames.sorted(), forKey: Self.favoriteShortcutNamesKey)
+    }
+
+    public var orderedShortcuts: [String] {
+        let favorites = shortcuts.filter(favoriteShortcutNames.contains)
+        let others = shortcuts.filter { !favoriteShortcutNames.contains($0) }
+        return favorites + others
+    }
+
+    private func showSuccessFeedback(for name: String, generation: Int) {
+        lastRunSucceededName = name
+        successFeedbackTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled,
+                  let self,
+                  self.isStarted,
+                  self.lifecycleGeneration == generation else { return }
+            self.lastRunSucceededName = nil
         }
     }
 

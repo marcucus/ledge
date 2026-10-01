@@ -37,6 +37,25 @@ struct SettingsStoreTests {
         #expect(reloadedStore.targetScreenName == "Studio Display")
     }
 
+    @Test func multiDisplaySelectionPersistsModeIdentifiersAndNames() {
+        let suiteName = "ledge.multi-screen.tests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Unable to create isolated UserDefaults suite")
+            return
+        }
+        defer { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
+
+        let initialStore = SettingsStore(defaults: defaults)
+        initialStore.displayTargetMode = .selected
+        initialStore.selectedScreenIdentifiers = ["one", "two"]
+        initialStore.selectedScreenNames = ["one": "Mac", "two": "Studio"]
+
+        let reloadedStore = SettingsStore(defaults: defaults)
+        #expect(reloadedStore.displayTargetMode == .selected)
+        #expect(reloadedStore.selectedScreenIdentifiers == ["one", "two"])
+        #expect(reloadedStore.selectedScreenNames["two"] == "Studio")
+    }
+
     @Test func panelCompositionDefaultsToPanoramicAndPersists() {
         let suiteName = "ledge.composition.tests.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {

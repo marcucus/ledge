@@ -8,7 +8,7 @@
 ## État vérifié
 
 - `swift build` : réussi.
-- `swift test` : **99 tests dans 14 suites**, tous réussis.
+- `swift test` : **110 tests dans 17 suites**, tous réussis.
 - `swiftlint lint --quiet Sources Tests` : aucune erreur ni avertissement.
 - `SettingsStore.swift` (328 lignes) et `NotchController.swift` (367 lignes) sont sous le seuil de
   400 lignes.
@@ -104,10 +104,10 @@ d'observation actives.
 - [x] Comparer le SHA-256 calculé avec les métadonnées qui seront publiées.
 
 Le bundle, le DMG et l'appcast ont été régénérés et vérifiés le **1er octobre 2026**. Le
-DMG pèse **3 434 842 octets** et son SHA-256 est
-`1dffa27718e326555d0e2a5176fe9618229045b949b29d2b2aaf93dcf4a60ab6`. L'appcast contient la
-version `0.3.0`, le build `3`, macOS `14.0` et une signature EdDSA. La génération désactive les
-deltas pour cette release et recrée l'appcast afin de ne conserver aucune ancienne référence. Le
+DMG pèse **3 511 066 octets** et son SHA-256 est
+`1ebca1e74d462f2271c47ced8b7d3d721dacff8e151c9fb93e11af8f1db0e122`. L'appcast contient la
+version `0.3.0`, le build `3`, macOS `14.0` et une signature EdDSA, ainsi que l'entrée stable 0.2.0.
+La génération désactive les deltas pour cette release. Le
 script de publication sait néanmoins téléverser chaque delta référencé et refuse un delta local
 manquant si cette option est réactivée.
 

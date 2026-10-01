@@ -47,7 +47,7 @@ extension NSScreen {
     }
 
     /// Écran correspondant à l'identifiant persistant CoreGraphics.
-    static func screen(identifier: String) -> NSScreen? {
+    public static func screen(identifier: String) -> NSScreen? {
         guard !identifier.isEmpty else { return nil }
         return screens.first { $0.ledgeIdentifier == identifier }
     }

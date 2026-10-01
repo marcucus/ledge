@@ -64,16 +64,35 @@ struct NotchContentView: View {
                        value: controller.panelComposition)
             .colorScheme(.dark)
 
+            if state == .collapsed && controller.usesExternalDisplayIndicator {
+                ExternalDisplayIndicator()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            }
+
             // Ring timer
             if state == .collapsed {
                 TimerRingView(controller: controller)
                     .frame(
-                        width: controller.notchWidth + NotchController.timerRingInset * 2,
-                        height: controller.notchHeight + NotchController.timerRingInset
+                        width: timerRingWidth,
+                        height: timerRingHeight
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
         }
+    }
+
+    private var timerRingWidth: CGFloat {
+        let baseWidth = controller.usesExternalDisplayIndicator
+            ? ExternalDisplayIndicator.width
+            : controller.notchWidth
+        return baseWidth + NotchController.timerRingInset * 2
+    }
+
+    private var timerRingHeight: CGFloat {
+        let baseHeight = controller.usesExternalDisplayIndicator
+            ? ExternalDisplayIndicator.height
+            : controller.notchHeight
+        return baseHeight + NotchController.timerRingInset
     }
 
     private var outerHorizontalPadding: CGFloat {

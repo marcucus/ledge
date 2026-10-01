@@ -161,9 +161,10 @@ et **remplacer** l'overlay natif de macOS.
   action de récupération lorsque c’est pertinent.
 - VoiceOver enrichi sur la navigation et le HUD ; les animations principales respectent le réglage
   macOS « Réduire les animations ».
-- Sélecteur d'écran fiable dans Réglages → Affichage : écran du Mac par défaut ou écran externe
-  explicite, pseudo-encoche sur les écrans sans encoche, cible persistante et restauration après
-  une déconnexion temporaire.
+- Sélecteur d'écran fiable dans Réglages → Affichage : écran du Mac par défaut, tous les écrans ou
+  sélection multiple persistante. Chaque cible reçoit un panneau léger qui partage les mêmes
+  modules ; une fine barre noire remplace l'encoche sur les écrans externes. Une cible déconnectée
+  reste mémorisée et revient automatiquement.
 - Trois dispositions persistantes dans Réglages → Apparence : Concentrée, Panoramique par défaut
   et Immersive. Elles conservent un fond noir continu avec l'encoche, ajustent largeur, hauteur et
   navigation, et partagent une transition amortie qui respecte « Réduire les animations ».
@@ -194,7 +195,7 @@ et **remplacer** l'overlay natif de macOS.
   que lorsque l’accès est accordé.
 - Raccourcis distingue une liste vide d’un échec de la commande système et affiche aussi l’échec
   éventuel d’un lancement.
-- La suite couvre 99 tests dans 14 suites, dont les cas de veille, grille vide, module masqué pendant
+- La suite couvre 110 tests dans 17 suites, dont les cas de veille, grille vide, module masqué pendant
   sa sélection, élément épinglé et fichier de Drop Zone devenu indisponible.
 
 ## Cycle de vie et confidentialité des modules (Jalon 2, 27 septembre 2026)
@@ -287,7 +288,16 @@ aux réglages sont injectées dans Timer, Drop Zone et l'assemblage App. Les err
 écriture et suppression de `timers.json` sont visibles dans le module et récupérables avec
 « Réessayer ». La publication GitHub reprend désormais un brouillon du même commit après un upload
 partiel, et `make measure-performance` produit des mesures CPU/RSS CSV reproductibles. Build,
-99 tests dans 14 suites et SwiftLint sans avertissement sont verts.
+110 tests dans 17 suites et SwiftLint sans avertissement sont verts.
+
+**Polissage d'interface (1er octobre 2026)** : la barre de navigation remplit désormais l'épaule
+gauche selon sa capacité réelle avant d'envoyer les modules en débordement à droite de l'encoche.
+Le module Raccourcis gagne une recherche, des lignes entièrement cliquables et des retours explicites
+de chargement, d'erreur, d'exécution et de succès. Ses favoris sont persistants et remontent en tête
+de liste. Ledge peut être affiché sur tous les écrans ou une sélection d'écrans sans dupliquer les
+sources des modules. Sur un écran sans encoche, l'état replié devient
+une fine barre noire au bord supérieur plutôt qu'une encoche simulée. Enfin, la fenêtre Paramètres
+normalise toute taille restaurée à au moins 720 × 520 pt et la replace dans la zone visible.
 
 ## Construire & lancer
 
