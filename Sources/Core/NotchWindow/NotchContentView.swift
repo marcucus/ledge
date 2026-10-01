@@ -37,6 +37,9 @@ struct NotchContentView: View {
                     .padding(.top, controller.panelComposition == .immersive ? 8 : 0)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .environment(\.panelComposition, controller.panelComposition)
+                    .environment(\.transientInteractionHandler) {
+                        controller.setTransientInteractionActive($0)
+                    }
                     .transition(contentTransition)
                 }
             }

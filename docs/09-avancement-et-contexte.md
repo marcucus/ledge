@@ -301,6 +301,8 @@ normalise toute taille restaurée à au moins 720 × 520 pt et la replace dans l
 La page Permissions réévalue aussi ses statuts chaque seconde tant qu'elle est visible, car macOS
 ne publie pas de notification TCC fiable lors d'un changement effectué dans Réglages Système ; la
 tâche est automatiquement annulée dès que l'utilisateur quitte cette page.
+L'aperçu Quick Look de la Drop Zone maintient désormais le panneau ouvert et tolère la traversée
+entre la tuile et son popover ; un PDF reste donc interactif sous le pointeur, scrollbar comprise.
 
 ## Construire & lancer
 

@@ -169,9 +169,11 @@ private struct ShelfItemView: View {
     let item: ShelfItem
     let onRemove: () -> Void
 
-    /// Délai avant l'apparition de l'aperçu QuickLook, annulé si le survol s'arrête avant.
-    @State private var hoverPreviewTask: Task<Void, Never>?
+    /// Les courts délais d'ouverture et de fermeture permettent de traverser l'espace entre
+    /// la tuile et le popover sans que l'aperçu disparaisse sous le pointeur.
+    @State private var previewTask: Task<Void, Never>?
     @State private var isPreviewVisible = false
+    @Environment(\.transientInteractionHandler) private var transientInteractionHandler
 
     var body: some View {
         VStack(spacing: 4) {
@@ -198,12 +200,19 @@ private struct ShelfItemView: View {
         .help(item.displayName)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(item.displayName)
-        .onHover(perform: handleHover)
+        .onHover(perform: handleItemHover)
         .popover(isPresented: $isPreviewVisible, arrowEdge: .top) {
             QuickLookPreview(url: item.url)
                 .padding(12)
+                .onHover(perform: handlePreviewHover)
         }
-        .onDisappear { hoverPreviewTask?.cancel() }
+        .onChange(of: isPreviewVisible) { _, isVisible in
+            transientInteractionHandler(isVisible)
+        }
+        .onDisappear {
+            previewTask?.cancel()
+            transientInteractionHandler(false)
+        }
         // L'aperçu ne dépendait que du survol — inutilisable au clavier ou avec VoiceOver
         // (doc 13, Jalon 4, item 24). `.focusable()` + Espace reproduit le raccourci Quick
         // Look standard du Finder ; l'action nommée offre le même bascule via le rotor
@@ -245,16 +254,36 @@ private struct ShelfItemView: View {
 
     /// Programme l'ouverture de l'aperçu après un court délai, annulé si le survol cesse
     /// ou change de cible avant l'expiration (pattern collapseTask/hudTask de NotchController).
-    private func handleHover(isHovering: Bool) {
-        hoverPreviewTask?.cancel()
-        guard isHovering, item.isAvailable else {
-            isPreviewVisible = false
-            return
+    private func handleItemHover(isHovering: Bool) {
+        previewTask?.cancel()
+        guard item.isAvailable else { return }
+        if isHovering, !isPreviewVisible {
+            schedulePreviewOpening()
+        } else if !isHovering, isPreviewVisible {
+            schedulePreviewClosing()
         }
-        hoverPreviewTask = Task { @MainActor in
+    }
+
+    private func handlePreviewHover(isHovering: Bool) {
+        previewTask?.cancel()
+        if !isHovering {
+            schedulePreviewClosing()
+        }
+    }
+
+    private func schedulePreviewOpening() {
+        previewTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(450))
             guard !Task.isCancelled else { return }
             isPreviewVisible = true
+        }
+    }
+
+    private func schedulePreviewClosing() {
+        previewTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            isPreviewVisible = false
         }
     }
 }
