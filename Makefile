@@ -51,7 +51,7 @@ SPARKLE_FW    := $(SPARKLE_XCF)/macos-arm64_x86_64/Sparkle.framework
 GENERATE_APPCAST := $(shell find .build/artifacts -path "*/bin/generate_appcast" 2>/dev/null | head -1)
 
 .PHONY: all app direct-sign direct-dmg direct-appcast sign dmg notarize appcast \
-	release release-notarized dmg-image appcast-image clean
+	release release-notarized dmg-image appcast-image measure-performance clean
 
 all: app
 
@@ -249,6 +249,15 @@ endif
 	@echo "▸ Publication de la release notarisée v$(VERSION)…"
 	@Scripts/publish-release.sh
 	@echo "✓ Release notarisée v$(VERSION) publiée → https://github.com/$(GITHUB_REPOSITORY)/releases/tag/v$(VERSION)"
+
+# Mesure un processus Ledge déjà lancé. Préparer le scénario dans l'app, puis exécuter par ex. :
+#   make measure-performance SCENARIO=idle DURATION=30 INTERVAL=1
+SCENARIO ?= idle
+DURATION ?= 30
+INTERVAL ?= 1
+
+measure-performance:
+	@Scripts/measure-performance.sh "$(SCENARIO)" "$(DURATION)" "$(INTERVAL)"
 
 # ─── Nettoyage ─────────────────────────────────────────────────────────────────
 

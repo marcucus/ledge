@@ -66,14 +66,46 @@ payload=$(jq -cn \
   '{tag_name:$tag,target_commitish:$commit,name:$name,body:$body,draft:true,prerelease:$prerelease}')
 
 api_url="https://api.github.com/repos/$GITHUB_REPOSITORY"
-release_response=$(curl --fail --silent --show-error \
-  -X POST \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $GITHUB_TOKEN" \
-  -H "X-GitHub-Api-Version: 2026-03-10" \
-  -H "Content-Type: application/json" \
-  --data-binary "$payload" \
-  "$api_url/releases")
+auth_headers=(
+  -H "Accept: application/vnd.github+json"
+  -H "Authorization: Bearer $GITHUB_TOKEN"
+  -H "X-GitHub-Api-Version: 2026-03-10"
+)
+
+lookup=$(curl --silent --show-error \
+  "${auth_headers[@]}" \
+  --write-out $'\n%{http_code}' \
+  "$api_url/releases/tags/v$VERSION")
+lookup_status=${lookup##*$'\n'}
+lookup_body=${lookup%$'\n'*}
+
+case "$lookup_status" in
+  200)
+    [[ "$(print -r -- "$lookup_body" | jq -r '.draft')" == "true" ]] || {
+      print -u2 "La release v$VERSION existe déjà et n'est pas un brouillon"
+      exit 1
+    }
+    existing_commit=$(print -r -- "$lookup_body" | jq -r '.target_commitish')
+    [[ "$existing_commit" == "$commit" ]] || {
+      print -u2 "Le brouillon v$VERSION vise $existing_commit au lieu de $commit"
+      exit 1
+    }
+    release_response=$lookup_body
+    print "▸ Reprise du brouillon GitHub v$VERSION…"
+    ;;
+  404)
+    release_response=$(curl --fail --silent --show-error \
+      -X POST \
+      "${auth_headers[@]}" \
+      -H "Content-Type: application/json" \
+      --data-binary "$payload" \
+      "$api_url/releases")
+    ;;
+  *)
+    print -u2 "Impossible de rechercher la release v$VERSION (HTTP $lookup_status)"
+    exit 1
+    ;;
+esac
 
 upload_url=$(print -r -- "$release_response" | jq -r '.upload_url | split("{")[0]')
 release_id=$(print -r -- "$release_response" | jq -r '.id')
@@ -82,13 +114,30 @@ release_id=$(print -r -- "$release_response" | jq -r '.id')
   exit 1
 }
 
+# Réapplique les métadonnées calculées localement lors d'une reprise de brouillon.
+curl --fail --silent --show-error \
+  -X PATCH \
+  "${auth_headers[@]}" \
+  -H "Content-Type: application/json" \
+  --data-binary "$payload" \
+  --output /dev/null \
+  "$api_url/releases/$release_id"
+
 dmg_name=$(basename "$DMG_PATH")
+
+# Une relance après un upload partiel remplace uniquement les deux assets du brouillon courant.
+for asset_id in $(print -r -- "$release_response" | jq -r \
+  --arg dmg "$dmg_name" '.assets[] | select(.name == $dmg or .name == "appcast.xml") | .id'); do
+  curl --fail --silent --show-error \
+    -X DELETE \
+    "${auth_headers[@]}" \
+    --output /dev/null \
+    "$api_url/releases/assets/$asset_id"
+done
 
 curl --fail --silent --show-error \
   -X POST \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $GITHUB_TOKEN" \
-  -H "X-GitHub-Api-Version: 2026-03-10" \
+  "${auth_headers[@]}" \
   -H "Content-Type: application/x-apple-diskimage" \
   --data-binary "@$DMG_PATH" \
   --output /dev/null \
@@ -96,9 +145,7 @@ curl --fail --silent --show-error \
 
 curl --fail --silent --show-error \
   -X POST \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $GITHUB_TOKEN" \
-  -H "X-GitHub-Api-Version: 2026-03-10" \
+  "${auth_headers[@]}" \
   -H "Content-Type: application/xml" \
   --data-binary "@$APPCAST_PATH" \
   --output /dev/null \
@@ -106,9 +153,7 @@ curl --fail --silent --show-error \
 
 curl --fail --silent --show-error \
   -X PATCH \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $GITHUB_TOKEN" \
-  -H "X-GitHub-Api-Version: 2026-03-10" \
+  "${auth_headers[@]}" \
   -H "Content-Type: application/json" \
   --data-binary '{"draft":false}' \
   --output /dev/null \
