@@ -298,6 +298,9 @@ de liste. Ledge peut être affiché sur tous les écrans ou une sélection d'éc
 sources des modules. Sur un écran sans encoche, l'état replié devient
 une fine barre noire au bord supérieur plutôt qu'une encoche simulée. Enfin, la fenêtre Paramètres
 normalise toute taille restaurée à au moins 720 × 520 pt et la replace dans la zone visible.
+La page Permissions réévalue aussi ses statuts chaque seconde tant qu'elle est visible, car macOS
+ne publie pas de notification TCC fiable lors d'un changement effectué dans Réglages Système ; la
+tâche est automatiquement annulée dès que l'utilisateur quitte cette page.
 
 ## Construire & lancer
 
