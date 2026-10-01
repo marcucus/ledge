@@ -12,7 +12,7 @@
 - `swiftlint lint --quiet Sources Tests` : aucune erreur ni avertissement.
 - `SettingsStore.swift` (328 lignes) et `NotchController.swift` (367 lignes) sont sous le seuil de
   400 lignes.
-- La candidate est découpée sur `codex/release-0.3.0` en sept commits cohérents. Le push reste
+- La candidate est découpée sur `codex/release-0.3.0` en commits cohérents. Le push reste
   bloqué : le jeton HTTPS courant n'a pas le scope `workflow` requis pour modifier la CI et aucune
   clé SSH autorisée n'est disponible sur cette machine.
 

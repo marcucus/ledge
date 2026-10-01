@@ -304,9 +304,9 @@ réinstalle le tap au changement d'application, sans nécessiter de relance.
 La version publique est `0.2.0`. La candidate locale suivante est `0.3.0` (build `3`) ; elle ne doit
 être publiée qu'après la recette de [doc 12](12-recette-release-candidate.md).
 
-1. Pousser la candidate `codex/release-0.3.0`, puis valider la nouvelle CI GitHub Actions sur le
-   flux `dev → rc → main`. L'accès en écriture de l'app est de nouveau disponible ; celui du site
-   reste refusé en HTTP 403.
+1. Fournir au PAT de l'app le scope `workflow`, pousser `codex/release-0.3.0`, puis valider la CI
+   GitHub Actions sur le flux `dev → rc → main`. Le vrai push est toujours refusé malgré une
+   simulation réussie ; celui du site reste refusé en HTTP 403.
 2. Valider Apple Music en lecture réelle : pochette, seek, resynchronisation et permission Automation.
 3. Valider manuellement les trois comportements plein écran et les transitions veille/réveil sur
    écran interne et externe.

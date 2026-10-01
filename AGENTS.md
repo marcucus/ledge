@@ -109,8 +109,10 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
 - Le bundle `0.3.0`, son DMG et son appcast EdDSA ont été reconstruits. Build, 99 tests, SwiftLint,
   `codesign`, `hdiutil`, `xmllint` et `make verify-release` sont verts. Les attentes asynchrones de
   tests Raccourcis et de fermeture du panneau ne dépendent plus de délais fixes trop courts.
-- La branche candidate `codex/release-0.3.0` peut désormais être poussée avec l'identité HTTPS
-  courante. Le dépôt du site reste refusé en HTTP 403 ; les deux CI distantes restent à valider.
+- Le vrai push de `codex/release-0.3.0` reste refusé : le PAT HTTPS n'a pas le scope `workflow`
+  requis pour `.github/workflows/ci.yml`, même si `git push --dry-run` l'annonce à tort comme
+  possible. Le dépôt du site reste lui aussi refusé en HTTP 403 ; les deux CI distantes restent à
+  valider.
 - La clé publique Sparkle est renseignée. `SUFeedURL` est injectée dans le bundle de distribution
   par `SPARKLE_FEED_URL`; le bundle de développement n'active pas Sparkle sans cette valeur.
 - `make release` crée un DMG signé ad hoc, génère l'appcast Sparkle EdDSA, crée une GitHub Release
