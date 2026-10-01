@@ -65,10 +65,14 @@ struct ClipboardModuleSettingsView: View {
             Button {
                 pickAppToExclude()
             } label: {
-                Label(
-                    LocalizedStringKey("settings.modules.clipboard.excludedApps.add"),
-                    systemImage: "plus"
-                )
+                Label {
+                    Text(
+                        "settings.modules.clipboard.excludedApps.add",
+                        bundle: localizationBundle
+                    )
+                } icon: {
+                    Image(systemName: "plus")
+                }
             }
         } header: {
             Text("settings.modules.clipboard.excludedApps", bundle: localizationBundle)

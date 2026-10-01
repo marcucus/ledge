@@ -303,6 +303,8 @@ ne publie pas de notification TCC fiable lors d'un changement effectué dans Ré
 tâche est automatiquement annulée dès que l'utilisateur quitte cette page.
 L'aperçu Quick Look de la Drop Zone maintient désormais le panneau ouvert et tolère la traversée
 entre la tuile et son popover ; un PDF reste donc interactif sous le pointeur, scrollbar comprise.
+Les boutons « Ajouter une app… » du presse-papiers et « Ajouter un profil » utilisent explicitement
+le bundle Core de localisation, évitant l'affichage brut de leur clé dans la cible App.
 
 ## Construire & lancer
 
