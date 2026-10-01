@@ -8,11 +8,11 @@
 ## État vérifié
 
 - `swift build` : réussi.
-- `swift test` : **95 tests dans 14 suites**, tous réussis.
-- `swiftlint lint --quiet Sources Tests` : aucune erreur.
-- Deux avertissements de longueur de fichier subsistent : `SettingsStore.swift` (429 lignes) et
-  `NotchController.swift` (443 lignes).
-- La candidate est découpée sur `codex/release-0.3.0` en quatre commits cohérents. Le push reste
+- `swift test` : **99 tests dans 14 suites**, tous réussis.
+- `swiftlint lint --quiet Sources Tests` : aucune erreur ni avertissement.
+- `SettingsStore.swift` (328 lignes) et `NotchController.swift` (367 lignes) sont sous le seuil de
+  400 lignes.
+- La candidate est découpée sur `codex/release-0.3.0` en sept commits cohérents. Le push reste
   bloqué : le jeton HTTPS courant n'a pas le scope `workflow` requis pour modifier la CI et aucune
   clé SSH autorisée n'est disponible sur cette machine.
 
@@ -149,17 +149,17 @@ scénarios fonctionnels ci-dessus.
 
 ## P2 — Dette non bloquante
 
-- [ ] Extraire progressivement `SettingsStore.swift` et `NotchController.swift` sous 400 lignes.
-- [ ] Réduire les accès à `SettingsStore.shared` au profit de l'injection.
-- [ ] Remplacer les `try?` de persistance des timers par une erreur visible et récupérable.
-- [ ] Supprimer ou isoler les vues et réglages Système devenus inaccessibles depuis la décision de
+- [x] Extraire progressivement `SettingsStore.swift` et `NotchController.swift` sous 400 lignes.
+- [x] Réduire les accès à `SettingsStore.shared` au profit de l'injection.
+- [x] Remplacer les `try?` de persistance des timers par une erreur visible et récupérable.
+- [x] Supprimer ou isoler les vues et réglages Système devenus inaccessibles depuis la décision de
   conserver ce module hors navigation.
-- [ ] Rendre `publish-release.sh` récupérable après un échec d'upload : reprendre ou supprimer
+- [x] Rendre `publish-release.sh` récupérable après un échec d'upload : reprendre ou supprimer
   proprement la release brouillon au lieu de laisser un tag bloquant.
-- [ ] Ajouter des mesures de performance reproductibles.
-- [ ] Consolider les docs 01 à 06 : distinguer clairement vision historique, fonctions livrées et
+- [x] Ajouter des mesures de performance reproductibles.
+- [x] Consolider les docs 01 à 06 : distinguer clairement vision historique, fonctions livrées et
   fonctions volontairement hors périmètre.
-- [ ] Réduire `docs/10-audit-et-plan.md` à son rôle d'archive et garder ce document comme backlog
+- [x] Réduire `docs/10-audit-et-plan.md` à son rôle d'archive et garder ce document comme backlog
   opérationnel de la candidate.
 
 ## Hors périmètre de `0.3.0`

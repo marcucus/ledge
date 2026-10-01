@@ -9,9 +9,8 @@
 ## État automatisé de la candidate
 
 - [x] `swift build`
-- [x] `swift test` — 95 tests dans 14 suites
-- [x] `swiftlint lint --quiet Sources Tests` — aucune erreur ; deux avertissements historiques de
-  longueur de fichier (`SettingsStore.swift` et `NotchController.swift`)
+- [x] `swift test` — 99 tests dans 14 suites
+- [x] `swiftlint lint --quiet Sources Tests` — aucune erreur ni avertissement
 - [x] `make app` — bundle construit avec la licence Sparkle incluse
 - [x] tests, ESLint et build de production de `ledge-site`
 - [ ] CI GitHub verte sur le commit candidat
@@ -48,6 +47,20 @@
 16. Réinitialiser tous les réglages et confirmer le retour immédiat aux valeurs par défaut.
 17. Ouvrir les quatre liens juridiques depuis À propos et depuis l'onboarding.
 
+### Mesures CPU et mémoire reproductibles
+
+Lancer le bundle, préparer le scénario dans l'app, puis mesurer chaque état pendant la même durée :
+
+```bash
+make measure-performance SCENARIO=idle DURATION=30 INTERVAL=1
+make measure-performance SCENARIO=timer DURATION=30 INTERVAL=1
+make measure-performance SCENARIO=media DURATION=30 INTERVAL=1
+```
+
+Chaque commande écrit un CSV horodaté dans `dist/` et affiche CPU moyen/max ainsi que RSS
+moyenne/max. Conserver les trois CSV avec les notes de recette pour comparer les mêmes scénarios
+entre candidates.
+
 ## Recette indispensable sur un autre Mac
 
 Cette partie ne peut pas être validée depuis la machine de développement.
@@ -69,5 +82,7 @@ cases ci-dessus et déploiement des pages juridiques du site.
 make release CHANGELOG="Décrire ici les changements de la version 0.3.0"
 ```
 
-Cette commande publie la GitHub Release, le DMG et l'appcast. Elle ne doit pas être lancée pour une
-simple vérification locale.
+Cette commande publie la GitHub Release, le DMG et l'appcast. Si un upload échoue, la même commande
+reprend uniquement le brouillon `v0.3.0` visant le même commit et remplace ses assets partiels. Elle
+refuse de modifier une release déjà publique ou un brouillon associé à un autre commit. Elle ne
+doit pas être lancée pour une simple vérification locale.

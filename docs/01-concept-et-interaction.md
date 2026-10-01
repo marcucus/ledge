@@ -1,5 +1,9 @@
 # 01 — Concept & modèle d'interaction
 
+> **Statut 0.3.0 : contrat produit actif.** Les cinq états livrés sont `collapsed`, `ambient`,
+> `peeking`, `hud` et `expanded`. Les idées non présentes dans le code restent de la vision et ne
+> constituent pas des promesses de la candidate ; voir [doc 09](09-avancement-et-contexte.md).
+
 ## Vision
 
 L'encoche est un « trou noir » matériel que macOS n'exploite pas. Ledge en fait un

@@ -1,7 +1,8 @@
 # 06 — Écran Paramètres
 
-> Le centre de contrôle de l'app. L'utilisateur y compose son menu (modules actifs, ordre,
-> comportements) et règle les 4 choix critiques (multi-écran, plein écran, permissions, encoche).
+> **Statut 0.3.0 : livré, sauf mentions explicitement historiques.** L'utilisateur compose les
+> sept modules visibles et règle multi-écran, plein écran, permissions et encoche. Les réglages du
+> module Système ont été retirés avec son onglet ; voir [doc 09](09-avancement-et-contexte.md).
 
 ## Forme
 

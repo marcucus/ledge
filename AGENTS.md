@@ -97,25 +97,24 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   `init(directory:)` déclarés `private`/`internal` alors qu'exposés dans une API publique),
   corrigés dans la foulée avec un avertissement de longueur de fonction dans
   `AppDelegate.buildAndRegisterModules(in:)` (câblage du minuteur extrait dans `makeTimerModule(in:)`).
-- `swift test` compile et exécute **95 tests dans 14 suites**, tous verts. Les nouvelles suites
+- `swift test` compile et exécute **99 tests dans 14 suites**, tous verts. Les nouvelles suites
   couvrent aussi Calendrier, Notes, Raccourcis et l'assemblage des modules de l'app.
-- SwiftLint est vert sur `Sources` et `Tests` (aucune erreur), avec deux avertissements de longueur
-  de fichier : `SettingsStore.swift` et `NotchController.swift` (429 lignes chacun), au-delà du
-  seuil de 400 lignes (pas l'erreur à 500) ; restructuration reportée plutôt que refactorée sans
-  pouvoir compiler. `Tests/CoreTests/NotchControllerTests.swift` (425 lignes) n'est pas concerné :
-  `.swiftlint.yml` scope l'analyse à `included: Sources`, qui prime sur les répertoires passés à la
-  CLI — passer `Tests` en argument ne l'y fait donc pas réellement analyser.
+- SwiftLint est vert sur `Sources` et `Tests`, sans avertissement. `SettingsStore.swift` et
+  `NotchController.swift` ont été ramenés sous 400 lignes par extraction des clés et du contenu
+  transient. Les erreurs disque du Timer sont visibles et récupérables, et quatre tests couvrent
+  la persistance et l'injection des réglages Drop Zone.
 - Version bundle locale actuelle : `0.3.0` (build `3`), candidate non publiée. La version publique
   GitHub est `0.2.0` ; elle ne doit pas être remplacée ni republier ses assets.
-- Le bundle `0.3.0` a été reconstruit avec `make app`; build, 95 tests et SwiftLint sont verts
-  (hors deux avertissements historiques de longueur de fichier). La CI et la candidate sont
+- Le bundle `0.3.0` a été reconstruit avec `make app`; build, 99 tests et SwiftLint sont verts.
+  La CI et la candidate sont
   commitées sur `codex/release-0.3.0`, mais le push reste bloqué par un jeton HTTPS sans scope
   `workflow` et l'absence de clé SSH autorisée ; l'exécution distante reste donc à valider.
 - La clé publique Sparkle est renseignée. `SUFeedURL` est injectée dans le bundle de distribution
   par `SPARKLE_FEED_URL`; le bundle de développement n'active pas Sparkle sans cette valeur.
 - `make release` crée un DMG signé ad hoc, génère l'appcast Sparkle EdDSA, crée une GitHub Release
-  brouillon, téléverse les deux fichiers puis la publie. Aucun compte Apple, bucket ou service
-  payant n'est requis. Le parcours Developer ID reste optionnel via `make release-notarized`.
+  brouillon, téléverse les deux fichiers puis la publie. Une relance reprend un brouillon du même
+  commit et remplace ses assets partiels. Aucun compte Apple, bucket ou service payant n'est
+  requis. Le parcours Developer ID reste optionnel via `make release-notarized`.
 - Les fonctionnalités Apple Music et les permissions doivent être validées dans une vraie lecture
   et un bundle signé; les tests unitaires ne couvrent pas ce scénario système.
 

@@ -194,7 +194,7 @@ et **remplacer** l'overlay natif de macOS.
   que lorsque l’accès est accordé.
 - Raccourcis distingue une liste vide d’un échec de la commande système et affiche aussi l’échec
   éventuel d’un lancement.
-- La suite couvre 95 tests dans 14 suites, dont les cas de veille, grille vide, module masqué pendant
+- La suite couvre 99 tests dans 14 suites, dont les cas de veille, grille vide, module masqué pendant
   sa sélection, élément épinglé et fichier de Drop Zone devenu indisponible.
 
 ## Cycle de vie et confidentialité des modules (Jalon 2, 27 septembre 2026)
@@ -209,11 +209,9 @@ et **remplacer** l'overlay natif de macOS.
   un profil d'app, par exemple pour une app bancaire) arrête réellement `ClipboardSource` — plus
   aucune capture tant qu'il reste désactivé. Avant ce correctif, seule la navigation était masquée ;
   le module continuait de tourner en arrière-plan.
-- Le module Système reste volontairement hors du catalogue des Réglages → Modules (décision
-  produit) : son toggle « activé » et son écran de réglages complets étaient trompeurs, puisque le
-  module n'a jamais été un onglet réel — seule la pastille batterie de la NavBar l'utilise. Les
-  jauges CPU/RAM/réseau, l'indicateur micro, la batterie d'accessoires et le lanceur restent
-  fonctionnels dans le code mais assumés comme non exposés.
+- Le module Système reste volontairement hors du catalogue des Réglages → Modules. Seule sa
+  batterie transverse est conservée dans la NavBar ; les vues, réglages, jauges, toggles et lanceur
+  devenus inaccessibles ont été supprimés au lieu de conserver un second produit caché.
 - Les erreurs de persistance du presse-papiers (lecture, écriture, suppression du fichier
   `clipboard-history.json`) ne sont plus silencieuses : `ClipboardHistoryStore` lève désormais des
   erreurs, `ClipboardModule` les expose via `SettingsStore.clipboardPersistenceIssue`, et
@@ -252,8 +250,6 @@ et **remplacer** l'overlay natif de macOS.
   d'ajustement (±15 s), sans dépendre d'un `Slider` natif.
 - Les molettes H:M:S du réglage de minuteur exposent chacune une valeur et des actions
   d'ajustement bornées à leurs valeurs min/max.
-- Le bouton on/off du module Système expose son état à l'accessibilité (actuellement du code mort
-  documenté comme tel : l'onglet Système a été retiré de la navigation au Jalon 2).
 - L'aperçu QuickLook d'un fichier dans la Drop Zone, jusque-là déclenché uniquement par un survol
   de souris avec un délai de 450 ms, est maintenant accessible au clavier (barre d'espace) et via
   une action VoiceOver nommée.
@@ -285,19 +281,13 @@ et **remplacer** l'overlay natif de macOS.
   état de démarrage et une génération invalidée par `stop()`, empêchant tout callback retardé ou
   double réarmement après un cycle `start()`/`stop()`.
 
-⚠️ **Point de vigilance restant** : `SettingsStore.swift` (429 lignes) et `NotchController.swift`
-(443 lignes) dépassent le seuil d'avertissement SwiftLint de 400 lignes (l'erreur est à 500, non
-atteinte) ; une extraction a été jugée trop risquée à faire sans pouvoir compiler et donc reportée.
-`Tests/CoreTests/NotchControllerTests.swift` (425 lignes) n'est en revanche **pas** signalé par
-SwiftLint : `.swiftlint.yml` scope l'analyse à `included: Sources`, qui prime sur les répertoires
-passés en argument à la CLI — `Tests` n'est donc pas réellement analysé même quand la commande
-l'inclut explicitement. `swift build && swift test && swiftlint lint --quiet Sources Tests` ont
-depuis été exécutés : build ✅, 95 tests dans 14 suites ✅, SwiftLint sans erreur
-(seulement les deux avertissements de longueur de fichier ci-dessus). Deux bugs de niveau d'accès
-introduits pendant cette session (`SettingsStore.defaults` et `TimerPersistenceStore`/son
-`init(directory:)` déclarés `private`/`internal` alors qu'exposés dans une API publique) et un
-avertissement de longueur de fonction (`AppDelegate.buildAndRegisterModules(in:)`, câblage du
-minuteur extrait dans `makeTimerModule(in:)`) ont été corrigés après ce premier retour de build.
+**P2 de maintenance (30 septembre 2026)** : `SettingsStore.swift` (328 lignes) et
+`NotchController.swift` (367 lignes) sont désormais sous le seuil de 400 lignes. Les dépendances
+aux réglages sont injectées dans Timer, Drop Zone et l'assemblage App. Les erreurs de lecture,
+écriture et suppression de `timers.json` sont visibles dans le module et récupérables avec
+« Réessayer ». La publication GitHub reprend désormais un brouillon du même commit après un upload
+partiel, et `make measure-performance` produit des mesures CPU/RSS CSV reproductibles. Build,
+99 tests dans 14 suites et SwiftLint sans avertissement sont verts.
 
 ## Construire & lancer
 
@@ -314,7 +304,7 @@ réinstalle le tap au changement d'application, sans nécessiter de relance.
 La version publique est `0.2.0`. La candidate locale suivante est `0.3.0` (build `3`) ; elle ne doit
 être publiée qu'après la recette de [doc 12](12-recette-release-candidate.md).
 
-1. Pousser les quatre commits de `codex/release-0.3.0` avec un jeton disposant du scope `workflow`,
+1. Pousser les sept commits de `codex/release-0.3.0` avec un jeton disposant du scope `workflow`,
    puis valider la nouvelle CI GitHub Actions sur le flux `dev → rc → main`.
 2. Valider Apple Music en lecture réelle : pochette, seek, resynchronisation et permission Automation.
 3. Valider manuellement les trois comportements plein écran et les transitions veille/réveil sur
