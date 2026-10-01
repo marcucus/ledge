@@ -135,8 +135,9 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   Les DMG et appcasts sont des assets de release, jamais des fichiers suivis par Git.
 - Les promesses du site doivent suivre le code réel : macOS 14+, modules réellement visibles,
   permissions réellement requises, version publiée réelle et limites connues.
-- Au 30 septembre 2026, l'accueil, l'appcast, le téléchargement et les quatre routes juridiques du
-  site public répondent correctement. Le blocage Vercel observé la veille est résolu.
+- La recette du site public était verte le 30 septembre 2026. Le 1er octobre, `ledge.app` sert une
+  page de parking redirigeant vers `/lander`, les API répondent `404` et l'appcast/téléchargement ne
+  servent plus leurs contenus. La configuration DNS/Vercel doit être restaurée avant la release.
 
 ## Fin de tâche
 
