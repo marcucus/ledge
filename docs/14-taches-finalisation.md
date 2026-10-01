@@ -104,8 +104,8 @@ d'observation actives.
 - [x] Comparer le SHA-256 calculé avec les métadonnées qui seront publiées.
 
 Le bundle, le DMG et l'appcast ont été régénérés et vérifiés le **1er octobre 2026**. Le
-DMG pèse **3 511 066 octets** et son SHA-256 est
-`1ebca1e74d462f2271c47ced8b7d3d721dacff8e151c9fb93e11af8f1db0e122`. L'appcast contient la
+DMG pèse **3 518 366 octets** et son SHA-256 est
+`e34044573eda613d07e4e66a7f5f381427bcf320176565ba08e6348a546bebec`. L'appcast contient la
 version `0.3.0`, le build `3`, macOS `14.0` et une signature EdDSA, ainsi que l'entrée stable 0.2.0.
 La génération désactive les deltas pour cette release. Le
 script de publication sait néanmoins téléverser chaque delta référencé et refuse un delta local
