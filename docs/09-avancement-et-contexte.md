@@ -305,6 +305,9 @@ L'aperçu Quick Look de la Drop Zone maintient désormais le panneau ouvert et t
 entre la tuile et son popover ; un PDF reste donc interactif sous le pointeur, scrollbar comprise.
 Les boutons « Ajouter une app… » du presse-papiers et « Ajouter un profil » utilisent explicitement
 le bundle Core de localisation, évitant l'affichage brut de leur clé dans la cible App.
+Après une veille ou un déverrouillage de session, le module Système recrée désormais son
+`CGEventTap` avec trois tentatives bornées. Cela évite que le HUD Ledge et le HUD natif macOS
+s'affichent ensemble lorsque l'ancien Mach port existe encore mais n'intercepte plus les touches.
 
 ## Construire & lancer
 
