@@ -42,13 +42,11 @@ enum ModuleCatalog {
             descriptionKey: "module.clipboard.description",
             settingsBuilder: { store in AnyView(ClipboardModuleSettingsView(store: store)) }
         ),
-        Entry(
-            id: "system",
-            icon: "cpu",
-            nameKey: "module.system.label",
-            descriptionKey: "module.system.description",
-            settingsBuilder: { store in AnyView(SystemModuleSettingsView(store: store)) }
-        ),
+        // Le module Système n'est pas un onglet : il reste une simple source de statut (pastille
+        // batterie de la NavBar, voir `AppDelegate.buildAndRegisterModules`). L'exposer ici
+        // laisserait croire qu'un bascule "activé" ou un écran de réglages a un effet réel, alors
+        // qu'aucun des deux n'en a — décision produit actée dans docs/13-audit-finalisation.md
+        // (Jalon 2, point 11) : retirer les réglages trompeurs plutôt que réintégrer l'onglet.
         Entry(
             id: "shortcuts",
             icon: "bolt.fill",

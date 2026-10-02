@@ -57,7 +57,9 @@ struct PermissionsSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .task { await refreshStatuses() }
+        // TCC ne publie pas de notification fiable quand un toggle change dans Réglages Système.
+        // Cette tâche ne vit que tant que la page Permissions est affichée et s'annule avec la vue.
+        .task { await monitorStatuses() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { await refreshStatuses() }
         }
@@ -151,5 +153,17 @@ struct PermissionsSettingsView: View {
         calendarStatus = EKEventStore.authorizationStatus(for: .event)
         guard notificationsAvailable else { return }
         notificationStatus = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+    }
+
+    @MainActor
+    private func monitorStatuses() async {
+        while !Task.isCancelled {
+            await refreshStatuses()
+            do {
+                try await Task.sleep(for: .seconds(1))
+            } catch {
+                return
+            }
+        }
     }
 }

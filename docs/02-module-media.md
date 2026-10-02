@@ -1,6 +1,8 @@
 # 02 — Module Média 🎵
 
-> Le module « waouh » et le plus simple à brancher → **premier à implémenter (V1)**.
+> **Statut 0.3.0 : livré.** Apple Music, Spotify et les commandes réellement disponibles sont
+> décrits par le code actuel ; les autres sources citées ci-dessous relèvent de la vision
+> historique tant qu'elles ne sont pas implémentées. Voir [doc 09](09-avancement-et-contexte.md).
 
 ## Objectif
 

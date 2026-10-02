@@ -13,6 +13,17 @@ public enum ModulePlacement: Int, CaseIterable {
     case hidden = 2
 }
 
+/// État d'erreur de persistance du presse-papiers, publié par `ClipboardModule` pour que
+/// `ClipboardModuleSettingsView` l'affiche sans connaître l'instance du module en cours
+/// d'exécution (`ModuleCatalog.Entry.settingsBuilder` ne reçoit que `SettingsStore`). `nil` =
+/// aucun problème en cours. Volontairement non persisté : état d'exécution, pas un réglage
+/// utilisateur (doc 13, Jalon 2, point 12).
+public enum ClipboardPersistenceIssue: Equatable {
+    case loadFailed
+    case saveFailed
+    case clearFailed
+}
+
 public enum NotchDetectionMode: Int, CaseIterable {
     case automatic = 0
     case manual = 1
@@ -22,6 +33,28 @@ public enum FullscreenBehavior: Int, CaseIterable {
     case accessible = 0
     case hidden = 1
     case overlay = 2
+}
+
+public enum HotZoneSize: Int, CaseIterable {
+    case precise = 0
+    case standard = 1
+    case generous = 2
+
+    public var horizontalInset: CGFloat {
+        switch self {
+        case .precise: 0
+        case .standard: 8
+        case .generous: 18
+        }
+    }
+
+    public var bottomInset: CGFloat {
+        switch self {
+        case .precise: 0
+        case .standard: 6
+        case .generous: 14
+        }
+    }
 }
 
 public enum AnimationSpeed: Int, CaseIterable {

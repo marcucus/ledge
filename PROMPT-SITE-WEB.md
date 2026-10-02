@@ -146,11 +146,10 @@ La publication et le stockage sont entièrement gérés par GitHub Releases. Sta
 
 Le site doit donner la même sensation que l'app : **sobre, premium, natif macOS, vivant**.
 
-- **Esthétique macOS** : typographie système (`-apple-system`, SF Pro / Inter en fallback web),
-  beaucoup d'espace, matériaux translucides (glassmorphism *discret*, `backdrop-filter`), ombres
-  douces, coins arrondis généreux.
-- **Dark mode d'abord**, mais clair/sombre tous deux soignés (`prefers-color-scheme`). Le noir de
-  l'encoche est un motif central : fond sombre profond, accents lumineux.
+- **Esthétique macOS** : typographie éditoriale lisible, beaucoup d'espace, séparateurs fins,
+  ombres rares et coins cohérents avec l'app. Éviter les empilements de cartes génériques.
+- **Apparence unique** : navbar noire permanente et scène produit noire pour prolonger l'encoche,
+  puis sections éditoriales claires. Il n'existe plus de dark mode ni de sélecteur de thème.
 - **L'encoche est le héros.** La hero section devrait **mettre en scène une encoche** qui s'anime
   (repos → survol → ouvert) — idéalement une démo interactive ou une vidéo/`<canvas>` légère.
   Réutilise les 3 états comme fil narratif de la page.
@@ -165,19 +164,18 @@ Le site doit donner la même sensation que l'app : **sobre, premium, natif macOS
 
 ## 4. Structure de site recommandée (point de départ, adaptable)
 
-1. **Hero** — nom, pitch en une phrase, démo/anim de l'encoche, CTA principal (Télécharger /
-   Rejoindre la liste d'attente), badge « macOS 14+ · Apple Silicon ».
-2. **Le concept** — les 3 états (repos / survol / ouvert), avec visuels. « Une extension naturelle
-   du matériel. »
-3. **Les 7 modules visibles** — présentation fidèle aux onglets réellement enregistrés dans l'app.
-4. **Pourquoi c'est léger** — l'argument technique : ne rien faire au repos, natif, zéro runtime tiers.
-5. **Téléchargement** — CTA « Télécharger pour macOS » → `.dmg` de la **dernière version** (dynamique,
+1. **Récit produit plein écran** — la promesse, la compatibilité et les CTA constituent le premier
+   chapitre d'une scène continue : repos, ambient, ouverture, trois compositions, fermeture puis
+   les sept modules visibles. Les captures proviennent des vraies vues SwiftUI.
+2. **Pourquoi c'est léger** — l'argument technique : presque rien au repos, natif, zéro runtime tiers.
+3. **Téléchargement** — CTA « Télécharger pour macOS » → `.dmg` de la **dernière version** (dynamique,
    cf. §2bis). Version, taille, exigences (macOS 14+ · Apple Silicon), bloc **« Premier lancement »**
    (Gatekeeper / permissions).
-5bis. **Historique des versions / Changelog** — liste des versions publiées (depuis `GET /api/releases`).
-6. **FAQ** — permissions demandées et pourquoi, compatibilité, vie privée (tout est local, rien
-   n'est envoyé), open source ? (non — code visible mais propriétaire).
-7. **Footer** — licence, copyright, lien GitHub, mentions.
+4. **Historique des versions / Changelog** — liste des versions publiées depuis `GET /api/releases`.
+5. **FAQ** — permissions demandées et pourquoi, compatibilité, vie privée (contenus locaux, aucune
+   télémétrie ; mises à jour et pochettes distantes peuvent utiliser le réseau), open source ?
+   (non — code visible mais propriétaire).
+6. **Footer** — copyright, lien GitHub et quatre documents juridiques.
 
 ---
 
@@ -190,9 +188,10 @@ Le site doit donner la même sensation que l'app : **sobre, premium, natif macOS
 - **Stockage des binaires** : **GitHub Releases** dans le dépôt public de l'app.
 - **Index des versions** : API publique GitHub Releases, avec métadonnées signées dans chaque
   release.
-- **Déploiement** : **Vercel** par défaut (natif Next.js + fonctions + Blob), sinon Netlify /
-  Cloudflare. Build reproductible. Le token GitHub d'écriture reste uniquement sur la machine de
-  publication; un éventuel token de lecture du site doit être limité à la lecture.
+- **Déploiement** : **Vercel** avec les fonctions Next.js. Les binaires restent exclusivement dans
+  GitHub Releases : aucun bucket ou Vercel Blob n'est nécessaire. Le token GitHub d'écriture reste
+  uniquement sur la machine de publication; un éventuel token de lecture du site doit être limité
+  à la lecture.
 - **Zéro dépendance superflue.** Comme l'app : *natif d'abord*. Pas de grosse lib d'animation si du
   CSS / Web Animations API suffit. Justifie toute dépendance ajoutée.
 
@@ -218,9 +217,14 @@ Le site doit donner la même sensation que l'app : **sobre, premium, natif macOS
 - Licence **propriétaire** : © 2026 Adrien Marques, tous droits réservés. Le code de l'app est
   *visible* publiquement (transparence / portfolio) mais **pas open source** : copie, modification,
   compilation, distribution, revente interdites sans accord écrit. Voir [LICENSE](LICENSE).
-- **Vie privée** : argument fort — Ledge fonctionne **en local**, ne collecte ni n'envoie de
-  données. Le site lui-même doit être sobre côté tracking (pas de pisteurs invasifs ; si analytics,
-  privacy-friendly type Plausible, et le mentionner).
+- **Vie privée** : argument fort — les contenus de l'utilisateur restent traités **en local** et
+  Ledge n'intègre aucune télémétrie. Ne jamais promettre « aucune transmission » de façon absolue :
+  Sparkle/GitHub servent les mises à jour et le fallback de pochette Spotify peut effectuer une
+  requête vers l'hébergeur de l'image. Le site lui-même reste sans publicité ni mesure d'audience ;
+  toute évolution doit être documentée dans la politique de confidentialité avant publication.
+- **Cadre juridique public** : mentions légales, confidentialité, conditions d'utilisation et
+  licences tierces sont accessibles dans le footer du site et depuis Réglages → À propos dans
+  l'app. L'éditeur est Adrien Marques, personne physique agissant à titre non professionnel.
 
 ---
 

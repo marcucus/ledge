@@ -13,15 +13,6 @@ struct CompositionModuleOrders: Codable {
 }
 
 extension SettingsStore {
-    static let defaultLauncherApps: [String] = {
-        let candidates = [
-            "/Applications/Safari.app",
-            "/System/Applications/Utilities/Terminal.app",
-            "/System/Library/CoreServices/Finder.app",
-        ]
-        return candidates.filter { FileManager.default.fileExists(atPath: $0) }
-    }()
-
     static let defaultFocusedModulePlacements = defaultPlacements(
         bar: ["media", "timers"],
         grid: ["dropzone", "clipboard", "shortcuts", "calendar", "notes"]

@@ -72,7 +72,12 @@ Budget indicatif visé :
   - **Accessible au survol** : on n'affiche rien tant que le curseur ne touche pas le bord haut, façon barre de menu auto-hide.
   - **Masquer auto** : la fenêtre se cache complètement.
   - **Overlay permanent** : toujours visible par-dessus (utile pour timer/anneau).
-- Détection via `NSWorkspace`/observation de l'app active en plein écran.
+- Détection événementielle via les changements d'app et d'espace de `NSWorkspace`, puis comparaison
+  des métadonnées publiques des fenêtres CoreGraphics avec les limites de l'écran ciblé. Aucune
+  capture d'écran ni boucle de polling n'est utilisée.
+- En mode **Accessible**, le panneau revient à `collapsed` mais conserve sa zone de survol invisible.
+  En mode **Masquer auto**, la fenêtre est retirée de l'écran. En mode **Overlay**, ambient, HUD et
+  panneau restent disponibles.
 
 ## Choix 3 — Permissions
 

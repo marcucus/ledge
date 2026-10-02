@@ -37,6 +37,9 @@ struct NotchContentView: View {
                     .padding(.top, controller.panelComposition == .immersive ? 8 : 0)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .environment(\.panelComposition, controller.panelComposition)
+                    .environment(\.transientInteractionHandler) {
+                        controller.setTransientInteractionActive($0)
+                    }
                     .transition(contentTransition)
                 }
             }
@@ -64,11 +67,35 @@ struct NotchContentView: View {
                        value: controller.panelComposition)
             .colorScheme(.dark)
 
+            if state == .collapsed && controller.usesExternalDisplayIndicator {
+                ExternalDisplayIndicator()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            }
+
             // Ring timer
             if state == .collapsed {
                 TimerRingView(controller: controller)
+                    .frame(
+                        width: timerRingWidth,
+                        height: timerRingHeight
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
         }
+    }
+
+    private var timerRingWidth: CGFloat {
+        let baseWidth = controller.usesExternalDisplayIndicator
+            ? ExternalDisplayIndicator.width
+            : controller.notchWidth
+        return baseWidth + NotchController.timerRingInset * 2
+    }
+
+    private var timerRingHeight: CGFloat {
+        let baseHeight = controller.usesExternalDisplayIndicator
+            ? ExternalDisplayIndicator.height
+            : controller.notchHeight
+        return baseHeight + NotchController.timerRingInset
     }
 
     private var outerHorizontalPadding: CGFloat {
@@ -195,25 +222,26 @@ struct HUDBar: View {
 
 struct TimerRingView: View {
     let controller: NotchController
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        if controller.timerRingActive {
-            if reduceMotion {
-                ring(alpha: 0.8)
-            } else {
-                TimelineView(.animation) { (context: TimelineViewDefaultContext) in
-                    let elapsed = context.date.timeIntervalSinceReferenceDate
-                    ring(alpha: 0.5 + 0.4 * sin(elapsed * .pi * 0.8))
-                }
+        if let progress = controller.timerRingProgress {
+            ZStack {
+                ring
+                    .stroke(.white.opacity(0.16), lineWidth: 1.5)
+                ring
+                    .trim(from: 0, to: max(0.015, progress))
+                    .stroke(
+                        controller.appAccentColor,
+                        style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
+                    )
             }
+            .padding(.horizontal, NotchController.timerRingInset)
+            .padding(.bottom, NotchController.timerRingInset)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("timer.ring.accessibility", bundle: localizationBundle))
+            .accessibilityValue(Text("\(Int(progress * 100))%"))
         }
     }
 
-    private func ring(alpha: Double) -> some View {
-        NotchPanelShape(topEar: 0, bottomRadius: 10)
-            .stroke(controller.appAccentColor.opacity(alpha), lineWidth: 1.5)
-            .padding(.horizontal, NotchController.timerRingInset)
-            .padding(.bottom, NotchController.timerRingInset)
-    }
+    private var ring: NotchPanelShape { NotchPanelShape(topEar: 0, bottomRadius: 10) }
 }

@@ -20,18 +20,18 @@ struct NavBar: View {
         controller.notchWidth + 24
     }
 
-    /// Répartit les onglets autour de l'encoche : autant que la zone gauche peut en contenir,
-    /// le surplus passe à droite de l'encoche (collé à l'encoche), avant batterie + réglages.
+    /// Garde les onglets groupés à gauche tant qu'ils tiennent sur l'épaule de l'encoche.
+    /// Seul le surplus passe à droite, avant la batterie et les réglages.
     private var moduleSplit: (left: [ModuleItem], right: [ModuleItem]) {
         let items = controller.navigationModules.map(ModuleItem.init)
-        if controller.panelComposition != .focused {
-            let leftCount = (items.count + 1) / 2
-            return (Array(items.prefix(leftCount)), Array(items.dropFirst(leftCount)))
-        }
-        let leftZone = (controller.expandedWidth - notchReserve) / 2 - 10
-        let maxLeft = max(1, Int(leftZone / tabWidth))
-        guard items.count > maxLeft else { return (items, []) }
-        return (Array(items.prefix(maxLeft)), Array(items.suffix(items.count - maxLeft)))
+        let leadingCount = NavigationModuleLayout.leadingModuleCount(
+            moduleCount: items.count,
+            panelWidth: controller.expandedWidth,
+            notchReserve: notchReserve,
+            tabWidth: tabWidth,
+            showsGridButton: controller.showsModuleGrid
+        )
+        return (Array(items.prefix(leadingCount)), Array(items.dropFirst(leadingCount)))
     }
 
     var body: some View {

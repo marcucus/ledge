@@ -1,9 +1,21 @@
-# 10 — Audit & plan (chef de projet)
+# 10 — Audit historique & suivi
 
-> Audit complet du code (qualité, features manquantes, sécurité, performance) + plan d'action.
-> Établi le **2026-06-24**. À mettre à jour au fil des avancées.
+> Audit initial établi le **24 juin 2026**, conservé pour expliquer les décisions prises.
+> Il ne constitue plus la liste des travaux restants.
 >
 > Légende gravité : 🔴 bloquant / important · 🟡 à traiter · 🟢 mineur / cosmétique.
+
+## État courant au 30 septembre 2026
+
+- Les jalons historiques 0 à 3 et les jalons de finalisation 1 à 4 sont terminés.
+- L'application compte huit modules compilés, sept onglets visibles et 110 tests dans 17 suites.
+- La version publique est `0.2.0`. La candidate locale est `0.3.0` (build `3`).
+- Le plan actif est désormais le **jalon 5** de [l'audit de finalisation](13-audit-finalisation.md) :
+  CI, recette manuelle, second Mac, mise à jour Sparkle et publication.
+- Les routes juridiques et de distribution de `ledge-site` sont maintenant déployées et répondent
+  correctement. La CI de l'app reste à valider après commit sur GitHub.
+- Les constats ci-dessous décrivent l'état au moment de l'audit initial. Le tableau **Suivi** indique
+  leur résolution ; le code et les docs 09, 12 et 13 priment en cas de contradiction.
 
 ---
 
@@ -117,48 +129,11 @@ paresseux ; animations factorisées.
 
 ---
 
-## G. Plan d'action
+## Clôture de l'audit
 
-Chaque ligne = une PR (règle « une tâche = un sujet = une PR »).
+Les jalons issus de cet audit ont été traités ou explicitement écartés. Leur historique détaillé
+est conservé dans les commits et dans [l'audit de finalisation](13-audit-finalisation.md).
 
-### Jalon 0 — Débloquer la release (priorité 1)
-1. **S1** — ajouter `NSAppleEventsUsageDescription` (+ vérifier les autres `NS...UsageDescription`) à l'Info.plist.
-2. **S2 / B6** — configurer Sparkle réel (feed HTTPS + clé EdDSA), retirer les placeholders.
-3. **S6** — corriger le copyright.
-4. **P1** — revoir le polling 0,2 s du HUD (défaut activé → visible en conso pour tout le monde).
-
-### Jalon 1 — Combler les promesses de l'UI
-5. **B1** — raccourcis réellement personnalisables (capture + persistance), sinon retirer la page.
-6. **E2** — supprimer le code mort `launchAtLogin`.
-7. **P2 / P3** — ScriptingBridge pour Apple Music + suspension du poll média au repos.
-
-### Jalon 2 — Robustesse
-8. **E1** — tests `NotchController` + décodage média + merge `MediaState`.
-9. **B4** — fiabiliser la pochette Apple Music (ScriptingBridge / iTunesLibrary).
-10. **B3** — option persistance presse-papiers (opt-in, RAM par défaut).
-
-### Jalon 3 — Croissance produit
-11. Choisir 2–3 features de la section F (reco : Calendrier/EventKit, épinglage presse-papiers, batterie accessoires).
-12. **E3 / E4 / E5** — aligner la doc (README/09), centraliser les constantes de géométrie, convertir PROMPT_IA → CLAUDE.md.
-
----
-
-## Suivi
-
-| Jalon | Item | État |
-|---|---|---|
-| 0 | S1 — usage descriptions Info.plist | ✅ `NSAppleEventsUsageDescription` ajouté (en/fr via `InfoPlist.strings`, copié par le Makefile à la racine du bundle) |
-| 0 | S2/B6 — Sparkle configuré | ✅ clé EdDSA dans Info.plist ; `make release` construit un DMG ad hoc sans compte Apple, génère l'appcast signé et publie les deux assets dans une GitHub Release. Le token fin `Contents: write`, limité à `marcucus/ledge`, est conservé dans le Trousseau macOS. `make release-notarized` conserve un parcours Apple optionnel. |
-| 0 | S6 — copyright | ✅ `© 2026` |
-| 0 | P1 — polling HUD | ✅ volume passé à un listener CoreAudio événementiel (`AudioObjectAddPropertyListenerBlock`, zéro polling) ; luminosité : zéro lecture en mode par défaut (`hudBrightnessManualOnly`), poll à 0,2 s seulement si l'utilisateur désactive ce mode ; recheck de la permission Accessibilité au changement d'application, sans battement au repos. |
-| 1 | B1 — raccourcis personnalisables | ✅ `GlobalKeyboardShortcut` (Core, Codable, persisté en JSON dans `UserDefaults`) + `ShortcutRecorderView` (capture clavier locale, exige ≥1 modificateur) + `GlobalShortcutManager` lit désormais `SettingsStore` au lieu de coder les combinaisons en dur. |
-| 1 | E2 — code mort launchAtLogin | ✅ propriété supprimée de `SettingsStore` (le toggle réel passe par `SMAppService`) |
-| 1 | P2/P3 — ScriptingBridge + poll média | ✅ `AppleMusicScriptingBridge` (en-process, délégué anti-exception) remplace les 2 spawns `osascript` (seek + resync 5 s) ; le poll de secours média est borné à 3 tentatives au lancement puis s'arrête (zéro polling au repos). ⚠️ Seek/resync non vérifiés en conditions réelles (Apple Music en lecture) — à confirmer à l'usage. |
-| 2 | E1 — tests | ✅ `SettingsStore` rendu injectable (`init(defaults:)`) pour permettre des tests isolés ; couverture de la géométrie des compositions, de la persistance de leur navigation et du maintien ouvert pendant le popover incluse. La passe de robustesse ajoute timers après veille, grille vide, module sélectionné puis masqué, ordre des épinglés et fichier de Drop Zone supprimé. 41 tests dans 8 suites, tous verts. |
-| 2 | B4 — pochette Apple Music | ✅ `AppleMusicScriptingBridge.currentArtwork()` (chaîne `currentTrack→artworks→data`, bridgée directement en `NSImage`) remplace l'export AppleScript vers fichier temporaire — plus robuste (zéro I/O disque intermédiaire). ⚠️ Non vérifié avec une lecture réelle (aucun morceau en cours sur la machine de dev). |
-| 2 | B3 — persistance presse-papiers | ✅ `ClipboardHistoryStore` (JSON dans Application Support) + réglage `clipboardPersistEnabled` (**désactivé par défaut : RAM uniquement**, conforme à la confidentialité doc 03). Toggle dans Réglages → Presse-papiers ; désactiver l'option efface aussi le fichier sur disque. |
-| 3 | Features F | ✅ Implémentées (via subagents en worktrees isolés) : presse-papiers (épingler + recherche), Drop Zone (drag-out + aperçu QuickLook), Système (indicateur micro, batterie accessoires Bluetooth), **profils de modules par app active** (`FrontmostAppObserver` + `AppProfile`), nouveaux modules **Raccourcis** (Shortcuts.app), **Calendrier** (EventKit), **Notes éphémères**, **thèmes nommés** (couleur + opacité + rayon en 1 clic). Doc d'extensibilité `NotchModule` → [doc 11](11-extensibilite-modules.md). **Descopés** (décision utilisateur / pas d'API publique fiable) : météo, sync iCloud, mode Focus, codes 2FA, AirDrop entrant, progression tâches longues, chargement dynamique de plugins tiers (doc-only pour raisons de sécurité). |
-| 3 | E3 — alignement doc | ✅ README (« presque rien au repos » + statut « implémentation avancée ») et doc 09 (HUD natif/distribution à jour). |
-| 3 | E4 — constantes géométrie | ✅ littéraux `190/32` centralisés dans `NotchGeometry.fallbackSize` (utilisé par `NotchController` et `NotchWindow`). |
-| 3 | E5 — CLAUDE.md | ✅ `PROMPT_IA.md` (obsolète) remplacé par un `CLAUDE.md` racine (commandes, conventions, pièges permissions/bundle/instance unique, extensibilité). |
-| — | UI/UX (session) | ✅ Timer redessiné (molette H:M:S + démarrage immédiat, 2 colonnes réglage/timers actifs, ambient décompte live) ; NavBar noire continue avec l'encoche, lanceur de modules en grille redessiné et trois dispositions persistantes (Concentrée, Panoramique recommandée, Immersive) ; chaque disposition mémorise le placement exclusif Barre/Grille/Masqué de chaque module et la visibilité du bouton de grille ; Média adapte réellement sa composition intérieure à chaque disposition ; ambient conserve une silhouette commune ; ouverture séquencée surface/contenu, masque appliqué à toute la hiérarchie et silhouette bornée pendant le redimensionnement ; en-tête des Réglages intégré au flux, sans recouvrir la première section ; module Système masqué (onglet retiré, batterie conservée) ; icône Dock au gabarit macOS quand Réglages ouverts ; onboarding éditorial en 3 étapes ; permissions centralisées avec états réels et demande contextuelle ; états vides harmonisés ; VoiceOver et réduction des animations pris en charge ; choix persistant de l'écran cible avec pseudo-encoche externe et fallback de déconnexion ; signature dev stable (Accessibilité persistante). |
+Ce document n'est plus un plan d'action. Le backlog opérationnel unique de la candidate 0.3.0 est
+[la liste de finalisation](14-taches-finalisation.md), tandis que [l'état courant](09-avancement-et-contexte.md)
+décrit le produit effectivement livré.

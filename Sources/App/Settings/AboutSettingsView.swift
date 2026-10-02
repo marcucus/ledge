@@ -3,6 +3,11 @@ import Core
 import SwiftUI
 
 struct AboutSettingsView: View {
+    var store: SettingsStore
+
+    // doc 13, Jalon 4, item 27 : réinitialisation des réglages.
+    @State private var isShowingResetConfirmation = false
+
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
@@ -52,7 +57,42 @@ struct AboutSettingsView: View {
                     Text("settings.about.checkUpdates", bundle: localizationBundle)
                 }
             }
+
+            Section {
+                ForEach(LegalDestination.all) { destination in
+                    Link(destination: destination.url) {
+                        Label {
+                            Text(LocalizedStringKey(destination.titleKey), bundle: localizationBundle)
+                        } icon: {
+                            Image(systemName: destination.systemImage)
+                        }
+                    }
+                }
+            } header: {
+                Text("settings.about.legal", bundle: localizationBundle)
+            }
+
+            Section {
+                Button(role: .destructive) {
+                    isShowingResetConfirmation = true
+                } label: {
+                    Text("settings.about.resetAll", bundle: localizationBundle)
+                }
+            }
         }
         .formStyle(.grouped)
+        .confirmationDialog(
+            Text("settings.about.resetAll.confirm.title", bundle: localizationBundle),
+            isPresented: $isShowingResetConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(role: .destructive) {
+                store.resetToDefaults()
+            } label: {
+                Text("settings.about.resetAll.confirm.button", bundle: localizationBundle)
+            }
+        } message: {
+            Text("settings.about.resetAll.confirm.message", bundle: localizationBundle)
+        }
     }
 }

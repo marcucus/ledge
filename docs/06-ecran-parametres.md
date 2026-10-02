@@ -1,7 +1,8 @@
 # 06 — Écran Paramètres
 
-> Le centre de contrôle de l'app. L'utilisateur y compose son menu (modules actifs, ordre,
-> comportements) et règle les 4 choix critiques (multi-écran, plein écran, permissions, encoche).
+> **Statut 0.3.0 : livré, sauf mentions explicitement historiques.** L'utilisateur compose les
+> sept modules visibles et règle multi-écran, plein écran, permissions et encoche. Les réglages du
+> module Système ont été retirés avec son onglet ; voir [doc 09](09-avancement-et-contexte.md).
 
 ## Forme
 
@@ -35,14 +36,17 @@ ou un raccourci global.
 GÉNÉRAL
   ☑ Lancer au démarrage de session
   ☑ Masquer l'icône du Dock (mode agent)
-  Sensibilité de la hot zone     [—————●———]  (petite ↔ large)
-  Délai d'ouverture au survol     [ 0,4 s ▾ ]
-  ☑ Peek automatique sur événement (global)
-       Durée du peek              [ 2 s ▾ ]
+  Zone de survol                  [ Standard ▾ ]
+       └─ Précise · Standard · Large
+  Délai de fermeture              [ 0,6 s ▾ ]
+  Action au clic                  [ Ouvrir | Aperçu ]
   Langue                          [ 🌐 Système (Français) ▾ ]
        └─ Système · Français · English · Español · Deutsch · …
-  [ Réinitialiser tous les réglages ]
+  [ Réinitialiser tous les réglages ]   (prévu)
 ```
+
+Le survol ouvre immédiatement le panneau complet. Il n'existe volontairement aucun délai
+d'ouverture ni aperçu intermédiaire automatique.
 
 ### Langue — comportement
 
@@ -114,20 +118,23 @@ Chaque « Configurer → » ouvre les réglages détaillés du module (listés d
 
 ```
 AFFICHAGE — Écrans
-  Sur quel écran afficher Ledge ?
-     (•) Écran avec l'encoche (intégré)
-     ( ) Écran principal (celui de la barre de menu)
-     ( ) Écran où se trouve le curseur
+  Où afficher Ledge ?
+     (•) Automatique (écran du Mac)
      ( ) Tous les écrans
+     ( ) Écrans sélectionnés
+          ☑ Écran du Mac
+          ☑ Studio Display
+          ☐ Écran du bureau
 
   Sur un écran SANS encoche :
-     (•) Afficher une "pseudo-encoche" en haut au centre
-     ( ) Afficher un petit onglet discret
-     ( ) Ne rien afficher
+     Une fine barre noire est affichée tout en haut, au centre.
 ```
 
-> Par défaut on suit l'écran intégré (vraie encoche). La pseudo-encoche permet d'avoir
-> l'expérience sur un moniteur externe. La largeur/forme de la pseudo-encoche est réglable.
+> Par défaut on suit l'écran intégré. « Tous les écrans » et « Écrans sélectionnés » créent un
+> panneau natif léger par écran tout en partageant les mêmes modules et leurs sources : aucun
+> polling coûteux n'est dupliqué. Sur un moniteur externe, Ledge n'imite pas une
+> encoche physique : une barre noire discrète, affleurant le bord supérieur, indique sa présence
+> et conserve la même zone de survol pour ouvrir le panneau.
 
 ### Choix 2 — Comportement en plein écran
 
@@ -163,7 +170,7 @@ AFFICHAGE — Encoche
 
 > **Aucune valeur codée en dur.** En auto, on lit `screen.safeAreaInsets` +
 > `auxiliaryTopLeft/RightArea` pour déduire la géométrie réelle de l'encoche (variable selon
-> le modèle de Mac). Le mode manuel sert de filet (modèle non reconnu, pseudo-encoche externe).
+> le modèle de Mac). Le mode manuel sert de filet lorsqu'un modèle n'est pas reconnu.
 
 ---
 
@@ -219,7 +226,7 @@ Version, lien réglages, réinitialisation, licence, crédits, vérif. de mise �
 
 | # | Choix | Section | Défaut |
 |---|---|---|---|
-| 1 | Multi-écran / écran sans encoche | Affichage → Écrans | Écran intégré + pseudo-encoche externe |
+| 1 | Multi-écran / écran sans encoche | Affichage → Écrans | Automatique, tous ou sélection multiple |
 | 2 | Comportement en plein écran | Affichage → Plein écran | Accessible au survol |
 | 3 | Permissions | Permissions | Demande paresseuse contextuelle |
 | 4 | Détection de l'encoche | Affichage → Encoche | Automatique (jamais en dur) |
