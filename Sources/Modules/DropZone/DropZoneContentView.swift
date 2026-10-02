@@ -8,6 +8,11 @@ public struct DropZoneContentView: View {
 
     private let columns = [GridItem(.adaptive(minimum: 64, maximum: 80), spacing: 8)]
 
+    /// Ancre réelle de la barre d'actions, capturée via `anchorNSView` (voir `ViewAnchorReader`).
+    /// Remplace `NSApplication.shared.keyWindow?.contentView`, invalide ici car `NotchWindow`
+    /// est un panneau non activable qui ne devient jamais la fenêtre clé.
+    @State private var actionBarAnchorView: NSView?
+
     public init(module: DropZoneModule) {
         self.module = module
     }
@@ -105,7 +110,7 @@ public struct DropZoneContentView: View {
     private var actionBar: some View {
         HStack(spacing: 8) {
             actionButton(label: "dropzone.action.airdrop", icon: "airplayaudio") {
-                guard let view = findNSView() else { return }
+                guard let view = actionBarAnchorView else { return }
                 module.shareViaAirDrop(from: view)
             }
             actionButton(label: "dropzone.action.save", icon: "folder") {
@@ -116,6 +121,7 @@ public struct DropZoneContentView: View {
                 module.clearAll()
             }
         }
+        .anchorNSView { actionBarAnchorView = $0 }
     }
 
     private func actionButton(
@@ -155,18 +161,6 @@ public struct DropZoneContentView: View {
         }
         return handled
     }
-
-    private func shouldAccept(url: URL) -> Bool {
-        if SettingsStore.shared.dropZoneAcceptFolders { return true }
-        var isDir: ObjCBool = false
-        FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
-        return !isDir.boolValue
-    }
-
-    /// Finds the underlying NSView to anchor NSSharingServicePicker
-    private func findNSView() -> NSView? {
-        NSApplication.shared.keyWindow?.contentView
-    }
 }
 
 // MARK: — Shelf item tile
@@ -175,9 +169,11 @@ private struct ShelfItemView: View {
     let item: ShelfItem
     let onRemove: () -> Void
 
-    /// Délai avant l'apparition de l'aperçu QuickLook, annulé si le survol s'arrête avant.
-    @State private var hoverPreviewTask: Task<Void, Never>?
+    /// Les courts délais d'ouverture et de fermeture permettent de traverser l'espace entre
+    /// la tuile et le popover sans que l'aperçu disparaisse sous le pointeur.
+    @State private var previewTask: Task<Void, Never>?
     @State private var isPreviewVisible = false
+    @Environment(\.transientInteractionHandler) private var transientInteractionHandler
 
     var body: some View {
         VStack(spacing: 4) {
@@ -204,12 +200,33 @@ private struct ShelfItemView: View {
         .help(item.displayName)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(item.displayName)
-        .onHover(perform: handleHover)
+        .onHover(perform: handleItemHover)
         .popover(isPresented: $isPreviewVisible, arrowEdge: .top) {
             QuickLookPreview(url: item.url)
                 .padding(12)
+                .onHover(perform: handlePreviewHover)
         }
-        .onDisappear { hoverPreviewTask?.cancel() }
+        .onChange(of: isPreviewVisible) { _, isVisible in
+            transientInteractionHandler(isVisible)
+        }
+        .onDisappear {
+            previewTask?.cancel()
+            transientInteractionHandler(false)
+        }
+        // L'aperçu ne dépendait que du survol — inutilisable au clavier ou avec VoiceOver
+        // (doc 13, Jalon 4, item 24). `.focusable()` + Espace reproduit le raccourci Quick
+        // Look standard du Finder ; l'action nommée offre le même bascule via le rotor
+        // VoiceOver, qui n'intercepte pas toujours les frappes clavier brutes.
+        .focusable(item.isAvailable)
+        .onKeyPress(.space) {
+            guard item.isAvailable else { return .ignored }
+            isPreviewVisible.toggle()
+            return .handled
+        }
+        .accessibilityAction(named: Text("dropzone.action.preview", bundle: localizationBundle)) {
+            guard item.isAvailable else { return }
+            isPreviewVisible.toggle()
+        }
     }
 
     private var iconView: some View {
@@ -237,16 +254,36 @@ private struct ShelfItemView: View {
 
     /// Programme l'ouverture de l'aperçu après un court délai, annulé si le survol cesse
     /// ou change de cible avant l'expiration (pattern collapseTask/hudTask de NotchController).
-    private func handleHover(isHovering: Bool) {
-        hoverPreviewTask?.cancel()
-        guard isHovering, item.isAvailable else {
-            isPreviewVisible = false
-            return
+    private func handleItemHover(isHovering: Bool) {
+        previewTask?.cancel()
+        guard item.isAvailable else { return }
+        if isHovering, !isPreviewVisible {
+            schedulePreviewOpening()
+        } else if !isHovering, isPreviewVisible {
+            schedulePreviewClosing()
         }
-        hoverPreviewTask = Task { @MainActor in
+    }
+
+    private func handlePreviewHover(isHovering: Bool) {
+        previewTask?.cancel()
+        if !isHovering {
+            schedulePreviewClosing()
+        }
+    }
+
+    private func schedulePreviewOpening() {
+        previewTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(450))
             guard !Task.isCancelled else { return }
             isPreviewVisible = true
+        }
+    }
+
+    private func schedulePreviewClosing() {
+        previewTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            isPreviewVisible = false
         }
     }
 }

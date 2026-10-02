@@ -1,6 +1,8 @@
 # 04 — Module Système ⚙️
 
-> Jauges + toggles rapides + lanceur. Implémentation V3.
+> **Statut 0.3.0 : périmètre réduit.** Le module n'est pas un onglet. Seuls la batterie transverse
+> dans la NavBar et le HUD volume/luminosité sont livrés. Les jauges, toggles et le lanceur décrits
+> ci-dessous sont une vision historique, volontairement hors de la candidate.
 
 ## Objectif
 

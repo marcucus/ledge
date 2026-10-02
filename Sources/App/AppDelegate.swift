@@ -11,7 +11,8 @@ import SystemModule
 import TimerModule
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var notchWindow: NotchWindow?
+    private let settings = SettingsStore.shared
+    private var notchWindowCoordinator: NotchWindowCoordinator?
     private var settingsWindowController: SettingsWindowController?
     private var onboardingWindowController: OnboardingWindowController?
     private var systemObserver: SystemObserver?
@@ -27,64 +28,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setAppIcon()
         setupUpdater()
 
-        let window = NotchWindow()
-        let settingsWC = SettingsWindowController()
-        window.controller.openSettings = { settingsWC.show() }
-        let onboardingWC = OnboardingWindowController {
+        let settingsWC = SettingsWindowController(settings: settings)
+        let coordinator = NotchWindowCoordinator(
+            settings: settings,
+            settingsWindowController: settingsWC
+        )
+        let onboardingWC = OnboardingWindowController(settings: settings) {
             settingsWC.show(section: .permissions)
         }
 
         setupStatusItem()
-        buildAndRegisterModules(in: window)
-        installObservers(for: window)
-        notchWindow = window
+        coordinator.start()
+        timerModule = coordinator.assembly.timerModule
+        clipboardModule = coordinator.assembly.clipboardModule
+        installObservers(for: coordinator)
+        notchWindowCoordinator = coordinator
         settingsWindowController = settingsWC
         onboardingWindowController = onboardingWC
 
-        if !SettingsStore.shared.hasCompletedOnboarding {
+        if !settings.hasCompletedOnboarding {
             DispatchQueue.main.async { [weak onboardingWC] in
                 onboardingWC?.show()
             }
         }
-    }
-
-    /// Instancie les modules, câble leurs contributions ambient, et les enregistre dans la fenêtre.
-    @MainActor private func buildAndRegisterModules(in window: NotchWindow) {
-        // Module Système masqué pour le moment : conservé comme source de statut (batterie dans
-        // la NavBar) et démarré manuellement, mais retiré des onglets (absent de register()).
-        let systemModule = SystemModule()
-        window.controller.statusModule = systemModule
-        systemModule.start()
-
-        let dropZoneModule = DropZoneModule()
-        dropZoneModule.onAmbientUpdate = { [weak window] content in
-            window?.controller.setAmbient(content, sourceID: "dropzone", priority: 1)
-        }
-        window.controller.onDragHoverChange = { [weak dropZoneModule] active in
-            dropZoneModule?.isDragActive = active
-        }
-
-        let mediaModule = MediaModule()
-        mediaModule.onBecameActive = { [weak window] in
-            window?.controller.selectModule(id: "media")
-        }
-        mediaModule.onAmbientUpdate = { [weak window] content in
-            window?.controller.setAmbient(content, sourceID: "media", priority: 3)
-        }
-
-        let timerModule = TimerModule()
-        timerModule.onAmbientUpdate = { [weak window] content in
-            window?.controller.setAmbient(content, sourceID: "timers", priority: 2)
-        }
-        self.timerModule = timerModule
-
-        let clipboardModule = ClipboardModule()
-        self.clipboardModule = clipboardModule
-
-        window.register(modules: [
-            mediaModule, timerModule, dropZoneModule, clipboardModule,
-            ShortcutsModule(), CalendarModule(), NotesModule(),
-        ])
     }
 
     /// Sparkle nécessite un vrai `.app` bundle — ne pas démarrer depuis `swift run`.
@@ -100,42 +66,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Branche les observateurs système (HUD, raccourcis globaux, app active).
-    @MainActor private func installObservers(for window: NotchWindow) {
-        systemObserver = makeSystemObserver(for: window)
-        shortcutManager = makeShortcutManager(for: window)
-        frontmostAppObserver = makeFrontmostAppObserver(for: window)
+    @MainActor private func installObservers(for coordinator: NotchWindowCoordinator) {
+        systemObserver = makeSystemObserver(for: coordinator)
+        shortcutManager = makeShortcutManager(for: coordinator)
+        frontmostAppObserver = makeFrontmostAppObserver(for: coordinator)
     }
 
     /// Bascule les modules visibles selon l'app au premier plan (profils par app).
-    @MainActor private func makeFrontmostAppObserver(for window: NotchWindow) -> FrontmostAppObserver {
+    @MainActor private func makeFrontmostAppObserver(
+        for coordinator: NotchWindowCoordinator
+    ) -> FrontmostAppObserver {
         let observer = FrontmostAppObserver()
-        observer.onActiveAppChange = { [weak window] bundleID in
-            window?.controller.updateActiveProfile(bundleID: bundleID)
+        observer.onActiveAppChange = { [weak coordinator] bundleID in
+            coordinator?.updateActiveProfile(bundleID: bundleID)
         }
-        window.controller.updateActiveProfile(bundleID: observer.currentBundleID)
+        coordinator.updateActiveProfile(bundleID: observer.currentBundleID)
         observer.start()
         return observer
     }
 
     /// Raccourcis globaux, personnalisables depuis Réglages → Raccourcis.
-    @MainActor private func makeShortcutManager(for window: NotchWindow) -> GlobalShortcutManager {
-        let manager = GlobalShortcutManager(settings: .shared)
+    @MainActor private func makeShortcutManager(for coordinator: NotchWindowCoordinator) -> GlobalShortcutManager {
+        let manager = GlobalShortcutManager(settings: settings)
 
-        manager.onOpenClose = { [weak window] in window?.controller.panelClicked() }
+        manager.onOpenClose = { [weak coordinator] in coordinator?.activeWindow?.controller.panelClicked() }
 
         manager.onPaste = { [weak self] in self?.clipboardModule?.pasteLatest() }
 
-        manager.onNewTimer = { [weak window] in
-            window?.controller.selectModule(id: "timers")
-            if window?.controller.state == .collapsed || window?.controller.state == .ambient {
-                window?.controller.cursorEntered()
+        manager.onNewTimer = { [weak coordinator] in
+            let controller = coordinator?.activeWindow?.controller
+            controller?.selectModule(id: "timers")
+            if controller?.state == .collapsed || controller?.state == .ambient {
+                controller?.cursorEntered()
             }
         }
 
-        manager.onOpenMedia = { [weak window] in
-            window?.controller.selectModule(id: "media")
-            if window?.controller.state == .collapsed || window?.controller.state == .ambient {
-                window?.controller.cursorEntered()
+        manager.onOpenMedia = { [weak coordinator] in
+            let controller = coordinator?.activeWindow?.controller
+            controller?.selectModule(id: "media")
+            if controller?.state == .collapsed || controller?.state == .ambient {
+                controller?.cursorEntered()
             }
         }
 
@@ -153,11 +123,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     private func observeShortcutSettings(_ manager: GlobalShortcutManager) {
         withObservationTracking {
-            _ = SettingsStore.shared.globalShortcutEnabled
-            _ = SettingsStore.shared.shortcutOpenClose
-            _ = SettingsStore.shared.shortcutPaste
-            _ = SettingsStore.shared.shortcutNewTimer
-            _ = SettingsStore.shared.shortcutOpenMedia
+            _ = settings.globalShortcutEnabled
+            _ = settings.shortcutOpenClose
+            _ = settings.shortcutPaste
+            _ = settings.shortcutNewTimer
+            _ = settings.shortcutOpenMedia
         } onChange: { [weak self, weak manager] in
             Task { @MainActor [weak self, weak manager] in
                 guard let manager else { return }
@@ -168,15 +138,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Branche le HUD volume/luminosité sur la fenêtre encoche.
-    @MainActor private func makeSystemObserver(for window: NotchWindow) -> SystemObserver {
-        let observer = SystemObserver(settings: .shared)
-        observer.onVolumeChange = { [weak window] value, isMuted in
-            let tint = SettingsStore.shared.hudAccentColor
-            window?.controller.showHUD(HUDContent(kind: .volume, value: value, isMuted: isMuted, tint: tint))
+    @MainActor private func makeSystemObserver(for coordinator: NotchWindowCoordinator) -> SystemObserver {
+        let observer = SystemObserver(settings: settings)
+        observer.onVolumeChange = { [weak self, weak coordinator] value, isMuted in
+            guard let tint = self?.settings.hudAccentColor else { return }
+            coordinator?.showHUD(HUDContent(kind: .volume, value: value, isMuted: isMuted, tint: tint))
         }
-        observer.onBrightnessChange = { [weak window] value in
-            let tint = SettingsStore.shared.hudAccentColor
-            window?.controller.showHUD(HUDContent(kind: .brightness, value: value, tint: tint))
+        observer.onBrightnessChange = { [weak self, weak coordinator] value in
+            guard let tint = self?.settings.hudAccentColor else { return }
+            coordinator?.showHUD(HUDContent(kind: .brightness, value: value, tint: tint))
         }
         observer.start()
         return observer

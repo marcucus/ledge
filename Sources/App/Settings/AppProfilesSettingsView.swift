@@ -30,7 +30,11 @@ struct AppProfilesSettingsView: View {
                 Button {
                     isPresentingNewProfile = true
                 } label: {
-                    Label(LocalizedStringKey("settings.appProfiles.add"), systemImage: "plus")
+                    Label {
+                        Text("settings.appProfiles.add", bundle: localizationBundle)
+                    } icon: {
+                        Image(systemName: "plus")
+                    }
                 }
             }
         }

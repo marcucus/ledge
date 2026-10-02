@@ -5,18 +5,26 @@ import SwiftUI
 // La fenêtre centralise volontairement le cycle de vie AppKit et ses transitions géométriques.
 // swiftlint:disable:next type_body_length
 public final class NotchWindow: NSPanel {
-    public let controller = NotchController(settings: .shared)
+    public let controller: NotchController
+    public let fixedTargetScreenIdentifier: String?
 
     private var currentGeometry: NotchGeometry?
     private var screenObserver: NSObjectProtocol?
     private var trackingArea: NSTrackingArea?
-    private var globalClickMonitor: Any?
-    private var globalFileDragMonitor: Any?
-    private var globalFileUpMonitor: Any?
+    private let dismissMonitor = NotchDismissMonitor()
+    private let fileDragMonitor = NotchFileDragMonitor()
     private var lastState: NotchState = .collapsed
-    private var isTrackingFileDrag = false
+    private var isTargetScreenFullscreen = false
+    private lazy var fullscreenMonitor = FullscreenMonitor { [weak self] isFullscreen in
+        self?.handleFullscreenChange(isFullscreen)
+    }
 
-    public init() {
+    public init(
+        settings: SettingsStore = .shared,
+        targetScreenIdentifier: String? = nil
+    ) {
+        controller = NotchController(settings: settings)
+        fixedTargetScreenIdentifier = targetScreenIdentifier
         super.init(
             contentRect: .zero,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -44,15 +52,15 @@ public final class NotchWindow: NSPanel {
 
         observeScreenChanges()
         positionOnNotch()
+        fullscreenMonitor.start()
         startFileDragMonitoring()
         startObservingSettings()
     }
 
     deinit {
         screenObserver.map { NotificationCenter.default.removeObserver($0) }
-        globalClickMonitor.map { NSEvent.removeMonitor($0) }
-        globalFileDragMonitor.map { NSEvent.removeMonitor($0) }
-        globalFileUpMonitor.map { NSEvent.removeMonitor($0) }
+        dismissMonitor.stop()
+        fileDragMonitor.stop()
     }
 
     // MARK: — Observation des réglages
@@ -62,12 +70,13 @@ public final class NotchWindow: NSPanel {
             applyCollectionBehavior(for: controller.fullscreenBehavior)
             _ = controller.expandedWidth
             _ = controller.expandedContentHeight
-            _ = controller.targetScreenIdentifier
-            _ = controller.targetScreenName
+            _ = controller.hotZoneHorizontalInset
+            _ = controller.hotZoneBottomInset
         } onChange: { [weak self] in
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.applyCollectionBehavior(for: self.controller.fullscreenBehavior)
+                self.controller.updateFullscreenStatus(isActive: self.isTargetScreenFullscreen)
                 self.positionOnNotch()
                 self.startObservingSettings()
             }
@@ -117,14 +126,18 @@ public final class NotchWindow: NSPanel {
 
     private func positionOnNotch() {
         let screen = resolvedTargetScreen()
-        guard let geometry = screen?.notchGeometry() ?? screen.map({ scr in
-            // Écran sans encoche : ancre une encoche simulée au centre du bord supérieur.
-            let bounds = scr.frame
+        fullscreenMonitor.updateTargetScreen(screen)
+        guard let screen else { return }
+        let physicalGeometry = screen.notchGeometry()
+        controller.usesExternalDisplayIndicator = physicalGeometry == nil
+        let geometry = physicalGeometry ?? {
+            // Écran sans encoche : conserve une zone d'ancrage invisible au bord supérieur.
+            let bounds = screen.frame
             let size = NotchGeometry.fallbackSize
             let rect = CGRect(x: bounds.midX - size.width / 2, y: bounds.maxY - size.height,
                               width: size.width, height: size.height)
             return NotchGeometry(notchRect: rect, screenFrame: bounds)
-        }) else { return }
+        }()
         currentGeometry = geometry
         updateFrame(for: controller.state, from: .collapsed, animated: false)
     }
@@ -132,14 +145,8 @@ public final class NotchWindow: NSPanel {
     /// Honore la cible explicite tant qu'elle est connectée. Si elle disparaît, Ledge revient
     /// temporairement sur l'écran intégré sans effacer le choix, puis la retrouve à la reconnexion.
     private func resolvedTargetScreen() -> NSScreen? {
-        let identifier = controller.targetScreenIdentifier
-        if !identifier.isEmpty {
-            return NSScreen.screen(identifier: identifier) ?? NSScreen.withNotch ?? NSScreen.main
-        }
-
-        let legacyName = controller.targetScreenName
-        if !legacyName.isEmpty {
-            return NSScreen.screen(named: legacyName) ?? NSScreen.withNotch ?? NSScreen.main
+        if let fixedTargetScreenIdentifier {
+            return NSScreen.screen(identifier: fixedTargetScreenIdentifier)
         }
         return NSScreen.withNotch ?? NSScreen.main
     }
@@ -158,7 +165,7 @@ public final class NotchWindow: NSPanel {
         case .ambient: applyAmbient(geometry: geometry, animated: animated)
         case .collapsed: applyCollapsed(geometry: geometry, from: from, animated: animated)
         }
-        orderFrontRegardless()
+        applyFullscreenVisibility()
     }
 
     /// Anime (ou pose directement si `animated == false`) la fenêtre vers `frame`,
@@ -209,11 +216,11 @@ public final class NotchWindow: NSPanel {
             self?.controller.expansionDidFinish()
             self?.revealClearBackground()
         }
-        addGlobalClickMonitor()
+        addDismissMonitors()
     }
 
     private func applyPeeking(geometry: NotchGeometry, animated: Bool) {
-        removeGlobalClickMonitor()
+        removeDismissMonitors()
         let size = CGSize(width: controller.expandedWidth, height: controller.navigationHeight)
         transitionFrame(
             to: makeFrame(size: size, geometry: geometry),
@@ -225,7 +232,7 @@ public final class NotchWindow: NSPanel {
     }
 
     private func applyHUD(geometry: NotchGeometry, animated: Bool) {
-        removeGlobalClickMonitor()
+        removeDismissMonitors()
         // Fenêtre qui entoure l'encoche (plus large des deux côtés), barre fine en dessous.
         let size = CGSize(
             width: max(NotchWindowLayout.hudMinWidth, controller.notchWidth + NotchWindowLayout.hudSideMargin),
@@ -241,7 +248,7 @@ public final class NotchWindow: NSPanel {
     }
 
     private func applyAmbient(geometry: NotchGeometry, animated: Bool) {
-        removeGlobalClickMonitor()
+        removeDismissMonitors()
         // Pills latérales : même hauteur que l'encoche, plus large des deux côtés.
         let pillWidth = NotchController.ambientPillWidth
         let pillGap = NotchController.ambientPillGap
@@ -259,12 +266,8 @@ public final class NotchWindow: NSPanel {
     }
 
     private func applyCollapsed(geometry: NotchGeometry, from: NotchState, animated: Bool) {
-        removeGlobalClickMonitor()
-        let ringInset = controller.timerRingActive ? NotchController.timerRingInset : 0
-        let size = CGSize(
-            width: geometry.notchRect.width + ringInset * 2,
-            height: geometry.notchRect.height + ringInset
-        )
+        removeDismissMonitors()
+        let size = collapsedSize(for: geometry)
         guard animated else {
             backgroundColor = .clear
             applyFrame(size: size, geometry: geometry)
@@ -290,6 +293,16 @@ public final class NotchWindow: NSPanel {
                 self?.updateTrackingArea()
             }
         }
+    }
+
+    private func collapsedSize(for geometry: NotchGeometry) -> CGSize {
+        let ringInset = controller.timerRingActive ? NotchController.timerRingInset : 0
+        let horizontalInset = max(ringInset, controller.hotZoneHorizontalInset)
+        let bottomInset = max(ringInset, controller.hotZoneBottomInset)
+        return CGSize(
+            width: geometry.notchRect.width + horizontalInset * 2,
+            height: geometry.notchRect.height + bottomInset
+        )
     }
 
     private func applyFrame(size: CGSize, geometry: NotchGeometry) {
@@ -324,66 +337,55 @@ public final class NotchWindow: NSPanel {
     // MARK: — File drag monitoring
 
     private func startFileDragMonitoring() {
-        globalFileDragMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.handleGlobalFileDrag() }
-        }
-        globalFileUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.handleFileDragEnd() }
-        }
+        fileDragMonitor.start(
+            zone: { [weak self] in self?.fileDragZone },
+            onChange: { [weak self] isInside in
+                guard let self else { return }
+                if isInside {
+                    let dropzoneID = controller.modules.first(where: { $0.id == "dropzone" })?.id ?? "dropzone"
+                    controller.dragApproachNotch(preferredModuleID: dropzoneID)
+                } else {
+                    controller.dragLeftProximity()
+                }
+            }
+        )
     }
 
-    private func handleGlobalFileDrag() {
-        // Vérifie si le drag contient des fichiers
-        let types = NSPasteboard(name: .drag).types ?? []
-        let hasFiles = types.contains(where: {
-            $0.rawValue == "public.file-url" || $0.rawValue == "NSFilenamesPboardType"
-        })
-        guard hasFiles else {
-            if isTrackingFileDrag { endFileDragTracking() }
-            return
-        }
-
-        // Zone de proximité : 120 px sous l'encoche, pleine largeur expanded
-        guard let geometry = currentGeometry else { return }
-        let mouse = NSEvent.mouseLocation
-        let zone = CGRect(
+    private var fileDragZone: CGRect? {
+        guard let geometry = currentGeometry else { return nil }
+        return CGRect(
             x: geometry.anchorPoint.x - controller.expandedWidth / 2,
             y: geometry.notchRect.minY - 120,
             width: controller.expandedWidth,
             height: 120 + geometry.notchRect.height
         )
-
-        if zone.contains(mouse) {
-            if !isTrackingFileDrag {
-                isTrackingFileDrag = true
-                let dropzoneID = controller.modules.first(where: { $0.id == "dropzone" })?.id ?? "dropzone"
-                controller.dragApproachNotch(preferredModuleID: dropzoneID)
-            }
-        } else if isTrackingFileDrag {
-            endFileDragTracking()
-        }
     }
 
-    private func handleFileDragEnd() {
-        if isTrackingFileDrag { endFileDragTracking() }
-    }
+    // MARK: — Fermeture clavier et clic extérieur
 
-    private func endFileDragTracking() {
-        isTrackingFileDrag = false
-        controller.dragLeftProximity()
-    }
-
-    // MARK: — Global click monitor
-
-    private func addGlobalClickMonitor() {
-        guard globalClickMonitor == nil else { return }
-        globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] _ in
+    private func addDismissMonitors() {
+        dismissMonitor.start(window: self) { [weak self] in
             self?.controller.dismiss()
         }
     }
 
-    private func removeGlobalClickMonitor() {
-        globalClickMonitor.map { NSEvent.removeMonitor($0) }
-        globalClickMonitor = nil
+    private func removeDismissMonitors() {
+        dismissMonitor.stop()
+    }
+
+    // MARK: — Plein écran
+
+    private func handleFullscreenChange(_ isFullscreen: Bool) {
+        isTargetScreenFullscreen = isFullscreen
+        controller.updateFullscreenStatus(isActive: isFullscreen)
+        applyFullscreenVisibility()
+    }
+
+    private func applyFullscreenVisibility() {
+        if isTargetScreenFullscreen, controller.fullscreenBehavior == .hidden {
+            orderOut(nil)
+        } else {
+            orderFrontRegardless()
+        }
     }
 }

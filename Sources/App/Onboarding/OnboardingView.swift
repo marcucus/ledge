@@ -103,6 +103,7 @@ struct OnboardingView: View {
                 permissionBenefit(icon: "hand.raised", key: "onboarding.permissions.benefit.control")
                 permissionBenefit(icon: "lock.open", key: "onboarding.permissions.benefit.optional")
                 permissionBenefit(icon: "gearshape", key: "onboarding.permissions.benefit.later")
+                legalLinks
             }
             .frame(width: 286, alignment: .leading)
         }
@@ -164,6 +165,24 @@ struct OnboardingView: View {
                 .font(.callout.weight(.medium))
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private var legalLinks: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("onboarding.legal.detail", bundle: localizationBundle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 14) {
+                ForEach(LegalDestination.onboarding) { destination in
+                    Link(destination: destination.url) {
+                        Text(LocalizedStringKey(destination.titleKey), bundle: localizationBundle)
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+            }
+        }
+        .padding(.top, 4)
     }
 
     private var footer: some View {

@@ -41,7 +41,7 @@ struct SettingsDetailView: View {
         case .display: DisplaySettingsView(store: store)
         case .permissions: PermissionsSettingsView()
         case .shortcuts: ShortcutsSettingsView(store: store)
-        case .about: AboutSettingsView()
+        case .about: AboutSettingsView(store: store)
         }
     }
 }

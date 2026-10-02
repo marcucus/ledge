@@ -1,7 +1,8 @@
 # 05 — Module Timers & Notifications ⏱️
 
-> Minuteurs/Pomodoro livrés. L'agrégation des notifications d'autres apps reste une piste avancée,
-> non livrée et désactivée par défaut faute d'API publique fiable.
+> **Statut 0.3.0 : minuteurs et Pomodoro livrés.** L'agrégation des notifications d'autres apps
+> reste une vision historique, non livrée faute d'API publique fiable. Voir
+> [doc 09](09-avancement-et-contexte.md) pour l'état exécutable.
 
 ## Objectif
 

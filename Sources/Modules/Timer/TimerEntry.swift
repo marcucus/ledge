@@ -1,6 +1,6 @@
 import Foundation
 
-public struct TimerEntry: Identifiable, Sendable {
+public struct TimerEntry: Identifiable, Sendable, Codable {
     public let id: UUID
     public var label: String
     public let duration: TimeInterval

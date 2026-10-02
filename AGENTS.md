@@ -59,6 +59,9 @@ développeur débutant en Swift.
 - Les API privées et les permissions sont isolées derrière des abstractions et échouent sans
   planter l'application.
 - L'historique du presse-papiers reste en RAM par défaut; la persistance disque est un opt-in.
+- Un module désactivé (réglages globaux ou profil d'app actif) doit être réellement arrêté
+  (`stop()`), pas seulement masqué de la navigation — voir `NotchController+ModuleLifecycle.swift`
+  et [doc 11](docs/11-extensibilite-modules.md).
 - Aucun texte visible en dur. Toute nouvelle chaîne doit être ajoutée en anglais et en français.
 - Aucun force-unwrap de production, aucun état global mutable supplémentaire, aucun couplage entre
   modules.
@@ -75,6 +78,7 @@ swift build
 swift test
 swiftlint lint --quiet Sources Tests
 make app
+make verify-release
 open dist/Ledge.app
 ```
 
@@ -82,18 +86,40 @@ Avant une relance manuelle, arrêter l'instance existante avec `killall Ledge`. 
 distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make notarize` et
 `make appcast` selon les secrets disponibles.
 
-## État vérifié le 27 septembre 2026
+## État vérifié le 1er octobre 2026
 
 - Branche `main`, commit observé `fa5f726`.
-- `swift test` compile et exécute **41 tests dans 8 suites**, tous verts.
-- SwiftLint est vert sur `Sources` et `Tests` au 27 septembre 2026.
-- Version bundle actuelle : `0.2.0` (build `2`), candidate locale non publiée. La version publique
-  observée sur GitHub/Vercel reste `0.1.0` tant que la nouvelle release n'est pas publiée.
+- Jalons 3 et 4 de finalisation (doc 13) ajoutés dans une session sans toolchain Swift (agent
+  cloud) : chiffrement du presse-papiers, identité de source média, persistance des timers,
+  accessibilité média/timer/Système, Quick Look au clavier, localisation de « Système », erreurs de
+  lancement à la connexion et réinitialisation des réglages (voir
+  [doc 09](docs/09-avancement-et-contexte.md)). Un premier `swift build` a révélé deux bugs de
+  niveau d'accès introduits par l'agent (`SettingsStore.defaults`, `TimerPersistenceStore` et son
+  `init(directory:)` déclarés `private`/`internal` alors qu'exposés dans une API publique),
+  corrigés dans la foulée avec un avertissement de longueur de fonction dans
+  `AppDelegate.buildAndRegisterModules(in:)` (câblage du minuteur extrait dans `makeTimerModule(in:)`).
+- `swift test` compile et exécute **110 tests dans 17 suites**, tous verts. Les nouvelles suites
+  couvrent aussi Calendrier, Notes, Raccourcis et l'assemblage des modules de l'app.
+- SwiftLint est vert sur `Sources` et `Tests`, sans avertissement. `SettingsStore.swift` et
+  `NotchController.swift` ont été ramenés sous 400 lignes par extraction des clés et du contenu
+  transient. Les erreurs disque du Timer sont visibles et récupérables, et quatre tests couvrent
+  la persistance et l'injection des réglages Drop Zone.
+- Version bundle locale actuelle : `0.3.0` (build `3`), candidate non publiée. La version publique
+  GitHub est `0.2.0` ; elle ne doit pas être remplacée ni republier ses assets.
+- Le bundle `0.3.0`, son DMG et son appcast EdDSA ont été reconstruits. Build, 110 tests, SwiftLint,
+  `codesign`, `hdiutil`, `xmllint` et `make verify-release` sont verts. Les attentes asynchrones de
+  tests Raccourcis et de fermeture du panneau ne dépendent plus de délais fixes trop courts.
+- Le vrai push de `codex/release-0.3.0` reste refusé : le PAT HTTPS n'a pas le scope `workflow`
+  requis pour `.github/workflows/ci.yml`, même si `git push --dry-run` l'annonce à tort comme
+  possible. Le dépôt du site reste lui aussi refusé en HTTP 403 ; les deux CI distantes restent à
+  valider.
 - La clé publique Sparkle est renseignée. `SUFeedURL` est injectée dans le bundle de distribution
   par `SPARKLE_FEED_URL`; le bundle de développement n'active pas Sparkle sans cette valeur.
 - `make release` crée un DMG signé ad hoc, génère l'appcast Sparkle EdDSA, crée une GitHub Release
-  brouillon, téléverse les deux fichiers puis la publie. Aucun compte Apple, bucket ou service
-  payant n'est requis. Le parcours Developer ID reste optionnel via `make release-notarized`.
+  brouillon, téléverse le DMG, l'appcast et tout delta référencé, puis la publie. Une relance reprend
+  un brouillon du même commit et remplace ses assets partiels. `make verify-release` contrôle le
+  paquet sans publication. Aucun compte Apple, bucket ou service payant n'est requis. Le parcours
+  Developer ID reste optionnel via `make release-notarized`.
 - Les fonctionnalités Apple Music et les permissions doivent être validées dans une vraie lecture
   et un bundle signé; les tests unitaires ne couvrent pas ce scénario système.
 
@@ -109,6 +135,9 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   Les DMG et appcasts sont des assets de release, jamais des fichiers suivis par Git.
 - Les promesses du site doivent suivre le code réel : macOS 14+, modules réellement visibles,
   permissions réellement requises, version publiée réelle et limites connues.
+- La recette du site public était verte le 30 septembre 2026. Le 1er octobre, `ledge.app` sert une
+  page de parking redirigeant vers `/lander`, les API répondent `404` et l'appcast/téléchargement ne
+  servent plus leurs contenus. La configuration DNS/Vercel doit être restaurée avant la release.
 
 ## Fin de tâche
 

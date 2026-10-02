@@ -15,16 +15,46 @@ public final class ShortcutsModule: NotchModule {
     public private(set) var loadFailed = false
     public private(set) var runningShortcutName: String?
     public private(set) var lastRunFailedName: String?
+    public private(set) var lastRunSucceededName: String?
+    public private(set) var favoriteShortcutNames: Set<String>
+    @ObservationIgnored private var isStarted = false
+    @ObservationIgnored private var lifecycleGeneration = 0
+    @ObservationIgnored private var successFeedbackTask: Task<Void, Never>?
+    @ObservationIgnored private let commandRunner: any ShortcutsCommandRunning
+    @ObservationIgnored private let defaults: UserDefaults
+    private static let favoriteShortcutNamesKey = "shortcutsFavoriteNames"
 
-    public init() {}
+    public convenience init() {
+        self.init(commandRunner: SystemShortcutsCommandRunner(), defaults: .standard)
+    }
+
+    init(commandRunner: any ShortcutsCommandRunning, defaults: UserDefaults = .standard) {
+        self.commandRunner = commandRunner
+        self.defaults = defaults
+        favoriteShortcutNames = Set(
+            defaults.stringArray(forKey: Self.favoriteShortcutNamesKey) ?? []
+        )
+    }
 
     // MARK: — NotchModule
 
     public func start() {
-        Task { await refresh() }
+        guard !isStarted else { return }
+        isStarted = true
+        lifecycleGeneration += 1
+        let generation = lifecycleGeneration
+        Task { await refresh(generation: generation) }
     }
 
-    public func stop() {}
+    public func stop() {
+        guard isStarted else { return }
+        isStarted = false
+        lifecycleGeneration += 1
+        successFeedbackTask?.cancel()
+        isLoading = false
+        runningShortcutName = nil
+        lastRunSucceededName = nil
+    }
 
     public func makePeekView() -> AnyView {
         AnyView(ShortcutsPeekView(module: self))
@@ -34,12 +64,32 @@ public final class ShortcutsModule: NotchModule {
         AnyView(ShortcutsContentView(module: self))
     }
 
+    // MARK: — Capture marketing
+
+    /// Injecte une liste de raccourcis de démonstration sans passer par `/usr/bin/shortcuts` —
+    /// utilisé uniquement par `MarketingCapture` (cf. docs/PLAN-REFONTE-FIDELITE.md).
+    package func configureMarketingCapture(
+        shortcuts: [String],
+        favorites: Set<String> = []
+    ) {
+        self.shortcuts = shortcuts
+        favoriteShortcutNames = favorites
+        isLoading = false
+        loadFailed = false
+    }
+
     // MARK: — Public API
 
     /// Recharge la liste des raccourcis disponibles depuis `shortcuts list`.
     public func refresh() async {
+        await refresh(generation: lifecycleGeneration)
+    }
+
+    private func refresh(generation: Int) async {
+        guard isStarted, lifecycleGeneration == generation else { return }
         isLoading = true
-        let result = await Self.listShortcuts()
+        let result = await listShortcuts()
+        guard isStarted, lifecycleGeneration == generation else { return }
         switch result {
         case let .success(names):
             shortcuts = names
@@ -52,20 +102,59 @@ public final class ShortcutsModule: NotchModule {
 
     /// Lance un raccourci par son nom, en tâche de fond (fire-and-forget).
     public func run(_ name: String) {
-        guard runningShortcutName == nil else { return }
+        guard isStarted, runningShortcutName == nil else { return }
+        successFeedbackTask?.cancel()
         runningShortcutName = name
         lastRunFailedName = nil
+        lastRunSucceededName = nil
+        let generation = lifecycleGeneration
         Task {
-            let succeeded = await Self.runShortcut(named: name)
+            let succeeded = await runShortcut(named: name)
+            guard isStarted, lifecycleGeneration == generation else { return }
             runningShortcutName = nil
-            if !succeeded { lastRunFailedName = name }
+            if succeeded {
+                showSuccessFeedback(for: name, generation: generation)
+            } else {
+                lastRunFailedName = name
+            }
+        }
+    }
+
+    public func isFavorite(_ name: String) -> Bool {
+        favoriteShortcutNames.contains(name)
+    }
+
+    public func toggleFavorite(_ name: String) {
+        if favoriteShortcutNames.contains(name) {
+            favoriteShortcutNames.remove(name)
+        } else {
+            favoriteShortcutNames.insert(name)
+        }
+        defaults.set(favoriteShortcutNames.sorted(), forKey: Self.favoriteShortcutNamesKey)
+    }
+
+    public var orderedShortcuts: [String] {
+        let favorites = shortcuts.filter(favoriteShortcutNames.contains)
+        let others = shortcuts.filter { !favoriteShortcutNames.contains($0) }
+        return favorites + others
+    }
+
+    private func showSuccessFeedback(for name: String, generation: Int) {
+        lastRunSucceededName = name
+        successFeedbackTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled,
+                  let self,
+                  self.isStarted,
+                  self.lifecycleGeneration == generation else { return }
+            self.lastRunSucceededName = nil
         }
     }
 
     // MARK: — Process helpers
 
-    private nonisolated static func listShortcuts() async -> Result<[String], ProcessFailure> {
-        let output = await runProcess(arguments: ["list"])
+    private func listShortcuts() async -> Result<[String], ProcessFailure> {
+        let output = await commandRunner.output(arguments: ["list"])
         guard let output else { return .failure(.commandFailed) }
         let names = output
             .split(separator: "\n")
@@ -74,39 +163,8 @@ public final class ShortcutsModule: NotchModule {
         return .success(names)
     }
 
-    private nonisolated static func runShortcut(named name: String) async -> Bool {
-        await runProcess(arguments: ["run", name]) != nil
-    }
-
-    /// Exécute `/usr/bin/shortcuts <arguments>` hors du thread principal et renvoie sa sortie standard,
-    /// ou `nil` si l'outil est absent ou la commande échoue.
-    private nonisolated static func runProcess(arguments: [String]) async -> String? {
-        await withCheckedContinuation { continuation in
-            // File dédiée : on draine le pipe AVANT `waitUntilExit`. Lire dans le
-            // `terminationHandler` (après la fin) bloquerait le process si sa sortie dépasse le
-            // buffer du pipe (~64 Ko) → terminaison jamais atteinte, continuation jamais reprise.
-            DispatchQueue.global(qos: .userInitiated).async {
-                let process = Process()
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/shortcuts")
-                process.arguments = arguments
-                let output = Pipe()
-                process.standardOutput = output
-                process.standardError = Pipe()
-                do {
-                    try process.run()
-                } catch {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let data = output.fileHandleForReading.readDataToEndOfFile()
-                process.waitUntilExit()
-                guard process.terminationStatus == 0 else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                continuation.resume(returning: String(data: data, encoding: .utf8))
-            }
-        }
+    private func runShortcut(named name: String) async -> Bool {
+        await commandRunner.output(arguments: ["run", name]) != nil
     }
 
     private enum ProcessFailure: Error {

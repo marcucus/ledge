@@ -31,6 +31,9 @@ public final class SystemObserver {
     private var didPromptAX = false
     private var settingObserver: NSObjectProtocol?
     private var appActivationObserver: NSObjectProtocol?
+    private var wakeObserver: NSObjectProtocol?
+    private var sessionActivationObserver: NSObjectProtocol?
+    private var wakeRecoveryTask: Task<Void, Never>?
 
     private let settings: SettingsStore
 
@@ -46,6 +49,7 @@ public final class SystemObserver {
         installKeyboardMonitor()
         observeSettingChanges()
         observeAppActivations()
+        observeWakeEvents()
         // Déclenche updateEventTap() via didSet → installe tap + polling si activé.
         suppressNativeHUD = settings.hudReplaceSystem
     }
@@ -61,6 +65,12 @@ public final class SystemObserver {
         settingObserver = nil
         appActivationObserver.map { NSWorkspace.shared.notificationCenter.removeObserver($0) }
         appActivationObserver = nil
+        wakeObserver.map { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+        wakeObserver = nil
+        sessionActivationObserver.map { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+        sessionActivationObserver = nil
+        wakeRecoveryTask?.cancel()
+        wakeRecoveryTask = nil
         SystemObserver.shared = nil
     }
 
@@ -114,8 +124,7 @@ public final class SystemObserver {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                guard let self, suppressNativeHUD, eventTap == nil, AXIsProcessTrusted() else { return }
-                installEventTap()
+                self?.ensureEventTapIsOperational()
             }
         }
     }
@@ -298,6 +307,62 @@ public final class SystemObserver {
         eventTap = nil
         SystemObserver.activeTap = nil
         runLoopSource = nil
+    }
+}
+
+// MARK: — Récupération après veille
+
+private extension SystemObserver {
+    /// Le Mach port d'un CGEventTap peut rester non-nil mais devenir inutilisable après une
+    /// veille. Au réveil et au déverrouillage de session, on le recrée avec quelques tentatives
+    /// bornées, le temps que WindowServer et les services d'accessibilité redeviennent prêts.
+    func observeWakeEvents() {
+        let center = NSWorkspace.shared.notificationCenter
+        wakeObserver = center.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.scheduleWakeRecovery() }
+        }
+        sessionActivationObserver = center.addObserver(
+            forName: NSWorkspace.sessionDidBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.scheduleWakeRecovery() }
+        }
+    }
+
+    func scheduleWakeRecovery() {
+        guard suppressNativeHUD else { return }
+        wakeRecoveryTask?.cancel()
+        removeEventTap()
+        SystemObserver.removeVolumeListener()
+        SystemObserver.removeDefaultDeviceListener()
+        lastBrightness = SystemObserver.currentBrightness()
+
+        wakeRecoveryTask = Task { @MainActor [weak self] in
+            let delays: [Duration] = [.milliseconds(250), .seconds(1), .seconds(2)]
+            for delay in delays {
+                do {
+                    try await Task.sleep(for: delay)
+                } catch {
+                    return
+                }
+                guard let self, suppressNativeHUD else { return }
+                updateEventTap()
+                if eventTap.map(CGEvent.tapIsEnabled(tap:)) == true { return }
+                removeEventTap()
+            }
+        }
+    }
+
+    func ensureEventTapIsOperational() {
+        guard suppressNativeHUD, AXIsProcessTrusted() else { return }
+        if let eventTap, CGEvent.tapIsEnabled(tap: eventTap) { return }
+        removeEventTap()
+        installEventTap()
     }
 }
 
