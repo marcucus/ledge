@@ -2,6 +2,9 @@ import AppKit
 import Core
 import SwiftUI
 
+// Le module centralise volontairement les callbacks MediaRemote, les fallbacks de pochettes et
+// leur invalidation générationnelle afin qu'aucune tâche ne survive à `stop()`.
+// swiftlint:disable:next type_body_length
 @MainActor @Observable public final class MediaModule: NotchModule {
     public let id = "media"
     public let tabIcon = "music.note"
@@ -22,21 +25,37 @@ import SwiftUI
     @ObservationIgnored private var wasActive = false
     @ObservationIgnored private var cachedArtwork: NSImage?
     @ObservationIgnored private var cachedArtworkColor: Color = .white
+    @ObservationIgnored private var isStarted = false
+    @ObservationIgnored private var lifecycleGeneration = 0
     public var artworkAccentColor: Color { cachedArtworkColor }
-    /// True quand la lecture est pilotée par Apple Music (notification distribuée).
-    @ObservationIgnored private var sourceIsAppleMusic = false
-    @ObservationIgnored private var sourceIsSpotify = false
+    /// Source qui pilote actuellement `nowPlaying` — voir `MediaSourceIdentity` (doc 13, Jalon 3).
+    @ObservationIgnored private var sourceIdentity: MediaSourceIdentity = .none
 
     public init() {
         source = MediaRemoteSource()
     }
 
+    /// Injecte un morceau stable pour l'outil interne de captures marketing, sans démarrer les
+    /// sources système. L'accès `package` empêche toute utilisation depuis un client externe.
+    package func configureMarketingCapture(state: MediaState, accentColor: Color) {
+        nowPlaying = state
+        cachedArtwork = state.artwork
+        cachedArtworkColor = accentColor
+    }
+
     public func start() {
+        guard !isStarted else { return }
+        isStarted = true
+        lifecycleGeneration += 1
+        startupPollAttemptsRemaining = MediaModule.maxStartupPollAttempts
+        let generation = lifecycleGeneration
         // MediaRemote — Spotify, navigateurs, etc.
         mrObserver = NotificationCenter.default.addObserver(
             forName: NSNotification.Name("kMRMediaRemoteNowPlayingInfoDidChangeNotification"),
             object: nil, queue: .main
-        ) { [weak self] _ in Task { [weak self] in await self?.refresh() } }
+        ) { [weak self] _ in
+            Task { [weak self] in await self?.refresh(generation: generation) }
+        }
 
         // com.apple.Music.playerInfo — distributed notification, aucun droit requis.
         // suspensionBehavior .deliverImmediately garantit la réception même en arrière-plan.
@@ -48,8 +67,8 @@ import SwiftUI
             suspensionBehavior: .deliverImmediately
         )
 
-        scheduleStartupPoll()
-        Task { await refresh() }
+        scheduleStartupPoll(generation: generation)
+        Task { await refresh(generation: generation) }
     }
 
     /// Sonde de démarrage à intervalles espacés (utile si la musique joue déjà au lancement —
@@ -57,22 +76,31 @@ import SwiftUI
     /// Nombre de tentatives borné : aucun polling au repos une fois la fenêtre passée.
     private static let maxStartupPollAttempts = 3
 
-    private func scheduleStartupPoll() {
-        guard startupPollAttemptsRemaining > 0 else { return }
+    private func scheduleStartupPoll(generation: Int) {
+        guard isStarted, lifecycleGeneration == generation, startupPollAttemptsRemaining > 0 else { return }
         startupPollAttemptsRemaining -= 1
         pollTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { [weak self] _ in
             Task { @MainActor [weak self] in
-                await self?.refresh()
-                self?.scheduleStartupPoll()
+                await self?.refresh(generation: generation)
+                self?.scheduleStartupPoll(generation: generation)
             }
         }
     }
 
     @objc private func handleMusicPlayerInfo(_ notif: Notification) {
+        guard isStarted else { return }
         guard let info = notif.userInfo else { return }
         let playerState = info["Player State"] as? String ?? ""
         let isPlaying = playerState == "Playing"
         let isActive = playerState == "Playing" || playerState == "Paused"
+
+        let previousIdentity = sourceIdentity
+        sourceIdentity = MediaSourceIdentity.resolved(current: previousIdentity, appleMusicIsActive: isActive)
+        // Un évènement Apple Music qui ne concerne ni la source affichée ni Apple Music lui-même
+        // (ex. "Stopped" reçu alors que Spotify joue déjà) est du bruit : on l'ignore pour ne pas
+        // écraser l'état d'une autre source ni lui reprendre son statut à tort.
+        guard sourceIdentity == .appleMusic || previousIdentity == .appleMusic else { return }
+
         let newTitle = isActive ? info["Name"] as? String : nil
 
         let state = MediaState(
@@ -92,8 +120,6 @@ import SwiftUI
         )
         let becameActive = !wasActive && state.isActive
         wasActive = state.isActive
-        sourceIsAppleMusic = state.isActive
-        sourceIsSpotify = false
         nowPlaying = state
         if becameActive { onBecameActive?() }
         updateElapsedTimer()
@@ -101,21 +127,23 @@ import SwiftUI
         updateAmbient()
 
         // Refresh complet pour récupérer la pochette via MediaRemote
-        Task { await refresh() }
+        Task { await refresh(generation: lifecycleGeneration) }
     }
 
-    private func refresh() async {
+    private func refresh(generation: Int) async {
+        guard isStarted, lifecycleGeneration == generation else { return }
         let state = await source.fetchNowPlayingInfo()
+        guard isStarted, lifecycleGeneration == generation else { return }
         let merged = MediaState.merging(incoming: state, previous: nowPlaying)
         let becameActive = !wasActive && merged.isActive
         let playStateChanged = merged.isPlaying != nowPlaying.isPlaying
         wasActive = merged.isActive
-        // Detect Spotify: running and NOT Apple Music
-        if merged.isActive, !sourceIsAppleMusic {
-            sourceIsSpotify = NSWorkspace.shared.runningApplications
-                .contains { $0.bundleIdentifier == "com.spotify.client" }
+        // Laisse Apple Music autoritaire tant qu'il est la source identifiée ; sinon, toute
+        // activité MediaRemote devient une source "autre" (Spotify, navigateur…) générique.
+        if merged.isActive, sourceIdentity != .appleMusic {
+            sourceIdentity = .other
         } else if !merged.isActive {
-            sourceIsSpotify = false
+            sourceIdentity = .none
         }
         nowPlaying = merged
         if becameActive { onBecameActive?() }
@@ -127,11 +155,12 @@ import SwiftUI
 
     /// Apple Music ne fournit pas la pochette via MediaRemote → on la récupère via AppleScript.
     private func fetchAppleMusicArtworkIfNeeded() {
-        guard sourceIsAppleMusic, nowPlaying.artwork == nil, let title = nowPlaying.title else { return }
+        guard sourceIdentity == .appleMusic, nowPlaying.artwork == nil, let title = nowPlaying.title else { return }
         let key = "\(title)|\(nowPlaying.artist ?? "")"
+        let generation = lifecycleGeneration
         Task { [weak self] in
             guard let image = await self?.artworkSource.artwork(forTrackKey: key) else { return }
-            guard let self, nowPlaying.title == title else { return }
+            guard let self, isStarted, lifecycleGeneration == generation, nowPlaying.title == title else { return }
             nowPlaying.artwork = image
             updateAmbient()
         }
@@ -139,14 +168,24 @@ import SwiftUI
 
     /// Spotify peut ne pas fournir de pochette via MediaRemote → fallback via AppleScript (artwork url).
     private func fetchSpotifyArtworkIfNeeded() {
-        guard sourceIsSpotify, nowPlaying.artwork == nil, let title = nowPlaying.title else { return }
+        guard isSpotifyLikelySource, nowPlaying.artwork == nil, let title = nowPlaying.title else { return }
         let key = "\(title)|\(nowPlaying.artist ?? "")"
+        let generation = lifecycleGeneration
         Task { [weak self] in
             guard let image = await self?.spotifyArtworkSource.artwork(forTrackKey: key) else { return }
-            guard let self, nowPlaying.title == title, nowPlaying.artwork == nil else { return }
+            guard let self, isStarted, lifecycleGeneration == generation,
+                  nowPlaying.title == title, nowPlaying.artwork == nil
+            else { return }
             nowPlaying.artwork = image
             updateAmbient()
         }
+    }
+
+    /// Sert uniquement à décider si le fallback artwork Spotify vaut la peine d'être tenté
+    /// (l'appel AppleScript lui-même se corrige si le titre a changé entre-temps).
+    private var isSpotifyLikelySource: Bool {
+        sourceIdentity == .other && NSWorkspace.shared.runningApplications
+            .contains { $0.bundleIdentifier == "com.spotify.client" }
     }
 
     private func updateAmbient() {
@@ -201,7 +240,7 @@ import SwiftUI
         let target = max(0, min(position, nowPlaying.duration))
         let previousElapsed = nowPlaying.elapsed
         nowPlaying.elapsed = target
-        if sourceIsAppleMusic {
+        if sourceIdentity == .appleMusic {
             seekAppleMusic(to: target, revertTo: previousElapsed)
         } else {
             send(.seek(to: target))
@@ -231,25 +270,30 @@ import SwiftUI
         elapsedTimer = nil
         resyncTimer?.invalidate()
         resyncTimer = nil
-        guard nowPlaying.isPlaying else { return }
+        guard isStarted, nowPlaying.isPlaying else { return }
+        let generation = lifecycleGeneration
         elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
-                guard let self, nowPlaying.isPlaying else { return }
+                guard let self, isStarted, lifecycleGeneration == generation, nowPlaying.isPlaying else { return }
                 nowPlaying.elapsed = min(nowPlaying.elapsed + 1, nowPlaying.duration)
             }
         }
         // Resync Apple Music position every 5 s to prevent drift from the 1-s ticker.
-        if sourceIsAppleMusic {
+        if sourceIdentity == .appleMusic {
             resyncTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-                Task { [weak self] in await self?.resyncAppleMusicElapsed() }
+                Task { [weak self] in await self?.resyncAppleMusicElapsed(generation: generation) }
             }
         }
     }
 
-    private func resyncAppleMusicElapsed() async {
-        guard sourceIsAppleMusic, nowPlaying.isPlaying else { return }
+    private func resyncAppleMusicElapsed(generation: Int) async {
+        guard isStarted, lifecycleGeneration == generation,
+              sourceIdentity == .appleMusic, nowPlaying.isPlaying
+        else { return }
         guard let pos = await appleMusicPlayerPosition() else { return }
-        guard sourceIsAppleMusic, nowPlaying.isPlaying else { return }
+        guard isStarted, lifecycleGeneration == generation,
+              sourceIdentity == .appleMusic, nowPlaying.isPlaying
+        else { return }
         nowPlaying.elapsed = pos
     }
 
@@ -258,6 +302,9 @@ import SwiftUI
     }
 
     public func stop() {
+        guard isStarted else { return }
+        isStarted = false
+        lifecycleGeneration += 1
         mrObserver.map { NotificationCenter.default.removeObserver($0) }
         mrObserver = nil
         DistributedNotificationCenter.default().removeObserver(
@@ -271,6 +318,7 @@ import SwiftUI
         elapsedTimer = nil
         resyncTimer?.invalidate()
         resyncTimer = nil
+        onAmbientUpdate?(nil)
     }
 
     public func makePeekView() -> AnyView {

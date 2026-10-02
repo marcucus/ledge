@@ -259,6 +259,39 @@ private extension MediaContentView {
             .contentShape(Rectangle())
             .gesture(scrubGesture(width: geometry.size.width))
         }
+        // Geste personnalisé sans équivalent AppKit accessible : exposé comme un slider
+        // VoiceOver (rôle "adjustable" + actions incrément/décrément) plutôt qu'une simple
+        // zone de glissement invisible pour l'accessibilité (doc 13, Jalon 4, item 21).
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("media.progress.label", bundle: localizationBundle))
+        .accessibilityValue(progressAccessibilityValue)
+        .accessibilityAdjustableAction(adjustProgress)
+    }
+
+    /// Pas de VoiceOver actif pendant un glissement continu ici : chaque ajustement saute
+    /// d'un pas fixe, comme le fait le widget Lecture en cours natif de macOS.
+    private static let accessibilityScrubStep: TimeInterval = 15
+
+    private func adjustProgress(_ direction: AccessibilityAdjustmentDirection) {
+        guard module.nowPlaying.duration > 0 else { return }
+        switch direction {
+        case .increment:
+            module.seek(to: min(module.nowPlaying.elapsed + Self.accessibilityScrubStep, module.nowPlaying.duration))
+        case .decrement:
+            module.seek(to: max(module.nowPlaying.elapsed - Self.accessibilityScrubStep, 0))
+        @unknown default:
+            break
+        }
+    }
+
+    private var progressAccessibilityValue: Text {
+        Text(
+            String(
+                format: NSLocalizedString("media.progress.value", bundle: localizationBundle, comment: ""),
+                formatTime(module.nowPlaying.elapsed),
+                formatTime(module.nowPlaying.duration)
+            )
+        )
     }
 
     private func scrubGesture(width: CGFloat) -> some Gesture {

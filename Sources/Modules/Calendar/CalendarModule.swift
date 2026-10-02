@@ -3,7 +3,7 @@ import EventKit
 import Foundation
 import SwiftUI
 
-public enum CalendarAccessState {
+public enum CalendarAccessState: Equatable {
     case notDetermined
     case authorized
     case denied
@@ -24,11 +24,22 @@ public final class CalendarModule: NotchModule {
     public private(set) var nextEvent: EKEvent?
     public private(set) var accessState: CalendarAccessState = .notDetermined
 
-    @ObservationIgnored private let eventStore = EKEventStore()
+    @ObservationIgnored private let eventSource: any CalendarEventSource
     @ObservationIgnored private nonisolated(unsafe) var refreshTimer: Timer?
     @ObservationIgnored private let lookahead: TimeInterval = 24 * 60 * 60
+    /// Vrai uniquement pendant une capture marketing (`configureMarketingCapture`) : coupe tout
+    /// accès EventKit réel — ni vérification d'autorisation, ni demande de permission, ni lecture
+    /// du calendrier personnel de l'utilisateur (cf. docs/PLAN-REFONTE-FIDELITE.md, règle « aucune
+    /// donnée personnelle dans une capture »).
+    @ObservationIgnored private var isMarketingCapture = false
 
-    public init() {}
+    public convenience init() {
+        self.init(eventSource: EventKitCalendarEventSource())
+    }
+
+    init(eventSource: any CalendarEventSource) {
+        self.eventSource = eventSource
+    }
 
     deinit {
         refreshTimer?.invalidate()
@@ -37,6 +48,7 @@ public final class CalendarModule: NotchModule {
     // MARK: — NotchModule
 
     public func start() {
+        guard !isMarketingCapture else { return }
         refreshAccessState()
         if accessState == .authorized {
             refreshNextEvent()
@@ -55,10 +67,23 @@ public final class CalendarModule: NotchModule {
         AnyView(CalendarContentView(module: self))
     }
 
+    // MARK: — Capture marketing
+
+    /// Fige le module sur un évènement de démonstration et désactive tout accès EventKit réel
+    /// (voir `isMarketingCapture`) — utilisé uniquement par `MarketingCapture`. Ne construit ni ne
+    /// lit rien via `eventStore` : `event` doit déjà être un `EKEvent` non persisté, fabriqué par
+    /// l'appelant.
+    package func configureMarketingCapture(event: EKEvent) {
+        isMarketingCapture = true
+        accessState = .authorized
+        nextEvent = event
+    }
+
     // MARK: — Polling lifecycle (called by the content view)
 
     /// Call from the content view's `onAppear`.
     func beginPolling() {
+        guard !isMarketingCapture else { return }
         refreshAccessState()
         switch accessState {
         case .authorized:
@@ -85,11 +110,13 @@ public final class CalendarModule: NotchModule {
         refreshTimer = nil
     }
 
+    var isPolling: Bool { refreshTimer != nil }
+
     // MARK: — Authorization
 
     func requestAccessAndRefresh() async {
         do {
-            let granted = try await eventStore.requestFullAccessToEvents()
+            let granted = try await eventSource.requestFullAccess()
             accessState = granted ? .authorized : .denied
             if granted {
                 refreshNextEvent()
@@ -104,7 +131,7 @@ public final class CalendarModule: NotchModule {
     }
 
     private func refreshAccessState() {
-        switch EKEventStore.authorizationStatus(for: .event) {
+        switch eventSource.authorizationStatus {
         case .fullAccess:
             accessState = .authorized
         case .notDetermined:
@@ -120,8 +147,7 @@ public final class CalendarModule: NotchModule {
         guard accessState == .authorized else { return }
         let now = Date()
         let end = now.addingTimeInterval(lookahead)
-        let predicate = eventStore.predicateForEvents(withStart: now, end: end, calendars: nil)
-        let events = eventStore.events(matching: predicate)
+        let events = eventSource.events(from: now, to: end)
         nextEvent = events
             .filter { $0.endDate > now }
             .sorted { $0.startDate < $1.startDate }

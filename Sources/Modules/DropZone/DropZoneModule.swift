@@ -16,13 +16,27 @@ public final class DropZoneModule: NotchModule {
     }
 
     public var onAmbientUpdate: ((AmbientContent?) -> Void)?
+    @ObservationIgnored private var isStarted = false
+    @ObservationIgnored private let settings: SettingsStore
 
-    public init() {}
+    public init(settings: SettingsStore = .shared) {
+        self.settings = settings
+    }
 
     // MARK: — NotchModule
 
-    public func start() {}
-    public func stop() {}
+    public func start() {
+        guard !isStarted else { return }
+        isStarted = true
+        updateAmbient()
+    }
+
+    public func stop() {
+        guard isStarted else { return }
+        isStarted = false
+        isDragActive = false
+        onAmbientUpdate?(nil)
+    }
     public func makePeekView() -> AnyView {
         AnyView(DropZonePeekView(module: self))
     }
@@ -31,11 +45,23 @@ public final class DropZoneModule: NotchModule {
         AnyView(DropZoneContentView(module: self))
     }
 
+    // MARK: — Capture marketing
+
+    /// Injecte des éléments de démonstration directement dans l'état observable — utilisé
+    /// uniquement par `MarketingCapture` (cf. docs/PLAN-REFONTE-FIDELITE.md). Contrairement aux
+    /// autres modules, `ShelfItem.isAvailable` dépend du système de fichiers réel : l'appelant
+    /// doit fournir des `URL` pointant vers des fichiers temporaires réellement présents sur
+    /// disque au moment de la capture (voir `main.swift`), sans quoi les items apparaîtront
+    /// indisponibles à l'écran.
+    package func configureMarketingCapture(items: [ShelfItem]) {
+        self.items = items
+    }
+
     // MARK: — Shelf operations
 
     public func addURLs(_ urls: [URL]) {
         let filtered: [URL]
-        if SettingsStore.shared.dropZoneAcceptFolders {
+        if settings.dropZoneAcceptFolders {
             filtered = urls
         } else {
             filtered = urls.filter { url in
@@ -64,6 +90,10 @@ public final class DropZoneModule: NotchModule {
     // MARK: — Ambient
 
     private func updateAmbient() {
+        guard isStarted else {
+            onAmbientUpdate?(nil)
+            return
+        }
         if isDragActive || !items.isEmpty {
             onAmbientUpdate?(.init(kind: .dropzone(count: items.count), accentColor: .blue))
         } else {
@@ -100,7 +130,7 @@ public final class DropZoneModule: NotchModule {
         let fileManager = FileManager.default
         var failureCount = 0
         for item in items where item.isAvailable {
-            let dest = destination.appendingPathComponent(item.displayName)
+            let dest = uniqueDestination(for: item.displayName, in: destination, fileManager: fileManager)
             do {
                 try fileManager.copyItem(at: item.url, to: dest)
             } catch {
@@ -109,5 +139,25 @@ public final class DropZoneModule: NotchModule {
         }
         failureCount += items.filter { !$0.isAvailable }.count
         lastCopyFailureCount = failureCount
+    }
+
+    /// Évite un échec silencieux quand un fichier du même nom existe déjà à destination :
+    /// ajoute un suffixe numéroté à la façon du Finder ("nom 2.ext", "nom 3.ext", …) jusqu'à
+    /// trouver un nom libre, plutôt que de laisser `copyItem` échouer et compter une collision
+    /// de nom comme une vraie erreur de copie.
+    /// Accès `internal` (plutôt que `private`) pour rester testable via `@testable import`.
+    func uniqueDestination(for displayName: String, in destination: URL, fileManager: FileManager) -> URL {
+        var candidate = destination.appendingPathComponent(displayName)
+        guard fileManager.fileExists(atPath: candidate.path) else { return candidate }
+
+        let baseName = (displayName as NSString).deletingPathExtension
+        let fileExtension = (displayName as NSString).pathExtension
+        var suffix = 2
+        repeat {
+            let newName = fileExtension.isEmpty ? "\(baseName) \(suffix)" : "\(baseName) \(suffix).\(fileExtension)"
+            candidate = destination.appendingPathComponent(newName)
+            suffix += 1
+        } while fileManager.fileExists(atPath: candidate.path)
+        return candidate
     }
 }

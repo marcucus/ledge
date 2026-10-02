@@ -17,12 +17,20 @@ final class ClipboardSource {
     /// Configurable max-history size (set by the module before starting)
     var maxItems: Int = 50
 
+    /// Identifiants de bundle dont les copies ne doivent jamais être capturées (doc 13,
+    /// Jalon 3, item 18), tenu à jour par `ClipboardModule` depuis `SettingsStore`.
+    var excludedBundleIdentifiers: Set<String> = []
+
     private var timer: Timer?
     private var lastChangeCount: Int = NSPasteboard.general.changeCount
     private let pasteboard = NSPasteboard.general
 
     /// Concealed-type UTI used by password managers to flag sensitive copies.
     private static let concealedType = "org.nspasteboard.ConcealedType"
+
+    /// UTI (convention non officielle nspasteboard.org) par laquelle une app bien élevée
+    /// déclare volontairement son identifiant de bundle comme source de la copie.
+    private static let sourceType = "org.nspasteboard.source"
 
     /// Thumbnail max dimension in points.
     private static let thumbnailMaxSide: CGFloat = 128
@@ -64,6 +72,8 @@ final class ClipboardSource {
             return nil
         }
 
+        guard !isExcludedSource(for: items) else { return nil }
+
         guard let first = items.first else { return nil }
 
         // Prefer URL > image > text
@@ -86,6 +96,31 @@ final class ClipboardSource {
         }
 
         return nil
+    }
+
+    // MARK: — Source app
+
+    /// Accès `internal` (plutôt que `private`) pour rester testable via `@testable import`
+    /// sans jamais toucher `NSPasteboard.general` dans les tests (doc 13, Jalon 3, item 18).
+    /// Vrai si la copie doit être ignorée car sa source figure dans `excludedBundleIdentifiers`.
+    func isExcludedSource(for items: [NSPasteboardItem]) -> Bool {
+        guard let bundleID = sourceBundleIdentifier(for: items) else { return false }
+        return excludedBundleIdentifiers.contains(bundleID)
+    }
+
+    /// Préfère la déclaration volontaire de l'app copiante (`org.nspasteboard.source`, non
+    /// implémentée par la majorité des apps) et, à défaut, retombe sur l'app au premier plan au
+    /// moment du sondage — une approximation raisonnable : aucune API publique n'expose la
+    /// source réelle d'une copie sur `NSPasteboard`.
+    func sourceBundleIdentifier(for items: [NSPasteboardItem]) -> String? {
+        for item in items {
+            if let data = item.data(forType: NSPasteboard.PasteboardType(ClipboardSource.sourceType)),
+               let bundleID = String(data: data, encoding: .utf8), !bundleID.isEmpty
+            {
+                return bundleID
+            }
+        }
+        return NSWorkspace.shared.frontmostApplication?.bundleIdentifier
     }
 
     // MARK: — Thumbnail

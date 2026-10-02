@@ -1,5 +1,9 @@
 # 01 — Concept & modèle d'interaction
 
+> **Statut 0.3.0 : contrat produit actif.** Les cinq états livrés sont `collapsed`, `ambient`,
+> `peeking`, `hud` et `expanded`. Les idées non présentes dans le code restent de la vision et ne
+> constituent pas des promesses de la candidate ; voir [doc 09](09-avancement-et-contexte.md).
+
 ## Vision
 
 L'encoche est un « trou noir » matériel que macOS n'exploite pas. Ledge en fait un
@@ -7,7 +11,7 @@ L'encoche est un « trou noir » matériel que macOS n'exploite pas. Ledge en fa
 en un menu riche dès qu'on en a besoin. L'app doit donner l'impression d'une **extension
 naturelle du matériel**, pas d'une fenêtre posée par-dessus.
 
-## Les 3 états
+## Les états d'interaction principaux
 
 ```
 ÉTAT 1 — REPOS                           (par défaut, 99 % du temps)
@@ -20,18 +24,18 @@ naturelle du matériel**, pas d'une fenêtre posée par-dessus.
      de l'encoche (anneau de timer, spectre audio fin).
 
 
-ÉTAT 2 — SURVOL / APERÇU                 (souris approche l'encoche)
+ÉTAT 2 — AMBIENT / APERÇU                (événement utile ou clic configuré)
 ┌───────────────────────────────────────────────────────────┐
 │                ╭───────────────────────────╮                │
 │   ●●●         │ ♪  Titre piste —— Artiste   │   (barre menu) │
 │               │ [pochette]      ⏱ 04:32     │                │
 │                ╰───────────────────────────╯                │
 └───────────────────────────────────────────────────────────┘
-   → L'encoche "gonfle" en douceur (spring animation).
-     Affiche un bandeau compact : aperçus glanés des modules actifs.
+   → L'encoche s'étend discrètement pour une information temporaire.
+     L'état compact n'est pas une étape obligatoire avant l'ouverture.
 
 
-ÉTAT 3 — OUVERT                          (clic, ou survol prolongé)
+ÉTAT 3 — OUVERT                          (survol direct ou clic)
 ┌───────────────────────────────────────────────────────────┐
 │              ╭─────────────────────────────────╮            │
 │  ●●●        │  [🎵] [📋] [⚙️] [⏱️]      ⚙ ✕    │  (menu bar) │
@@ -50,20 +54,20 @@ naturelle du matériel**, pas d'une fenêtre posée par-dessus.
 
 | De → vers | Déclencheur | Animation |
 |---|---|---|
-| Repos → Survol | curseur entre dans la *hot zone* sous l'encoche | gonflement spring ~0,25 s |
-| Survol → Ouvert | clic, OU survol maintenu > délai (réglable) | déroulé vertical du panneau |
+| Repos / Ambient → Ouvert | curseur entre dans la *hot zone* ou action d'ouverture | expansion directe du panneau |
 | Ouvert → Repos | clic ailleurs, `Échap`, ou curseur sort + délai | rétraction inverse |
-| Repos → Survol (auto) | **événement** : nouvelle piste, fin de timer, copie | « peek » bref (2 s) puis retour |
+| Repos → Ambient / HUD | **événement** : média, timer, drag, volume ou luminosité | extension compacte puis retour |
+| Repos → Aperçu | clic si le comportement « Aperçu » est sélectionné | barre compacte explicite |
 
-> Le **peek automatique** est ce qui rend l'app vivante : elle vient te montrer une info
-> importante sans que tu la sollicites, puis disparaît. À garder discret et réglable (cf. Paramètres).
+> Le survol ouvre directement le panneau complet. Cette décision produit est volontaire : aucun
+> délai ni aperçu intermédiaire ne doit ralentir l'accès aux modules.
 
 ## La *hot zone*
 
-Zone invisible sous l'encoche qui capte l'entrée du curseur. Doit être :
+Zone invisible sous l'encoche qui capte l'entrée du curseur. Elle est :
 - légèrement **plus large** que l'encoche (confort) ;
 - **dynamique** : calculée à partir de la vraie largeur de l'encoche (`safeAreaInsets`), jamais en dur ;
-- désactivable / réglable en sensibilité (cf. [Paramètres](06-ecran-parametres.md)).
+- réglable sur trois tailles : Précise, Standard ou Large (cf. [Paramètres](06-ecran-parametres.md)).
 
 ## Anatomie de l'état OUVERT
 
@@ -89,12 +93,12 @@ Zone invisible sous l'encoche qui capte l'entrée du curseur. Doit être :
 
 1. **Zéro friction au repos** — l'app ne doit jamais gêner. Si tu ne l'invoques pas, elle n'existe pas visuellement.
 2. **Réversible** — toute ouverture se ferme par `Échap` / clic extérieur.
-3. **Lisible d'un coup d'œil** — l'état Survol doit livrer l'info en < 1 s.
+3. **Lisible d'un coup d'œil** — l'ambient et le HUD doivent livrer l'information en < 1 s.
 4. **Personnalisable** — modules activables, réordonnables, comportements réglables.
-5. **Cohérent avec macOS** — matériaux translucides (`NSVisualEffectView`), coins arrondis qui prolongent l'encoche, respect du mode clair/sombre.
+5. **Cohérent avec le matériel** — surface noire continue, coins arrondis qui prolongent l'encoche et respect de « Réduire les animations ».
 
 ## Détails visuels signature
 
 - Les **coins du panneau** prolongent le rayon de l'encoche → effet « liquide » continu.
-- **Matériau** : `.hudWindow` ou `.popover` translucide, ombre douce.
+- **Matériau** : noir continu avec l'encoche, sans ombre décorative ni rupture de surface.
 - L'**anneau de timer** et le **spectre audio** peuvent border l'encoche elle-même à l'état repos (very subtle).

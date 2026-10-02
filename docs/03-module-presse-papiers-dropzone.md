@@ -1,7 +1,8 @@
 # 03 — Module Presse-papiers & Drop Zone 📋
 
-> Deux sous-fonctions complémentaires : **historique de copies** + **étagère de fichiers / partage**.
-> Implémentation V2 (Drop Zone) puis V3 (Presse-papiers).
+> **Statut 0.3.0 : livré.** L'historique reste en RAM par défaut ; la persistance chiffrée est un
+> opt-in. Drop Zone est une étagère temporaire locale. Les variantes futures décrites plus bas ne
+> sont pas incluses dans la candidate ; voir [doc 09](09-avancement-et-contexte.md).
 
 ## Objectif
 
