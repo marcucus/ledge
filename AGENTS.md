@@ -135,9 +135,10 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   Les DMG et appcasts sont des assets de release, jamais des fichiers suivis par Git.
 - Les promesses du site doivent suivre le code réel : macOS 14+, modules réellement visibles,
   permissions réellement requises, version publiée réelle et limites connues.
-- La recette du site public était verte le 30 septembre 2026. Le 1er octobre, `ledge.app` sert une
-  page de parking redirigeant vers `/lander`, les API répondent `404` et l'appcast/téléchargement ne
-  servent plus leurs contenus. La configuration DNS/Vercel doit être restaurée avant la release.
+- La recette du site public était verte le 30 septembre 2026 sur le déploiement Vercel. Le domaine
+  canonique choisi est désormais `app-ledge.fr`, acquis le 5 octobre 2026 ; son DNS et son
+  rattachement Vercel doivent être validés avant la release. `ledge.app` appartient à un tiers qui
+  le propose à la vente et ne doit plus être utilisé comme origine du produit.
 
 ## Fin de tâche
 

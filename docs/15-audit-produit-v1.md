@@ -1,0 +1,264 @@
+# Audit produit v1 — Ledge
+
+Date de l’audit : 5 octobre 2026
+
+## Verdict
+
+Ledge a une base technique saine et une identité produit déjà forte, mais le produit n’est pas
+encore prêt pour une **v1 grand public**.
+
+| Axe | État estimé |
+| --- | ---: |
+| Fondations techniques macOS | 8/10 |
+| Qualité fonctionnelle | 7/10 |
+| UX et accessibilité | 7/10 |
+| Site dans le dépôt | 7,5/10 |
+| Distribution grand public | 3/10 |
+| Production réellement accessible | 2/10 |
+| Préparation globale v1 | 5,5/10 |
+
+La version actuelle peut devenir une bonne bêta publique rapidement. Pour une vraie v1 crédible,
+il faut d’abord sécuriser la distribution, corriger quelques problèmes fonctionnels sensibles et
+effectuer une vraie recette sur plusieurs Mac.
+
+## Blocages P0 avant tout lancement
+
+### 1. Mettre en service le domaine acquis
+
+Adrien a acquis `app-ledge.fr` le 5 octobre 2026. Il devient l’unique domaine canonique du produit.
+Le domaine `ledge.app` appartient à un tiers qui le propose sur GoDaddy pour **15 000 USD**, en
+location-achat pour **1 250 USD par mois**, ou sur offre ; il ne fait pas partie du projet et ne
+doit plus apparaître comme origine officielle.
+
+Avant la publication, il reste à :
+
+- configurer le DNS de `app-ledge.fr` ;
+- rattacher le domaine au projet Vercel ;
+- vérifier le certificat HTTPS et les redirections éventuelles ;
+- valider les pages FR/EN, les métadonnées SEO, les API, `/download/latest` et `/appcast.xml` ;
+- créer les adresses de contact nécessaires, par exemple `support@app-ledge.fr`.
+
+Le code et la documentation utilisent désormais `https://app-ledge.fr` comme origine canonique.
+Le flux Sparkle par défaut de l’application pointe directement vers GitHub et reste distinct.
+
+### 2. Choisir une vraie stratégie de distribution
+
+Pour une v1 grand public, la cible recommandée est :
+
+- signature Developer ID ;
+- notarisation Apple ;
+- DMG signé ;
+- validation Gatekeeper sur une machine propre.
+
+Le parcours actuel « Ouvrir quand même » convient à une bêta pour utilisateurs techniques, mais
+il dégrade fortement la confiance et la conversion d’un lancement Internet.
+
+### 3. Débloquer les deux dépôts distants et leurs CI
+
+- Le push de l’application reste bloqué par le scope `workflow` du PAT.
+- Le push du site reste bloqué en HTTP 403.
+- Les CI distantes n’ont donc pas validé les branches de release.
+
+### 4. Faire une recette réelle du bundle
+
+La matrice minimale devrait couvrir :
+
+- installation propre et mise à jour depuis 0.2.0 ;
+- toutes les versions de macOS officiellement supportées ;
+- au moins deux Mac, dont un MacBook avec encoche ;
+- écran externe et multi-écrans ;
+- veille/réveil, plein écran et changement de session ;
+- Apple Music et Spotify en lecture réelle ;
+- permissions Accessibilité, Automation, Calendrier et Notifications accordées, refusées puis
+  retirées ;
+- VoiceOver, navigation clavier et réduction des animations.
+
+### 5. Corriger Drop Zone avant de le présenter comme prêt
+
+La copie de fichiers est exécutée sur le `MainActor`, malgré une signature `async`. De gros
+fichiers peuvent donc figer l’interface (`Sources/Modules/DropZone/DropZoneModule.swift`).
+
+Il faut déplacer les entrées/sorties hors du thread principal, afficher une progression et
+permettre l’annulation.
+
+### 6. Corriger la fidélité du presse-papiers
+
+L’image enregistrée est une miniature limitée à 128 × 128 pixels
+(`Sources/Modules/Clipboard/ClipboardSource.swift`). Recoller cette entrée ne restitue donc pas
+l’image originale.
+
+C’est un défaut fonctionnel important, car la documentation parle d’un historique d’images. Il
+faut soit conserver l’original avec un budget mémoire explicite, soit annoncer clairement
+« aperçu uniquement ».
+
+### 7. Fiabiliser la confidentialité du presse-papiers
+
+L’exclusion d’une application repose parfois sur l’application au premier plan lors du prochain
+polling. Si l’utilisateur change rapidement d’application après une copie, une donnée sensible
+peut être attribuée au mauvais processus.
+
+Les profils qui désactivent complètement le module sont plus sûrs. Pour la v1, il faut documenter
+cette limite, recommander les profils pour les applications sensibles et éviter toute promesse
+d’exclusion absolue.
+
+### 8. Faire relire les textes juridiques anglais
+
+Les pages anglaises affichent elles-mêmes qu’elles doivent être relues juridiquement avant
+publication. Cette mention ne doit pas rester sur une v1 publique.
+
+## P1 — À finir pour une v1 solide
+
+### Application
+
+- Détecter et afficher les conflits d’un raccourci clavier global. Aujourd’hui, un échec Carbon
+  peut rester silencieux.
+- Ajouter un timeout et une annulation aux commandes Shortcuts. Un raccourci bloqué peut laisser
+  le module indéfiniment en cours.
+- Rendre visibles les erreurs de demande de permission. Plusieurs appels utilisent `try?` et
+  confondent erreur système et refus utilisateur.
+- Respecter « Réduire les animations » dans les visualisations Ambient. Les
+  `TimelineView(.animation)` continuent actuellement leur animation.
+- Empêcher la ré-ingestion potentielle d’un collage écrit par Ledge dans son propre historique.
+- Ajouter un sélecteur d’applications aux profils au lieu de demander un identifiant de bundle
+  technique.
+- Clarifier la réinitialisation : elle remet les réglages à zéro mais ne supprime pas toutes les
+  données de modules, la langue, le lancement à la connexion ou les favoris Shortcuts.
+- Remplacer l’écriture de Notes dans `UserDefaults` à chaque frappe par une sauvegarde fichier
+  atomique et temporisée.
+- Tester et documenter précisément le comportement de la luminosité, qui dépend de
+  `DisplayServices`, une API privée.
+- Mesurer et réduire les quelque 100 Mo de mémoire au repos rapportés par la documentation.
+  L’ancien objectif de 10–20 Mo n’est pas réaliste dans l’état actuel.
+
+### Site
+
+- Remplacer les captures codées sous `product-story/0.2.0` par une version générée depuis une
+  source unique. Le générateur 0.3.0 écrit encore un manifeste 0.2.0.
+- Corriger l’avertissement du build Next.js dans `src/lib/social-image.tsx` : l’accès fichier
+  dynamique peut embarquer tout le projet dans le bundle serveur.
+- Ajouter CSP, `Referrer-Policy`, `X-Content-Type-Options` et une `Permissions-Policy`.
+- Distinguer « aucune release » d’une panne GitHub. Aujourd’hui, le site masque parfois une
+  indisponibilité comme si aucune version n’existait.
+- Prévoir un dernier manifeste de release connu afin que le téléchargement ne disparaisse pas
+  lors d’une panne temporaire de l’API GitHub.
+- Réduire la dépendance au récit scrollé de quinze écrans. Le repli mobile et mouvement réduit est
+  bon, mais le parcours desktop reste long et très dirigiste.
+- Ajouter une page Support avec signalement de bug, demande de fonctionnalité et informations
+  nécessaires au diagnostic.
+- Remplacer l’adresse personnelle exposée partout par une adresse dédiée, par exemple
+  `support@app-ledge.fr`.
+- Automatiser la génération de la page des licences depuis les dépendances pour éviter les
+  versions manuelles obsolètes.
+
+## Refactorisations recommandées
+
+### 1. Supprimer le code mort et les réglages hérités
+
+- `ExpandedView` et l’ancien `PeekView` ne sont plus utilisés.
+- `notchDetectionMode` est persisté mais sans effet.
+- `targetScreenIdentifier` et `targetScreenName` ne servent plus qu’à la migration.
+
+### 2. Clarifier la propriété du cycle de vie des modules
+
+Les différentes fenêtres multi-écrans partagent les mêmes instances de modules, alors que chaque
+`NotchController` suit son propre état de démarrage. Le coordinateur devrait posséder les sources
+et leur cycle de vie ; les contrôleurs devraient seulement présenter leur état.
+
+### 3. Isoler les accès non sûrs
+
+Media, System et les raccourcis globaux utilisent plusieurs états `nonisolated(unsafe)` et
+singletons statiques. Regrouper ces accès derrière des acteurs ou des exécuteurs série rendrait les
+intégrations système plus robustes.
+
+### 4. Centraliser les métadonnées produit
+
+Version, build, macOS minimal, URL canonique, dépôt GitHub, version des captures et liens
+juridiques sont dupliqués entre Swift, Makefile, scripts et TypeScript.
+
+### 5. Centraliser l’URL canonique dans l’application
+
+Les liens juridiques de l’application pointent désormais vers `app-ledge.fr`, mais l’origine reste
+une constante propre au code Swift. Elle devrait à terme provenir d’une configuration de build
+partagée ou générée afin d’éviter une nouvelle divergence avec le site.
+
+### 6. Découper `ScrollStoryStage.tsx`
+
+Ses quelque 590 lignes cumulent animation, navigation, accessibilité, gestion du hash, scroll
+interne, rendu SVG et affichage statique. C’est désormais un composant central trop risqué à
+modifier.
+
+## Documentation à remettre en cohérence
+
+- `docs/12` parle encore de 99 tests et `docs/13` de 95, contre 110 aujourd’hui.
+- Certaines pages décrivent encore un réglage manuel de détection de l’encoche qui n’existe pas
+  dans l’interface.
+- La documentation promet parfois un changement de langue immédiat alors que l’application
+  demande un redémarrage.
+- Plusieurs textes parlent de String Catalog alors que les ressources effectives sont des fichiers
+  `.strings`.
+- Le README décrit encore le module Système comme un véritable onglet avec jauges et contrôles,
+  alors qu’il est volontairement transverse et masqué.
+- Les décisions historiques sur l’écran unique contredisent le support multi-écrans actuel.
+- `docs/PROMPT_IA.md` devrait être archivé hors de la documentation active.
+- `.impeccable/design.json` et `DESIGN.md` ont divergé ; il faudrait régénérer la documentation
+  visuelle avant de reprendre un chantier d’interface.
+
+## Idées produit — après stabilisation de la v1
+
+Il est préférable de ne pas ajouter de huitième gros module avant le lancement. Les meilleures
+idées sont celles qui renforcent les fonctions existantes :
+
+- **Centre de diagnostic local** : permissions, version, écran détecté, modules actifs, état
+  Sparkle et export d’un rapport sans données personnelles.
+- **Profils par application faciles** : choisir une app ouverte et proposer automatiquement de
+  couper le presse-papiers pour les gestionnaires de mots de passe.
+- **Drop Zone avancée** : progression, destinations récentes et action
+  « déplacer/copier/partager ».
+- **Sessions Focus** : lancer un minuteur, masquer certains modules et activer automatiquement un
+  profil.
+- **Palette d’actions rapide** : rechercher un module, un raccourci ou une action depuis le
+  clavier.
+- **Canaux Stable/Bêta** : les utilisateurs volontaires peuvent tester les intégrations macOS
+  fragiles sans exposer toute la base.
+- **Sauvegarde/export des réglages** : utile pour les profils et l’organisation des modules.
+- **Onboarding interactif** : faire réellement démarrer un minuteur, déposer un fichier et lire un
+  média plutôt que seulement présenter les fonctions.
+- **Diagnostics et métriques opt-in** : au minimum compter anonymement les échecs de permission,
+  de mise à jour et les crashs, avec consentement explicite.
+
+## Feuille de route recommandée
+
+### Étape 1 — Canal de lancement, 2 à 3 jours
+
+Configuration DNS/Vercel de `app-ledge.fr`, droits Git, CI distante, liens canoniques, publication
+0.3.0, vérification du téléchargement, de l’appcast et de la mise à jour.
+
+### Étape 2 — Fiabilité v1, environ 1 à 2 semaines
+
+Drop Zone asynchrone, presse-papiers fidèle et mieux protégé, timeout Shortcuts, erreurs de
+permissions, animations accessibles et conflits de raccourcis.
+
+### Étape 3 — Release candidate, environ 1 semaine
+
+Notarisation, recette multi-Mac, VoiceOver, performances, veille/réveil, Apple Music/Spotify, mise
+à jour depuis 0.2.0 et revue juridique anglaise.
+
+### Étape 4 — Lancement
+
+Publier d’abord une **0.9 bêta publique**, puis la **1.0** après une courte période de retour
+terrain. Les sept modules peuvent rester, mais la communication devrait se concentrer sur trois
+usages forts : Média, Presse-papiers/Drop Zone et Timers.
+
+## Vérifications effectuées pendant l’audit
+
+- Lecture de l’ensemble de la documentation active et historique des deux dépôts.
+- Inspection des sources de production, configurations, scripts et tests des deux dépôts.
+- `swift build` : vert.
+- `swift test` : 110 tests dans 17 suites, tous verts.
+- SwiftLint sur `Sources` et `Tests` : vert.
+- `make verify-release` : bundle, DMG et appcast 0.3.0 build 3 valides.
+- Site : lint vert, 33 tests verts, contrat visuel vert et build de production réussi.
+- `npm audit --omit=dev --audit-level=high` : aucune vulnérabilité de niveau élevé.
+- Contrôle de la fiche de vente GoDaddy de `ledge.app` à 15 000 USD, vérification de la
+  disponibilité puis de l’acquisition de `app-ledge.fr`, du déploiement Vercel et de la release
+  GitHub publique.

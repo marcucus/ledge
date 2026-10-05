@@ -234,7 +234,7 @@ struct MarketingCapture {
     private static func makeClipboardModule() -> ClipboardModule {
         let module = ClipboardModule()
         let now = Date()
-        guard let changelogURL = URL(string: "https://ledge.app/changelog") else {
+        guard let changelogURL = URL(string: "https://app-ledge.fr/changelog") else {
             module.configureMarketingCapture(items: [])
             return module
         }

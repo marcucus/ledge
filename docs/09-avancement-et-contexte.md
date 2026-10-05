@@ -333,5 +333,6 @@ La version publique est `0.2.0`. La candidate locale suivante est `0.3.0` (build
 4. Tester Gatekeeper puis une mise à jour Sparkle `0.2.0` → `0.3.0` sur un autre Mac.
 5. Effectuer les recettes manuelles restantes avant d'exécuter `make release` : le DMG et
    l'appcast EdDSA 0.3.0 sont désormais générés et validés par `make verify-release`.
-6. Restaurer `ledge.app` vers le déploiement Vercel : le domaine sert actuellement une page de
-   parking `/lander` et non les routes de téléchargement et d'appcast.
+6. Configurer `app-ledge.fr`, acquis le 5 octobre 2026, comme domaine canonique du déploiement
+   Vercel, puis valider les pages, les routes de téléchargement et l'appcast. `ledge.app`
+   appartient à un tiers qui le propose à la vente ; il ne fait pas partie du projet.

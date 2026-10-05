@@ -1,6 +1,8 @@
 import Foundation
 
 struct LegalDestination: Identifiable {
+    private static let siteOrigin = "https://app-ledge.fr"
+
     let id: String
     let titleKey: String
     let systemImage: String
@@ -43,7 +45,7 @@ struct LegalDestination: Identifiable {
         systemImage: String,
         path: String
     ) -> LegalDestination? {
-        guard let url = URL(string: "https://ledge-notch.vercel.app/\(path)") else { return nil }
+        guard let url = URL(string: "\(siteOrigin)/\(path)") else { return nil }
         return LegalDestination(id: id, titleKey: titleKey, systemImage: systemImage, url: url)
     }
 }
