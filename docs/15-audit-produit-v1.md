@@ -10,16 +10,33 @@ encore prêt pour une **v1 grand public**.
 | Axe | État estimé |
 | --- | ---: |
 | Fondations techniques macOS | 8/10 |
-| Qualité fonctionnelle | 7/10 |
-| UX et accessibilité | 7/10 |
+| Qualité fonctionnelle | 8/10 |
+| UX et accessibilité | 8/10 |
 | Site dans le dépôt | 7,5/10 |
 | Distribution grand public | 3/10 |
 | Production réellement accessible | 2/10 |
-| Préparation globale v1 | 5,5/10 |
+| Préparation globale v1 | 6,5/10 |
 
 La version actuelle peut devenir une bonne bêta publique rapidement. Pour une vraie v1 crédible,
 il faut d’abord sécuriser la distribution, corriger quelques problèmes fonctionnels sensibles et
 effectuer une vraie recette sur plusieurs Mac.
+
+## Avancement du plan
+
+### Phase 2 — Fiabilité v1 terminée localement le 5 octobre 2026
+
+- Drop Zone : copie hors du `MainActor`, progression par fichier et annulation.
+- Presse-papiers : images conservées en pleine définition, prévention de la ré-ingestion des
+  écritures de Ledge et description honnête de la limite des exclusions d'apps.
+- Raccourcis : timeout de 5 s pour la liste et 30 s pour l'exécution, annulation qui termine le
+  processus, et erreurs distinctes.
+- Permissions : erreurs système visibles et séparées d'un refus pour Calendrier et Notifications.
+- Accessibilité : les animations Ambient continues sont arrêtées avec « Réduire les animations ».
+- Raccourcis globaux : les échecs Carbon et conflits sont affichés dans les réglages.
+- Validation locale : `swift build`, **116 tests dans 17 suites** et SwiftLint sans avertissement.
+
+La politique du propriétaire reste : **aucun push par l'agent**. Les validations distantes et
+toute publication restent donc des actions manuelles d'Adrien.
 
 ## Blocages P0 avant tout lancement
 
@@ -53,11 +70,11 @@ Pour une v1 grand public, la cible recommandée est :
 Le parcours actuel « Ouvrir quand même » convient à une bêta pour utilisateurs techniques, mais
 il dégrade fortement la confiance et la conversion d’un lancement Internet.
 
-### 3. Débloquer les deux dépôts distants et leurs CI
+### 3. Valider les dépôts distants et leurs CI côté propriétaire
 
-- Le push de l’application reste bloqué par le scope `workflow` du PAT.
-- Le push du site reste bloqué en HTTP 403.
-- Les CI distantes n’ont donc pas validé les branches de release.
+- Les CI distantes n’ont pas validé les branches de release.
+- Adrien a demandé qu'aucun push ne soit effectué par l'agent ; la publication distante est donc
+  volontairement hors du périmètre d'exécution automatisée.
 
 ### 4. Faire une recette réelle du bundle
 
@@ -73,33 +90,25 @@ La matrice minimale devrait couvrir :
   retirées ;
 - VoiceOver, navigation clavier et réduction des animations.
 
-### 5. Corriger Drop Zone avant de le présenter comme prêt
+### 5. ✅ Drop Zone corrigée en phase 2
 
-La copie de fichiers est exécutée sur le `MainActor`, malgré une signature `async`. De gros
-fichiers peuvent donc figer l’interface (`Sources/Modules/DropZone/DropZoneModule.swift`).
+Les entrées/sorties sont désormais exécutées hors du thread principal. La vue affiche la
+progression et permet l'annulation entre deux fichiers.
 
-Il faut déplacer les entrées/sorties hors du thread principal, afficher une progression et
-permettre l’annulation.
+### 6. ✅ Fidélité du presse-papiers corrigée en phase 2
 
-### 6. Corriger la fidélité du presse-papiers
+L'image complète est conservée et recollée sans la réduction destructive historique à 128 px.
+La consommation mémoire des gros historiques d'images devra être mesurée pendant la recette.
 
-L’image enregistrée est une miniature limitée à 128 × 128 pixels
-(`Sources/Modules/Clipboard/ClipboardSource.swift`). Recoller cette entrée ne restitue donc pas
-l’image originale.
-
-C’est un défaut fonctionnel important, car la documentation parle d’un historique d’images. Il
-faut soit conserver l’original avec un budget mémoire explicite, soit annoncer clairement
-« aperçu uniquement ».
-
-### 7. Fiabiliser la confidentialité du presse-papiers
+### 7. ✅ Confidentialité clarifiée en phase 2
 
 L’exclusion d’une application repose parfois sur l’application au premier plan lors du prochain
 polling. Si l’utilisateur change rapidement d’application après une copie, une donnée sensible
 peut être attribuée au mauvais processus.
 
-Les profils qui désactivent complètement le module sont plus sûrs. Pour la v1, il faut documenter
-cette limite, recommander les profils pour les applications sensibles et éviter toute promesse
-d’exclusion absolue.
+Les profils qui désactivent complètement le module restent la protection stricte recommandée. La
+limite est désormais expliquée dans l'interface, sans promesse d'exclusion absolue, et Ledge ne
+réimporte plus ses propres écritures au prochain sondage.
 
 ### 8. Faire relire les textes juridiques anglais
 
@@ -110,15 +119,6 @@ publication. Cette mention ne doit pas rester sur une v1 publique.
 
 ### Application
 
-- Détecter et afficher les conflits d’un raccourci clavier global. Aujourd’hui, un échec Carbon
-  peut rester silencieux.
-- Ajouter un timeout et une annulation aux commandes Shortcuts. Un raccourci bloqué peut laisser
-  le module indéfiniment en cours.
-- Rendre visibles les erreurs de demande de permission. Plusieurs appels utilisent `try?` et
-  confondent erreur système et refus utilisateur.
-- Respecter « Réduire les animations » dans les visualisations Ambient. Les
-  `TimelineView(.animation)` continuent actuellement leur animation.
-- Empêcher la ré-ingestion potentielle d’un collage écrit par Ledge dans son propre historique.
 - Ajouter un sélecteur d’applications aux profils au lieu de demander un identifiant de bundle
   technique.
 - Clarifier la réinitialisation : elle remet les réglages à zéro mais ne supprime pas toutes les
@@ -189,7 +189,7 @@ modifier.
 
 ## Documentation à remettre en cohérence
 
-- `docs/12` parle encore de 99 tests et `docs/13` de 95, contre 110 aujourd’hui.
+- `docs/12` parle encore de 99 tests et `docs/13` de 95, contre 116 aujourd’hui.
 - Certaines pages décrivent encore un réglage manuel de détection de l’encoche qui n’existe pas
   dans l’interface.
 - La documentation promet parfois un changement de langue immédiat alors que l’application
@@ -233,7 +233,7 @@ idées sont celles qui renforcent les fonctions existantes :
 Configuration DNS/Vercel de `app-ledge.fr`, droits Git, CI distante, liens canoniques, publication
 0.3.0, vérification du téléchargement, de l’appcast et de la mise à jour.
 
-### Étape 2 — Fiabilité v1, environ 1 à 2 semaines
+### Étape 2 — Fiabilité v1 — ✅ terminée localement le 5 octobre 2026
 
 Drop Zone asynchrone, presse-papiers fidèle et mieux protégé, timeout Shortcuts, erreurs de
 permissions, animations accessibles et conflits de raccourcis.
@@ -254,7 +254,7 @@ usages forts : Média, Presse-papiers/Drop Zone et Timers.
 - Lecture de l’ensemble de la documentation active et historique des deux dépôts.
 - Inspection des sources de production, configurations, scripts et tests des deux dépôts.
 - `swift build` : vert.
-- `swift test` : 110 tests dans 17 suites, tous verts.
+- `swift test` : 116 tests dans 17 suites, tous verts.
 - SwiftLint sur `Sources` et `Tests` : vert.
 - `make verify-release` : bundle, DMG et appcast 0.3.0 build 3 valides.
 - Site : lint vert, 33 tests verts, contrat visuel vert et build de production réussi.

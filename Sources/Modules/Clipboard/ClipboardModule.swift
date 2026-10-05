@@ -229,6 +229,7 @@ public final class ClipboardModule: NotchModule {
                 pasteboard.setData(tiff, forType: .tiff)
             }
         }
+        source.synchronizeChangeCount()
     }
 
     private func simulatePaste() {

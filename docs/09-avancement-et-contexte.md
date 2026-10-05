@@ -309,6 +309,16 @@ Après une veille ou un déverrouillage de session, le module Système recrée d
 `CGEventTap` avec trois tentatives bornées. Cela évite que le HUD Ledge et le HUD natif macOS
 s'affichent ensemble lorsque l'ancien Mach port existe encore mais n'intercepte plus les touches.
 
+**Phase 2 — fiabilité v1 (5 octobre 2026)** : la Drop Zone copie désormais hors du thread
+principal, publie une progression et permet l'annulation. Le presse-papiers conserve les images
+en pleine définition, ignore ses propres écritures et documente honnêtement la limite macOS de
+l'identification de l'app source. Les commandes Raccourcis ont des délais maximaux (5 s pour la
+liste, 30 s pour une exécution), une annulation qui termine le processus et des erreurs visibles.
+Les erreurs système de permissions Calendrier/Notifications ne sont plus confondues avec un refus.
+Les animations Ambient respectent « Réduire les animations » et les conflits Carbon des
+raccourcis globaux apparaissent dans les réglages. `swift build`, **116 tests dans 17 suites** et
+SwiftLint sont verts, sans avertissement.
+
 ## Construire & lancer
 
 ```bash
@@ -324,15 +334,14 @@ réinstalle le tap au changement d'application, sans nécessiter de relance.
 La version publique est `0.2.0`. La candidate locale suivante est `0.3.0` (build `3`) ; elle ne doit
 être publiée qu'après la recette de [doc 12](12-recette-release-candidate.md).
 
-1. Fournir au PAT de l'app le scope `workflow`, pousser `codex/release-0.3.0`, puis valider la CI
-   GitHub Actions sur le flux `dev → rc → main`. Le vrai push est toujours refusé malgré une
-   simulation réussie ; celui du site reste refusé en HTTP 403.
+1. Aucun push ne doit être effectué par l'agent. Si Adrien décide de publier les branches, il devra
+   lui-même valider ensuite les CI distantes de l'application et du site.
 2. Valider Apple Music en lecture réelle : pochette, seek, resynchronisation et permission Automation.
 3. Valider manuellement les trois comportements plein écran et les transitions veille/réveil sur
    écran interne et externe.
 4. Tester Gatekeeper puis une mise à jour Sparkle `0.2.0` → `0.3.0` sur un autre Mac.
 5. Effectuer les recettes manuelles restantes avant d'exécuter `make release` : le DMG et
    l'appcast EdDSA 0.3.0 sont désormais générés et validés par `make verify-release`.
-6. Configurer `app-ledge.fr`, acquis le 5 octobre 2026, comme domaine canonique du déploiement
-   Vercel, puis valider les pages, les routes de téléchargement et l'appcast. `ledge.app`
-   appartient à un tiers qui le propose à la vente ; il ne fait pas partie du projet.
+6. Finaliser le domaine Vercel : `app-ledge.fr` est connecté et HTTPS fonctionne, mais Vercel
+   redirige encore l'apex vers `www.app-ledge.fr` alors que le code déclare l'apex canonique.
+   `ledge.app` appartient à un tiers et ne fait pas partie du projet.

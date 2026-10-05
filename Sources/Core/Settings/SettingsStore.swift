@@ -143,6 +143,11 @@ import SwiftUI
         didSet { defaults.set(globalShortcutEnabled, forKey: Keys.globalShortcutEnabled) }
     }
 
+    /// Identifiants des actions dont la combinaison n'a pas pu être enregistrée auprès de
+    /// macOS (déjà utilisée par une autre app, doublon interne ou combinaison invalide).
+    /// État de session uniquement : `GlobalShortcutManager` le recalcule à chaque application.
+    public internal(set) var globalShortcutConflictIDs: Set<String> = []
+
     public var shortcutOpenClose: GlobalKeyboardShortcut {
         didSet { defaults.setShortcut(shortcutOpenClose, forKey: Keys.shortcutOpenClose) }
     }

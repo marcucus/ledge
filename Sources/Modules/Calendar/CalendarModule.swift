@@ -7,6 +7,7 @@ public enum CalendarAccessState: Equatable {
     case notDetermined
     case authorized
     case denied
+    case requestFailed
 }
 
 // MARK: — CalendarModule
@@ -93,6 +94,8 @@ public final class CalendarModule: NotchModule {
             Task { await requestAccessAndRefresh() }
         case .denied:
             nextEvent = nil
+        case .requestFailed:
+            nextEvent = nil
         }
     }
 
@@ -125,7 +128,7 @@ public final class CalendarModule: NotchModule {
                 nextEvent = nil
             }
         } catch {
-            accessState = .denied
+            accessState = .requestFailed
             nextEvent = nil
         }
     }
