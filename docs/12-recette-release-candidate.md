@@ -32,10 +32,14 @@
 - Cette machine possède un certificat Apple Development, mais aucun certificat Developer ID et
   aucune configuration `APPLE_ID`, `TEAM_ID` ou `APP_PASSWORD`. La notarisation est donc bloquée
   par des prérequis externes, pas par le code.
-- Le site local passe ESLint, 33 tests, le contrat visuel et le build Next.js de production.
+- Le site local passe désormais ESLint, 31 tests, le contrat visuel 0.3.0 et le build Next.js de
+  production sans avertissement. La réduction de 33 à 31 correspond à la suppression des tests du
+  code mort des anciennes timelines fusionnées ; les tests fonctionnels restants sont verts.
 - Les routes publiques renvoient `200`, mais l'apex redirige vers `www.app-ledge.fr` et le champ
-  `<link>` de l'appcast public pointe encore vers `ledge-notch.vercel.app`. La variable d'origine
-  Vercel et le domaine primaire doivent être corrigés côté hébergeur.
+  `<link>` de l'appcast public pointait encore vers `ledge-notch.vercel.app`. Le code ignore
+  désormais cette ancienne variable et force `https://app-ledge.fr`; le déploiement public reste
+  à actualiser manuellement. L'ancienne variable Vercel peut être supprimée et l'apex doit encore
+  être choisi comme domaine primaire côté hébergeur.
 - Les traductions juridiques anglaises n'ont pas reçu de validation juridique humaine et gardent
   volontairement leur avertissement.
 

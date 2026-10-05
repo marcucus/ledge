@@ -26,7 +26,11 @@ struct MarketingCapture {
         let assets = try requests.map {
             try render($0, mediaState: mediaState, outputDirectory: arguments.outputDirectory)
         }
-        try writeManifest(assets: assets, outputDirectory: arguments.outputDirectory)
+        try writeManifest(
+            assets: assets,
+            version: arguments.version,
+            outputDirectory: arguments.outputDirectory
+        )
         print("Captures Ledge écrites dans \(arguments.outputDirectory.path)")
     }
 
@@ -68,9 +72,13 @@ struct MarketingCapture {
         return [ambientRequest] + compositionRequests + otherModuleRequests
     }
 
-    private static func writeManifest(assets: [CaptureAsset], outputDirectory: URL) throws {
+    private static func writeManifest(
+        assets: [CaptureAsset],
+        version: String,
+        outputDirectory: URL
+    ) throws {
         let manifest = CaptureManifest(
-            version: "0.2.0",
+            version: version,
             scale: 2,
             generatedAt: ISO8601DateFormatter().string(from: Date()),
             assets: assets
@@ -284,13 +292,16 @@ struct MarketingCapture {
 private struct CaptureArguments {
     let outputDirectory: URL
     let artworkURL: URL
+    let version: String
 
     static func parse(_ arguments: [String]) -> CaptureArguments {
         let outputPath = value(after: "--output", in: arguments) ?? "MarketingCaptures"
         let artworkPath = value(after: "--artwork", in: arguments) ?? "ledgelogo.png"
+        let version = value(after: "--version", in: arguments) ?? "development"
         return CaptureArguments(
             outputDirectory: URL(fileURLWithPath: outputPath, isDirectory: true),
-            artworkURL: URL(fileURLWithPath: artworkPath)
+            artworkURL: URL(fileURLWithPath: artworkPath),
+            version: version
         )
     }
 

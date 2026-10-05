@@ -328,6 +328,14 @@ notarisation n'est possible sans certificat Developer ID et configuration Notary
 local est vert (lint, 33 tests, contrat visuel, build), tandis que la recette interactive, le
 second Mac, la validation juridique anglaise et deux réglages Vercel restent bloquants.
 
+**Synchronisation du site et des captures (5 octobre 2026)** : `MarketingCapture` ne code plus la
+version 0.2.0 dans son manifeste. Le script du site lit la version 0.3.0 dans `Info.plist`, la passe
+explicitement au générateur et le contrat visuel contrôle la version ainsi que la présence des dix
+PNG. Les captures 0.3.0 ont été régénérées dans `ledge-site`. Le site dispose aussi d'un fallback
+de release, d'en-têtes de sécurité, d'une page Support FR/EN, d'un inventaire de licences généré et
+d'une home raccourcie. Sa recette finale passe ESLint, **31 tests**, le contrat visuel 0.3.0 et le
+build Next.js sans avertissement. Aucun push n'a été effectué.
+
 ## Construire & lancer
 
 ```bash

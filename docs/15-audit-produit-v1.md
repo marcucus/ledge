@@ -2,6 +2,13 @@
 
 Date de l’audit : 5 octobre 2026
 
+> **Mise à jour du 5 octobre 2026 :** le chantier site des phases 1 à 3 est terminé localement :
+> sécurité HTTP, origine canonique `app-ledge.fr`, fallback de release, captures 0.3.0, page
+> Support FR/EN, licences générées, galerie des modules, story raccourcie et découpage de
+> `ScrollStoryStage`. ESLint, 31 tests, contrat visuel et build Next.js sont verts. Les constats
+> site non cochés plus bas sont conservés comme photographie de l'audit initial. Aucun push n'a
+> été effectué.
+
 ## Verdict
 
 Ledge a une base technique saine et une identité produit déjà forte, mais le produit n’est pas
