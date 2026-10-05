@@ -22,6 +22,11 @@ distribution directe avec mises à jour Sparkle.
 - Accessibilité renforcée pour Média, Timers et le HUD Système, avec prise en charge de Réduire les
   animations.
 - Quick Look au clavier, partage et gestion plus robuste des fichiers supprimés dans Drop Zone.
+- Copie Drop Zone hors du thread principal, avec progression et annulation entre les fichiers.
+- Images du presse-papiers conservées en pleine définition et prévention de la ré-ingestion des
+  contenus écrits par Ledge.
+- Timeout, annulation réelle et retours d'erreur distincts pour les commandes Raccourcis.
+- Conflits de raccourcis globaux et erreurs de permissions Calendrier/Notifications rendus visibles.
 - Modules réellement arrêtés lorsqu'ils sont désactivés globalement ou par un profil d'application.
 - Calendrier, Notes et Raccourcis mieux testés et plus explicites en cas d'autorisation refusée ou
   d'erreur système.

@@ -98,7 +98,7 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   `init(directory:)` déclarés `private`/`internal` alors qu'exposés dans une API publique),
   corrigés dans la foulée avec un avertissement de longueur de fonction dans
   `AppDelegate.buildAndRegisterModules(in:)` (câblage du minuteur extrait dans `makeTimerModule(in:)`).
-- `swift test` compile et exécute **110 tests dans 17 suites**, tous verts. Les nouvelles suites
+- `swift test` compile et exécute **116 tests dans 17 suites**, tous verts. Les nouvelles suites
   couvrent aussi Calendrier, Notes, Raccourcis et l'assemblage des modules de l'app.
 - SwiftLint est vert sur `Sources` et `Tests`, sans avertissement. `SettingsStore.swift` et
   `NotchController.swift` ont été ramenés sous 400 lignes par extraction des clés et du contenu
@@ -106,13 +106,11 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   la persistance et l'injection des réglages Drop Zone.
 - Version bundle locale actuelle : `0.3.0` (build `3`), candidate non publiée. La version publique
   GitHub est `0.2.0` ; elle ne doit pas être remplacée ni republier ses assets.
-- Le bundle `0.3.0`, son DMG et son appcast EdDSA ont été reconstruits. Build, 110 tests, SwiftLint,
+- Le bundle `0.3.0`, son DMG et son appcast EdDSA ont été reconstruits. Build, 116 tests, SwiftLint,
   `codesign`, `hdiutil`, `xmllint` et `make verify-release` sont verts. Les attentes asynchrones de
   tests Raccourcis et de fermeture du panneau ne dépendent plus de délais fixes trop courts.
-- Le vrai push de `codex/release-0.3.0` reste refusé : le PAT HTTPS n'a pas le scope `workflow`
-  requis pour `.github/workflows/ci.yml`, même si `git push --dry-run` l'annonce à tort comme
-  possible. Le dépôt du site reste lui aussi refusé en HTTP 403 ; les deux CI distantes restent à
-  valider.
+- Adrien a demandé qu'aucun push ne soit effectué par l'agent. Les deux CI distantes restent donc
+  à valider manuellement par le propriétaire.
 - La clé publique Sparkle est renseignée. `SUFeedURL` est injectée dans le bundle de distribution
   par `SPARKLE_FEED_URL`; le bundle de développement n'active pas Sparkle sans cette valeur.
 - `make release` crée un DMG signé ad hoc, génère l'appcast Sparkle EdDSA, crée une GitHub Release
@@ -135,10 +133,10 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   Les DMG et appcasts sont des assets de release, jamais des fichiers suivis par Git.
 - Les promesses du site doivent suivre le code réel : macOS 14+, modules réellement visibles,
   permissions réellement requises, version publiée réelle et limites connues.
-- La recette du site public était verte le 30 septembre 2026 sur le déploiement Vercel. Le domaine
-  canonique choisi est désormais `app-ledge.fr`, acquis le 5 octobre 2026 ; son DNS et son
-  rattachement Vercel doivent être validés avant la release. `ledge.app` appartient à un tiers qui
-  le propose à la vente et ne doit plus être utilisé comme origine du produit.
+- `app-ledge.fr`, acquis le 5 octobre 2026, est relié à Vercel et ses routes publiques répondent.
+  Vercel redirige toutefois encore l'apex vers `www.app-ledge.fr`, et l'appcast public expose une
+  ancienne origine `ledge-notch.vercel.app` : corriger le domaine primaire et la variable
+  `NEXT_PUBLIC_SITE_URL` avant la release. `ledge.app` appartient à un tiers.
 
 ## Fin de tâche
 

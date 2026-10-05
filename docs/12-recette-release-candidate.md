@@ -1,6 +1,6 @@
 # 12 — Recette release candidate
 
-> Mise à jour le **30 septembre 2026**.
+> Mise à jour le **5 octobre 2026** après la phase 3 locale.
 >
 > Version publique : `0.2.0` (build `2`). Candidate locale suivante : `0.3.0` (build `3`).
 > La release `v0.2.0` et ses assets ne doivent jamais être remplacés : Sparkle exige une version
@@ -9,17 +9,35 @@
 ## État automatisé de la candidate
 
 - [x] `swift build`
-- [x] `swift test` — 99 tests dans 14 suites
+- [x] `swift test` — 116 tests dans 17 suites
 - [x] `swiftlint lint --quiet Sources Tests` — aucune erreur ni avertissement
 - [x] `make app` — bundle construit avec la licence Sparkle incluse
+- [x] smoke test réel — le bundle optimisé démarre et reste actif pendant la mesure de 30 secondes
 - [x] tests, ESLint et build de production de `ledge-site`
-- [ ] CI GitHub verte sur le commit candidat
+- [ ] CI GitHub verte sur le commit candidat — aucun push ne doit être effectué par l'agent
 - [x] `make direct-appcast` — DMG et appcast `0.3.0` signés
 - [x] `codesign --verify --deep --strict dist/Ledge.app`
 - [x] `hdiutil verify dist/Ledge-0.3.0.dmg`
 - [x] validation XML de `dist/appcast.xml`
 - [x] pages juridiques publiques : mentions, confidentialité, conditions et licences en HTTP 200
 - [x] routes publiques : accueil `200`, appcast `200`, téléchargement `302` vers le DMG GitHub
+
+### Preuves de phase 3 — 5 octobre 2026
+
+- DMG reconstruit depuis le code de phase 2 : **3 565 185 octets**.
+- SHA-256 : `8b6078d6744a1c9b0c96648a8824ca4807ebb589f59a7eb69059603ef241e1d9`.
+- Appcast local : version `0.3.0`, build `3`, macOS `14.0`, signature EdDSA présente, zéro delta.
+- Gatekeeper rejette normalement l'app et le DMG actuels : ils sont signés ad hoc, sans ticket de
+  notarisation (`source=no usable signature`).
+- Cette machine possède un certificat Apple Development, mais aucun certificat Developer ID et
+  aucune configuration `APPLE_ID`, `TEAM_ID` ou `APP_PASSWORD`. La notarisation est donc bloquée
+  par des prérequis externes, pas par le code.
+- Le site local passe ESLint, 33 tests, le contrat visuel et le build Next.js de production.
+- Les routes publiques renvoient `200`, mais l'apex redirige vers `www.app-ledge.fr` et le champ
+  `<link>` de l'appcast public pointe encore vers `ledge-notch.vercel.app`. La variable d'origine
+  Vercel et le domaine primaire doivent être corrigés côté hébergeur.
+- Les traductions juridiques anglaises n'ont pas reçu de validation juridique humaine et gardent
+  volontairement leur avertissement.
 
 ## Recette manuelle sur le Mac de développement
 
@@ -60,6 +78,11 @@ make measure-performance SCENARIO=media DURATION=30 INTERVAL=1
 Chaque commande écrit un CSV horodaté dans `dist/` et affiche CPU moyen/max ainsi que RSS
 moyenne/max. Conserver les trois CSV avec les notes de recette pour comparer les mêmes scénarios
 entre candidates.
+
+Mesure stabilisée au repos du 5 octobre 2026, après une première fenêtre incluant le démarrage :
+**0,00 % CPU moyen**, **0,10 % max**, **91,1 Mo RSS moyen** et **91,2 Mo max** sur 30 mesures.
+Les scénarios Timer et Média exigent encore une interaction réelle avec l'encoche et une lecture
+Apple Music/Spotify ; ils ne sont pas cochés par une simple mesure du processus.
 
 ## Recette indispensable sur un autre Mac
 

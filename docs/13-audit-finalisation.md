@@ -1,7 +1,6 @@
 # 13 — Audit de finalisation de Ledge
 
-> État consolidé le **30 septembre 2026** après les jalons 1 à 4, la refonte de `ledge-site` et
-> l'ajout de la couche juridique.
+> État consolidé le **5 octobre 2026** après la phase 2 de fiabilité et la phase 3 locale.
 >
 > Version publique : `0.2.0` (build `2`). Candidate locale : `0.3.0` (build `3`).
 
@@ -19,7 +18,8 @@ et la correction des défauts observés pendant cette recette.
 ## Décisions produit qui ne doivent plus être remises en question
 
 - Le survol ouvre directement le panneau complet : aucun délai ni aperçu compact intermédiaire.
-- Une seule cible d'écran est choisie ; un écran sans encoche reçoit la pseudo-encoche.
+- L'utilisateur peut choisir la cible automatique, tous les écrans ou une sélection ; un écran
+  sans encoche reçoit la pseudo-encoche.
 - Les trois compositions gardent un fond noir raccordé à l'encoche.
 - Le module Système reste volontairement absent de la navigation. Il fournit batterie, HUD et
   signaux système en arrière-plan sans présenter un onglet incomplet.
@@ -33,15 +33,15 @@ et la correction des défauts observés pendant cette recette.
 | Vérification | Résultat |
 |---|---|
 | `swift build` | ✅ Succès |
-| `swift test` | ✅ 95 tests dans 14 suites |
+| `swift test` | ✅ 116 tests dans 17 suites |
 | `swiftlint lint --quiet Sources Tests` | ✅ Aucune erreur |
 | `make app` | ✅ Bundle construit et signé avec l'identité de développement |
 | Licence Sparkle | ✅ Copie exacte incluse dans les ressources du bundle |
 | Localisation | ✅ Nouvelles chaînes juridiques présentes en français et en anglais |
 | Version locale | ✅ `0.3.0` — build `3` |
 
-Deux avertissements SwiftLint historiques subsistent : `SettingsStore.swift` et
-`NotchController.swift` dépassent 400 lignes sans atteindre le seuil d'erreur de 500 lignes.
+SwiftLint est vert sans avertissement. `SettingsStore` et `NotchController` ont été découpés sous
+les seuils du projet.
 
 ## Jalons terminés
 

@@ -38,21 +38,31 @@ effectuer une vraie recette sur plusieurs Mac.
 La politique du propriétaire reste : **aucun push par l'agent**. Les validations distantes et
 toute publication restent donc des actions manuelles d'Adrien.
 
+### Phase 3 — Release candidate : automatisation locale terminée, recette humaine bloquante
+
+- Bundle, DMG et appcast 0.3.0 reconstruits et vérifiés depuis le code de phase 2.
+- Site local entièrement vert et routes publiques disponibles.
+- Repos stabilisé mesuré à 0,00 % CPU moyen et 91,1 Mo RSS moyen sur 30 secondes.
+- Gatekeeper confirme que le paquet ad hoc n'est pas une distribution grand public notarisée.
+- Aucun certificat Developer ID ni identifiant NotaryTool n'est disponible sur cette machine.
+- Restent obligatoires : recette interactive Média/Timer/VoiceOver/écrans/veille, second Mac,
+  mise à jour Sparkle 0.2.0 → 0.3.0 et validation juridique anglaise.
+
 ## Blocages P0 avant tout lancement
 
-### 1. Mettre en service le domaine acquis
+### 1. Finaliser le domaine acquis
 
 Adrien a acquis `app-ledge.fr` le 5 octobre 2026. Il devient l’unique domaine canonique du produit.
 Le domaine `ledge.app` appartient à un tiers qui le propose sur GoDaddy pour **15 000 USD**, en
 location-achat pour **1 250 USD par mois**, ou sur offre ; il ne fait pas partie du projet et ne
 doit plus apparaître comme origine officielle.
 
-Avant la publication, il reste à :
+Le DNS, le rattachement Vercel, HTTPS et les routes publiques fonctionnent. Avant publication, il
+reste à :
 
-- configurer le DNS de `app-ledge.fr` ;
-- rattacher le domaine au projet Vercel ;
-- vérifier le certificat HTTPS et les redirections éventuelles ;
-- valider les pages FR/EN, les métadonnées SEO, les API, `/download/latest` et `/appcast.xml` ;
+- faire de `app-ledge.fr` le domaine primaire au lieu de rediriger l'apex vers `www` ;
+- remplacer l'ancienne origine `ledge-notch.vercel.app` encore injectée dans l'appcast public ;
+- valider les pages FR/EN et les métadonnées SEO après ce changement ;
 - créer les adresses de contact nécessaires, par exemple `support@app-ledge.fr`.
 
 Le code et la documentation utilisent désormais `https://app-ledge.fr` comme origine canonique.
@@ -189,7 +199,7 @@ modifier.
 
 ## Documentation à remettre en cohérence
 
-- `docs/12` parle encore de 99 tests et `docs/13` de 95, contre 116 aujourd’hui.
+- `docs/12`, `docs/13` et `docs/14` sont désormais alignés sur les 116 tests actuels.
 - Certaines pages décrivent encore un réglage manuel de détection de l’encoche qui n’existe pas
   dans l’interface.
 - La documentation promet parfois un changement de langue immédiat alors que l’application

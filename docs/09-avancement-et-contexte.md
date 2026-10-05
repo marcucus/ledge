@@ -319,6 +319,15 @@ Les animations Ambient respectent « Réduire les animations » et les conflits 
 raccourcis globaux apparaissent dans les réglages. `swift build`, **116 tests dans 17 suites** et
 SwiftLint sont verts, sans avertissement.
 
+**Phase 3 — release candidate locale (5 octobre 2026)** : le bundle optimisé, le DMG et l'appcast
+0.3.0 ont été régénérés et validés. Le DMG pèse 3 565 185 octets et son SHA-256 est
+`8b6078d6744a1c9b0c96648a8824ca4807ebb589f59a7eb69059603ef241e1d9`. Au repos stabilisé,
+Ledge mesure 0,00 % CPU moyen et 91,1 Mo RSS moyen sur 30 secondes. La machine ne possède qu'un
+certificat Apple Development : Gatekeeper rejette normalement le paquet ad hoc et aucune
+notarisation n'est possible sans certificat Developer ID et configuration NotaryTool. Le site
+local est vert (lint, 33 tests, contrat visuel, build), tandis que la recette interactive, le
+second Mac, la validation juridique anglaise et deux réglages Vercel restent bloquants.
+
 ## Construire & lancer
 
 ```bash
