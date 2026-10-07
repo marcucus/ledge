@@ -56,6 +56,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func applyDockIcon() {
+        if let icon = NSImage(named: NSImage.applicationIconName) {
+            NSApp.applicationIconImage = icon
+            return
+        }
         guard let url = Bundle.module.url(forResource: "ledgelogo", withExtension: "png"),
               let logo = NSImage(contentsOf: url)
         else { return }

@@ -4,26 +4,29 @@ App macOS d'encoche (notch) : barre d'outils contextuelle sous l'encoche du MacB
 modules (Média, Timers, Drop Zone, Presse-papiers, Système, Raccourcis, Calendrier, Notes).
 Swift Package Manager pur (pas de projet Xcode), Swift 5.10+, macOS 14+, Apple Silicon.
 App `LSUIElement` (pas d'icône Dock, sauf fenêtre Réglages ouverte). Distribution directe hors
-App Store : DMG auto-hébergé, signature ad hoc et mises à jour signées avec Sparkle EdDSA.
+App Store : DMG auto-hébergé, signature Developer ID, notarisation Apple et mises à jour signées
+avec Sparkle EdDSA. Les paquets ad hoc servent uniquement à la recette locale.
 
 ## Commandes
 
 - **Build/test rapide :** `swift build` · `swift test` · `swiftlint lint --quiet <fichiers>`
-- **App réelle :** `make app` → `dist/Ledge.app` (signée avec le certificat Apple Development,
-  identité stable). C'est le SEUL moyen de tester les **permissions** (Accessibilité, Apple Events,
-  Calendrier) : `swift run` n'a pas de bundle/Info.plist, donc macOS (TCC) n'accorde rien.
+- **App réelle :** `make app` → `dist/Ledge.app`. Le Makefile utilise une identité Apple
+  Development stable si elle est installée, sinon une signature ad hoc. C'est le SEUL moyen de
+  tester les **permissions** (Accessibilité, Apple Events, Calendrier) : `swift run` n'a pas de
+  bundle/Info.plist, donc macOS (TCC) n'accorde rien.
 - **Lancer :** `open dist/Ledge.app`. **Une seule instance à la fois** — sinon plusieurs encoches
   s'ouvrent en parallèle. Avant relance : `killall Ledge`.
-- **Distribution directe :** `make release` ne demande aucun compte Apple. Le parcours optionnel
-  Developer ID reste disponible via `make release-notarized`.
+- **Distribution directe :** `make release` exige Developer ID et la notarisation afin que le DMG
+  téléchargé s'ouvre normalement sur un autre Mac. `make direct-appcast` reste réservé aux tests
+  locaux et ne peut plus être publié.
 
 ## Pièges connus
 
 - **Permissions ⇒ bundle uniquement.** Tester via `dist/Ledge.app`, jamais `swift run`. Le HUD
   volume/luminosité ne supprime l'OSD système que si l'Accessibilité est accordée au bundle.
-- **Signature stable.** `make app` signe avec l'identité Apple Development (variable `DEV_SIGN`)
-  pour que l'autorisation Accessibilité **persiste entre les rebuilds** (l'ad-hoc la perdait à
-  chaque build car le hash changeait).
+- **Signature stable si disponible.** `make app` préfère l'identité Apple Development (variable
+  `DEV_SIGN`) pour que l'autorisation Accessibilité persiste entre les rebuilds. Sans certificat,
+  il retombe sur l'ad hoc et macOS peut redemander la permission après un rebuild.
 - **Localisation :** les vraies chaînes UI vivent dans `Sources/Core/Resources/{en,fr}.lproj/`
   `Localizable.strings` (bundle `Ledge_Core`). Celles sous `Sources/App/Resources/*.lproj/` sont
   inertes SAUF `InfoPlist.strings` (permissions), que le Makefile copie à la racine du bundle.

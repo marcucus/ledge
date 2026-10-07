@@ -1,0 +1,24 @@
+INSTALLER LEDGE
+===============
+
+Configuration requise : Mac Apple Silicon, macOS 14 ou version ultérieure.
+
+1. Glissez Ledge.app sur le raccourci Applications.
+2. Éjectez ensuite le volume Ledge.
+3. Ouvrez Ledge depuis votre dossier Applications.
+
+Ledge apparaît dans la barre des menus et autour de l’encoche ; l’application n’ajoute pas
+d’icône permanente au Dock.
+
+---
+
+INSTALL LEDGE
+=============
+
+Requirements: Apple silicon Mac, macOS 14 or later.
+
+1. Drag Ledge.app onto the Applications shortcut.
+2. Eject the Ledge volume.
+3. Open Ledge from your Applications folder.
+
+Ledge appears in the menu bar and around the notch; it does not keep a permanent Dock icon.

@@ -1,10 +1,10 @@
 # ─── Ledge — Build / Sign / Distribute ────────────────────────────────────────
 #
 # make app      → build + crée dist/Ledge.app (signature de développement stable)
-# make release  → DMG auto-hébergé, signature ad hoc + EdDSA Sparkle (sans compte Apple)
-# make sign     → signe avec Developer ID (optionnel, nécessite DEVELOPER_ID_APP)
-# make notarize → envoie à Apple pour notarisation (optionnel)
-# make release-notarized → variante Developer ID + notarisation
+# make release  → DMG Developer ID notarisé + EdDSA Sparkle
+# make sign     → signe avec Developer ID (nécessite DEVELOPER_ID_APP)
+# make notarize → envoie à Apple pour notarisation
+# make release-notarized → alias historique de make release
 # make clean    → supprime dist/ et .build/
 #
 # Variables à définir (via env ou CLI) :
@@ -46,12 +46,16 @@ export GITHUB_TOKEN GITHUB_REPOSITORY VERSION BUILD_NUMBER MIN_OS CHANGELOG
 export DMG_PATH := $(DIST_DIR)/$(DMG_NAME)
 export APPCAST_PATH := $(DIST_DIR)/appcast.xml
 
+APP_ICON_CATALOG := Distribution/AppIcon.xcassets
+APP_ICON_INFO    := $(DIST_DIR)/AppIcon-Info.plist
+
 SPARKLE_XCF   := $(shell find .build/artifacts -name "Sparkle.xcframework" 2>/dev/null | head -1)
 SPARKLE_FW    := $(SPARKLE_XCF)/macos-arm64_x86_64/Sparkle.framework
 GENERATE_APPCAST := $(shell find .build/artifacts -path "*/bin/generate_appcast" 2>/dev/null | head -1)
 
 .PHONY: all app direct-sign direct-dmg direct-appcast sign dmg notarize appcast \
-	release release-notarized dmg-image appcast-image verify-release measure-performance clean
+	release release-notarized dmg-image appcast-image verify-release test-release-automation \
+	measure-performance clean
 
 all: app
 
@@ -71,6 +75,16 @@ app:
 
 	# Info.plist
 	cp Sources/App/Info.plist $(CONTENTS)/Info.plist
+
+	# Icône Finder/Dock compilée dans le bundle principal.
+	xcrun actool \
+	  --compile $(RES_DIR) \
+	  --platform macosx \
+	  --minimum-deployment-target $(MIN_OS) \
+	  --app-icon AppIcon \
+	  --output-partial-info-plist $(APP_ICON_INFO) \
+	  $(APP_ICON_CATALOG)
+	rm -f $(APP_ICON_INFO)
 
 	# Localisation des clés Info.plist (NSAppleEventsUsageDescription, etc.) :
 	# macOS ne lit InfoPlist.strings qu'à la racine de Resources/<lang>.lproj/,
@@ -110,12 +124,12 @@ app:
 	  codesign --force --sign - --identifier org.sparkle-project.Sparkle \
 	    $(FRAMEWORKS)/Sparkle.framework 2>/dev/null || true; \
 	fi
-	# …puis l'app avec l'identité DEV stable (→ autorisation Accessibilité persistante).
+	# …puis l'app avec l'identité DEV stable si elle existe, sinon avec la signature ad hoc.
 	codesign --force --sign "$(DEV_SIGN)" $(BINARY)
 	codesign --force --sign "$(DEV_SIGN)" $(BUNDLE)
 	@echo "✓ $(BUNDLE) — signé avec : $(DEV_SIGN)"
 
-# ─── 2. Distribution directe, sans compte Apple ────────────────────────────────
+# ─── 2. Paquet ad hoc pour recette locale uniquement ──────────────────────────
 
 direct-sign: app
 ifndef SPARKLE_FEED_URL
@@ -127,7 +141,7 @@ endif
 	codesign --force --sign - $(BINARY)
 	codesign --force --sign - $(BUNDLE)
 	codesign --verify --deep --strict $(BUNDLE)
-	@echo "✓ Bundle signé ad hoc — aucune validation App Store requise"
+	@echo "✓ Bundle signé ad hoc — test local uniquement, publication interdite"
 
 direct-dmg: direct-sign
 	@$(MAKE) dmg-image VERSION="$(VERSION)"
@@ -147,15 +161,7 @@ endif
 	@echo "▸ Signature Developer ID…"
 	/usr/libexec/PlistBuddy -c "Add :SUFeedURL string $(SPARKLE_FEED_URL)" $(CONTENTS)/Info.plist 2>/dev/null || \
 	  /usr/libexec/PlistBuddy -c "Set :SUFeedURL $(SPARKLE_FEED_URL)" $(CONTENTS)/Info.plist
-	@if [ -d "$(FRAMEWORKS)/Sparkle.framework" ]; then \
-	  codesign --force --options runtime --sign "$(DEVELOPER_ID_APP)" \
-	    --entitlements Scripts/Sparkle.entitlements \
-	    $(FRAMEWORKS)/Sparkle.framework; \
-	fi
-	codesign --force --deep --options runtime \
-	  --entitlements Scripts/App.entitlements \
-	  --sign "$(DEVELOPER_ID_APP)" $(BUNDLE)
-	codesign --verify --deep --strict $(BUNDLE)
+	Scripts/sign-release-bundle.sh $(BUNDLE) "$(DEVELOPER_ID_APP)"
 	@echo "✓ Signé : $(BUNDLE)"
 
 # ─── 4. Image disque ───────────────────────────────────────────────────────────
@@ -165,20 +171,7 @@ dmg: sign
 
 dmg-image:
 	@echo "▸ Création du DMG…"
-	rm -f $(DIST_DIR)/$(DMG_NAME)
-	@# Crée un DMG temporaire en lecture-écriture
-	hdiutil create \
-	  -volname "$(BINARY_NAME)" \
-	  -srcfolder $(BUNDLE) \
-	  -ov -format UDRW \
-	  $(DIST_DIR)/tmp_$(DMG_NAME)
-
-	@# Convertit en DMG compressé en lecture seule
-	hdiutil convert $(DIST_DIR)/tmp_$(DMG_NAME) \
-	  -format UDZO \
-	  -o $(DIST_DIR)/$(DMG_NAME)
-	rm -f $(DIST_DIR)/tmp_$(DMG_NAME)
-	@echo "✓ $(DIST_DIR)/$(DMG_NAME)"
+	@Scripts/create-dmg.sh $(BUNDLE) $(DIST_DIR)/$(DMG_NAME) "$(BINARY_NAME) Installer"
 
 # ─── 5. Notarisation Apple ─────────────────────────────────────────────────────
 # Prérequis : DEVELOPER_ID_APP, APPLE_ID, TEAM_ID, APP_PASSWORD
@@ -197,12 +190,18 @@ ifndef APP_PASSWORD
 	$(error Définir APP_PASSWORD (app-specific password depuis appleid.apple.com))
 endif
 	@echo "▸ Envoi pour notarisation…"
+	codesign --force --sign "$(DEVELOPER_ID_APP)" \
+	  --timestamp \
+	  --identifier "$(BUNDLE_ID).dmg" \
+	  $(DIST_DIR)/$(DMG_NAME)
+	codesign --verify --verbose=2 $(DIST_DIR)/$(DMG_NAME)
 	xcrun notarytool submit $(DIST_DIR)/$(DMG_NAME) \
 	  --apple-id "$(APPLE_ID)" \
 	  --team-id "$(TEAM_ID)" \
 	  --password "$(APP_PASSWORD)" \
 	  --wait
 	xcrun stapler staple $(DIST_DIR)/$(DMG_NAME)
+	Scripts/verify-notarized-dmg.sh $(DIST_DIR)/$(DMG_NAME)
 	@echo "✓ Notarisé et agrafé : $(DIST_DIR)/$(DMG_NAME)"
 
 # ─── 6. Appcast Sparkle ────────────────────────────────────────────────────────
@@ -226,9 +225,12 @@ endif
 verify-release:
 	@Scripts/verify-release-artifacts.sh
 
+test-release-automation:
+	@Scripts/test-release-automation.sh
+
 # ─── 7. Publication ────────────────────────────────────────────────────────────
-# `release` ne dépend d'aucun compte Apple. `release-notarized` conserve le parcours
-# Developer ID pour le jour où un certificat sera disponible.
+# `release` est volontairement bloquée sans Developer ID et notarisation : un DMG ad hoc
+# téléchargé depuis Internet est rejeté par Gatekeeper sur un autre Mac.
 #
 # Usage :
 #   make release CHANGELOG="Fix timer ring, improve ambient"
@@ -239,21 +241,15 @@ verify-release:
 #   GITHUB_REPOSITORY  Dépôt cible au format propriétaire/dépôt
 #   CHANGELOG      Texte du changelog (obligatoire)
 
-release: direct-appcast
+release: appcast
 ifndef CHANGELOG
 	$(error Définir CHANGELOG, ex: make release CHANGELOG="Fix timer ring")
 endif
-	@echo "▸ Publication de la release v$(VERSION)…"
+	@echo "▸ Publication de la release notarisée v$(VERSION)…"
 	@Scripts/publish-release.sh
 	@echo "✓ Release v$(VERSION) publiée → https://github.com/$(GITHUB_REPOSITORY)/releases/tag/v$(VERSION)"
 
-release-notarized: appcast
-ifndef CHANGELOG
-	$(error Définir CHANGELOG, ex: make release-notarized CHANGELOG="Fix timer ring")
-endif
-	@echo "▸ Publication de la release notarisée v$(VERSION)…"
-	@Scripts/publish-release.sh
-	@echo "✓ Release notarisée v$(VERSION) publiée → https://github.com/$(GITHUB_REPOSITORY)/releases/tag/v$(VERSION)"
+release-notarized: release
 
 # Mesure un processus Ledge déjà lancé. Préparer le scénario dans l'app, puis exécuter par ex. :
 #   make measure-performance SCENARIO=idle DURATION=30 INTERVAL=1

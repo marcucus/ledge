@@ -84,8 +84,10 @@ Pour une v1 grand public, la cible recommandée est :
 - DMG signé ;
 - validation Gatekeeper sur une machine propre.
 
-Le parcours actuel « Ouvrir quand même » convient à une bêta pour utilisateurs techniques, mais
-il dégrade fortement la confiance et la conversion d’un lancement Internet.
+Le code applique désormais cette stratégie : `make release` exige le parcours notarisé et le
+script de publication refuse un DMG ad hoc. L'icône du bundle et le parcours d'installation
+`Ledge.app → Applications` sont également présents. Le blocage restant est externe : obtenir et
+configurer le certificat Developer ID avant de reconstruire la candidate.
 
 ### 3. Valider les dépôts distants et leurs CI côté propriétaire
 

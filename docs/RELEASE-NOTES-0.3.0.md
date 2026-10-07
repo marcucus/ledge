@@ -34,6 +34,6 @@ distribution directe avec mises à jour Sparkle.
 ## Distribution
 
 - macOS 14 ou version ultérieure sur Apple Silicon.
-- Distribution directe, non notarisée : macOS peut demander « Ouvrir quand même » au premier
-  lancement.
+- DMG avec icône native, raccourci Applications et notice d'installation.
+- Distribution directe signée Developer ID et notarisée afin d'être acceptée par Gatekeeper.
 - Mises à jour complètes signées avec Sparkle EdDSA depuis la version 0.2.0.

@@ -155,6 +155,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: — Icône app (Dock + About)
 
     private func setAppIcon() {
+        if let icon = NSImage(named: NSImage.applicationIconName) {
+            NSApplication.shared.applicationIconImage = icon
+            return
+        }
         if let url = Bundle.module.url(forResource: "ledgelogo", withExtension: "png"),
            let icon = NSImage(contentsOf: url) {
             NSApplication.shared.applicationIconImage = icon

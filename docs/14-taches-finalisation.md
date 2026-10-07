@@ -134,12 +134,15 @@ une lecture média restent à effectuer avec les scénarios fonctionnels ci-dess
 
 ### 8 bis. État Developer ID et Gatekeeper
 
-- [x] Vérifier les identités locales : seul un certificat Apple Development est présent.
+- [x] Vérifier les identités locales : aucune identité de signature valide n'est actuellement
+  installée.
 - [x] Vérifier l'évaluation locale : l'app et le DMG ad hoc sont rejetés par Gatekeeper avec
   `source=no usable signature`, comportement attendu avant notarisation.
+- [x] Ajouter l'icône native, le raccourci Applications et les contrôles automatiques du DMG.
+- [x] Interdire la publication d'un DMG sans ticket de notarisation agrafé.
 - [ ] Obtenir une adhésion Apple Developer, un certificat Developer ID Application et configurer
   NotaryTool (`APPLE_ID`, `TEAM_ID`, mot de passe spécifique).
-- [ ] Exécuter `make release-notarized` puis vérifier l'agrafage du ticket.
+- [ ] Exécuter `make release` puis vérifier l'agrafage du ticket.
 
 ### 9. Effectuer la recette indispensable sur un second Mac
 
@@ -155,6 +158,8 @@ une lecture média restent à effectuer avec les scénarios fonctionnels ci-dess
 - [ ] Vérifier d'abord que les tâches bloquantes de `../ledge-site/docs/TACHES-FINALISATION.md`
   sont terminées.
 - [x] Préparer un changelog utilisateur précis (`docs/RELEASE-NOTES-0.3.0.md`).
+- [ ] Reconstruire le DMG et l'appcast après signature/notarisation, puis mettre à jour taille et
+  SHA-256 dans la recette.
 - [ ] Exécuter explicitement `make release CHANGELOG="…"`.
 - [ ] Vérifier la GitHub Release, ses assets et ses métadonnées.
 - [ ] Vérifier immédiatement le téléchargement public, l'appcast et la mise à jour Sparkle.
