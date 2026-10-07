@@ -165,8 +165,8 @@ Ledge/
 
 - **Hors Mac App Store** probablement nécessaire : les frameworks privés (MediaRemote) et
   certaines permissions (Accessibilité, lecture notifs) sont **incompatibles avec le sandbox MAS**.
-- Décision actuelle : distribution directe par DMG signé avec Developer ID et notarisé par Apple.
-  Les paquets ad hoc sont limités à la recette locale, car Gatekeeper les rejette après un
-  téléchargement Internet.
+- Décision actuelle : distribution directe gratuite par DMG signé ad hoc. Gatekeeper bloque la
+  première ouverture ; l'utilisateur doit ensuite autoriser explicitement Ledge via Confidentialité
+  et sécurité → « Ouvrir quand même ». Le parcours Developer ID/notarisé reste optionnel.
 - Le DMG contient `Ledge.app`, un raccourci vers `/Applications` et une notice d'installation.
 - Les mises à jour sont signées avec Sparkle EdDSA et servies depuis GitHub Releases.

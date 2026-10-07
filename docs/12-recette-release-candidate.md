@@ -16,7 +16,8 @@
 - [x] tests, ESLint et build de production de `ledge-site`
 - [ ] CI GitHub verte sur le commit candidat — aucun push ne doit être effectué par l'agent
 - [x] Paquet ad hoc local construit avec icône et raccourci Applications
-- [ ] DMG et appcast `0.3.0` reconstruits avec Developer ID puis notarisés
+- [x] Parcours gratuit retenu : DMG ad hoc et autorisation manuelle « Ouvrir quand même »
+- [ ] Variante Developer ID/notarisée — amélioration optionnelle, non bloquante
 - [x] Script de signature Sparkle de l'intérieur vers l'extérieur, sans propagation des
   entitlements de l'app aux helpers
 - [x] Signature Developer ID du DMG prévue avant l'envoi à NotaryTool
@@ -31,20 +32,18 @@
 - L'ancien DMG de phase 3 pesait **3 565 185 octets**, SHA-256
   `8b6078d6744a1c9b0c96648a8824ca4807ebb589f59a7eb69059603ef241e1d9`.
 - Ce hash est désormais historique : l'ajout de l'icône et du parcours `Ledge.app → Applications`
-  modifie le paquet. Recalculer taille et SHA-256 après notarisation.
-- Le paquet ad hoc de contrôle du 7 octobre pèse **5 614 097 octets**, SHA-256
-  `5fb69a3f33989f4140f15556997d472548e9faffd0106c7a35a53ed867b670e3`. Son bundle, son
-  agencement de DMG et son appcast sont verts, mais ce hash n'est pas publiable et changera après
-  signature Developer ID/notarisation.
+  modifie le paquet.
+- Le paquet ad hoc finalisé du 7 octobre pèse **5 615 093 octets**, SHA-256
+  `318507768f4e4b04c1f60348c62c9c3b3374d29ee1c589c6ce68afe2642c8056`. Son bundle, son
+  agencement de DMG, sa notice Gatekeeper et son appcast sont verts.
 - Appcast local : version `0.3.0`, build `3`, macOS `14.0`, signature EdDSA présente, zéro delta.
 - Gatekeeper rejette normalement l'app et le DMG actuels : ils sont signés ad hoc, sans ticket de
   notarisation (`source=no usable signature`).
 - Cette machine ne possède actuellement aucune identité de signature valide, ni Apple Development
   ni Developer ID, et aucune configuration `APPLE_ID`, `TEAM_ID` ou `APP_PASSWORD`. La notarisation
   est donc bloquée par des prérequis externes, pas par le code.
-- Le site local passe désormais ESLint, 31 tests, le contrat visuel 0.3.0 et le build Next.js de
-  production sans avertissement. La réduction de 33 à 31 correspond à la suppression des tests du
-  code mort des anciennes timelines fusionnées ; les tests fonctionnels restants sont verts.
+- Le site local passe désormais ESLint, 32 tests, le contrat visuel 0.3.0 et le build Next.js de
+  production sans avertissement. Un test protège spécifiquement l'ordre du parcours Gatekeeper.
 - Les routes publiques renvoient `200`, mais l'apex redirige vers `www.app-ledge.fr` et le champ
   `<link>` de l'appcast public pointait encore vers `ledge-notch.vercel.app`. Le code ignore
   désormais cette ancienne variable et force `https://app-ledge.fr`; le déploiement public reste
@@ -133,15 +132,15 @@ Le workflow crée ensuite lui-même les quatre labels s'ils n'existent pas.
 ## Publication
 
 La publication reste une action explicite. Elle ne doit commencer qu'après validation de toutes les
-cases ci-dessus, déploiement des pages juridiques du site, signature Developer ID et notarisation.
+cases bloquantes ci-dessus et déploiement des pages juridiques du site.
 
 ```bash
 make release CHANGELOG="Décrire ici les changements de la version 0.3.0"
 ```
 
-Cette commande construit le parcours Developer ID, notarise le DMG, valide le ticket agrafé, puis
-publie la GitHub Release, le DMG, l'appcast et chaque delta référencé par l'appcast. Le script refuse
-désormais un paquet ad hoc.
+Cette commande construit le DMG ad hoc, génère l'appcast Sparkle, puis publie la GitHub Release et
+ses assets. `make release-notarized` conserve la variante payante et vérifie le ticket Apple avant
+publication.
 Si un upload échoue, la même commande reprend uniquement le brouillon `v0.3.0` visant le même
 commit et remplace ses assets partiels. Elle refuse de modifier une release déjà publique ou un
 brouillon associé à un autre commit, ainsi que de publier un appcast qui référence un delta local

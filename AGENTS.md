@@ -121,11 +121,10 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   par `SPARKLE_FEED_URL`; le bundle de développement n'active pas Sparkle sans cette valeur.
 - Le bundle possède une icône native et le DMG contient `Ledge.app`, un raccourci Applications et
   une notice FR/EN. Les scripts vérifient ce contrat en montant le DMG en lecture seule.
-- `make release` suit obligatoirement le parcours Developer ID + notarisation, génère l'appcast
-  Sparkle EdDSA, puis publie sur GitHub Releases. `publish-release.sh` refuse tout DMG sans ticket
-  Apple agrafé. `make direct-appcast` reste un outil de recette locale non publiable. Aucun
-  certificat Developer ID n'est encore installé sur la machine : la publication est donc bloquée
-  par ce prérequis externe.
+- `make release` construit et publie le DMG ad hoc gratuit avec son appcast Sparkle EdDSA. Le DMG
+  explique le parcours exact : copier dans Applications, tenter une première ouverture, puis
+  utiliser « Ouvrir quand même » dans l'heure. `make release-notarized` conserve le parcours
+  Developer ID optionnel et vérifie le ticket Apple avant publication.
 - Les fonctionnalités Apple Music et les permissions doivent être validées dans une vraie lecture
   et un bundle signé; les tests unitaires ne couvrent pas ce scénario système.
 

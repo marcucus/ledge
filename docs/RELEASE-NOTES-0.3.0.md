@@ -35,5 +35,6 @@ distribution directe avec mises à jour Sparkle.
 
 - macOS 14 ou version ultérieure sur Apple Silicon.
 - DMG avec icône native, raccourci Applications et notice d'installation.
-- Distribution directe signée Developer ID et notarisée afin d'être acceptée par Gatekeeper.
+- Distribution directe non notarisée : après une première tentative d'ouverture, autoriser Ledge
+  dans Réglages Système → Confidentialité et sécurité → « Ouvrir quand même ».
 - Mises à jour complètes signées avec Sparkle EdDSA depuis la version 0.2.0.

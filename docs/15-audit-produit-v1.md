@@ -84,10 +84,11 @@ Pour une v1 grand public, la cible recommandée est :
 - DMG signé ;
 - validation Gatekeeper sur une machine propre.
 
-Le code applique désormais cette stratégie : `make release` exige le parcours notarisé et le
-script de publication refuse un DMG ad hoc. L'icône du bundle et le parcours d'installation
-`Ledge.app → Applications` sont également présents. Le blocage restant est externe : obtenir et
-configurer le certificat Developer ID avant de reconstruire la candidate.
+La décision actuelle privilégie le lancement gratuit : `make release` publie un DMG ad hoc et le
+site comme le volume expliquent clairement comment déclencher puis utiliser « Ouvrir quand même ».
+L'icône du bundle et le parcours `Ledge.app → Applications` sont présents. La notarisation reste
+une amélioration recommandée pour la confiance et la conversion, disponible via
+`make release-notarized`, mais elle n'est plus bloquante pour la bêta publique.
 
 ### 3. Valider les dépôts distants et leurs CI côté propriétaire
 

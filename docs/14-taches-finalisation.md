@@ -139,15 +139,16 @@ une lecture média restent à effectuer avec les scénarios fonctionnels ci-dess
 - [x] Vérifier l'évaluation locale : l'app et le DMG ad hoc sont rejetés par Gatekeeper avec
   `source=no usable signature`, comportement attendu avant notarisation.
 - [x] Ajouter l'icône native, le raccourci Applications et les contrôles automatiques du DMG.
-- [x] Interdire la publication d'un DMG sans ticket de notarisation agrafé.
-- [ ] Obtenir une adhésion Apple Developer, un certificat Developer ID Application et configurer
-  NotaryTool (`APPLE_ID`, `TEAM_ID`, mot de passe spécifique).
-- [ ] Exécuter `make release` puis vérifier l'agrafage du ticket.
+- [x] Documenter le parcours exact qui fait apparaître « Ouvrir quand même » pendant environ une
+  heure après la première tentative.
+- [ ] Optionnel : obtenir une adhésion Apple Developer, un certificat Developer ID Application et
+  configurer NotaryTool pour `make release-notarized`.
 
 ### 9. Effectuer la recette indispensable sur un second Mac
 
 - [ ] Installer la version publique `0.2.0` sur une machine vierge.
-- [ ] Valider le parcours Gatekeeper.
+- [ ] Valider la copie dans Applications, la première tentative bloquée puis l'apparition de
+  « Ouvrir quand même » dans Confidentialité et sécurité.
 - [ ] Tester ensuite la mise à jour Sparkle `0.2.0` → `0.3.0`.
 - [ ] Vérifier la conservation des réglages et la relance.
 - [ ] Vérifier macOS 14+ et les écrans interne/externe.
@@ -158,8 +159,7 @@ une lecture média restent à effectuer avec les scénarios fonctionnels ci-dess
 - [ ] Vérifier d'abord que les tâches bloquantes de `../ledge-site/docs/TACHES-FINALISATION.md`
   sont terminées.
 - [x] Préparer un changelog utilisateur précis (`docs/RELEASE-NOTES-0.3.0.md`).
-- [ ] Reconstruire le DMG et l'appcast après signature/notarisation, puis mettre à jour taille et
-  SHA-256 dans la recette.
+- [x] Reconstruire le DMG et l'appcast ad hoc, puis mettre à jour taille et SHA-256 dans la recette.
 - [ ] Exécuter explicitement `make release CHANGELOG="…"`.
 - [ ] Vérifier la GitHub Release, ses assets et ses métadonnées.
 - [ ] Vérifier immédiatement le téléchargement public, l'appcast et la mise à jour Sparkle.

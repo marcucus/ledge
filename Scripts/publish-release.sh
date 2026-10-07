@@ -22,10 +22,12 @@ export GITHUB_TOKEN
 
 [[ -f "$DMG_PATH" ]] || { print -u2 "DMG introuvable : $DMG_PATH"; exit 1; }
 [[ -f "$APPCAST_PATH" ]] || { print -u2 "Appcast introuvable : $APPCAST_PATH"; exit 1; }
-"${0:A:h}/verify-notarized-dmg.sh" "$DMG_PATH" >/dev/null || {
-  print -u2 "Publication refusée : le paquet public doit être notarisé."
-  exit 1
-}
+if [[ "${REQUIRE_NOTARIZATION:-false}" == true ]]; then
+  "${0:A:h}/verify-notarized-dmg.sh" "$DMG_PATH" >/dev/null || {
+    print -u2 "Publication notarisée refusée : ticket Apple absent ou invalide."
+    exit 1
+  }
+fi
 
 file_size=$(stat -f%z "$DMG_PATH")
 sha256=$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')

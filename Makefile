@@ -1,10 +1,10 @@
 # ─── Ledge — Build / Sign / Distribute ────────────────────────────────────────
 #
 # make app      → build + crée dist/Ledge.app (signature de développement stable)
-# make release  → DMG Developer ID notarisé + EdDSA Sparkle
+# make release  → DMG ad hoc gratuit + EdDSA Sparkle
 # make sign     → signe avec Developer ID (nécessite DEVELOPER_ID_APP)
 # make notarize → envoie à Apple pour notarisation
-# make release-notarized → alias historique de make release
+# make release-notarized → variante Developer ID + notarisation Apple
 # make clean    → supprime dist/ et .build/
 #
 # Variables à définir (via env ou CLI) :
@@ -129,7 +129,7 @@ app:
 	codesign --force --sign "$(DEV_SIGN)" $(BUNDLE)
 	@echo "✓ $(BUNDLE) — signé avec : $(DEV_SIGN)"
 
-# ─── 2. Paquet ad hoc pour recette locale uniquement ──────────────────────────
+# ─── 2. Distribution directe gratuite ─────────────────────────────────────────
 
 direct-sign: app
 ifndef SPARKLE_FEED_URL
@@ -141,7 +141,7 @@ endif
 	codesign --force --sign - $(BINARY)
 	codesign --force --sign - $(BUNDLE)
 	codesign --verify --deep --strict $(BUNDLE)
-	@echo "✓ Bundle signé ad hoc — test local uniquement, publication interdite"
+	@echo "✓ Bundle signé ad hoc — premier lancement via « Ouvrir quand même »"
 
 direct-dmg: direct-sign
 	@$(MAKE) dmg-image VERSION="$(VERSION)"
@@ -229,8 +229,8 @@ test-release-automation:
 	@Scripts/test-release-automation.sh
 
 # ─── 7. Publication ────────────────────────────────────────────────────────────
-# `release` est volontairement bloquée sans Developer ID et notarisation : un DMG ad hoc
-# téléchargé depuis Internet est rejeté par Gatekeeper sur un autre Mac.
+# `release` publie le parcours gratuit ad hoc. Au premier lancement, l'utilisateur doit tenter
+# d'ouvrir Ledge puis l'autoriser dans Confidentialité et sécurité → Ouvrir quand même.
 #
 # Usage :
 #   make release CHANGELOG="Fix timer ring, improve ambient"
@@ -241,15 +241,21 @@ test-release-automation:
 #   GITHUB_REPOSITORY  Dépôt cible au format propriétaire/dépôt
 #   CHANGELOG      Texte du changelog (obligatoire)
 
-release: appcast
+release: direct-appcast
 ifndef CHANGELOG
 	$(error Définir CHANGELOG, ex: make release CHANGELOG="Fix timer ring")
 endif
-	@echo "▸ Publication de la release notarisée v$(VERSION)…"
+	@echo "▸ Publication de la release ad hoc v$(VERSION)…"
 	@Scripts/publish-release.sh
 	@echo "✓ Release v$(VERSION) publiée → https://github.com/$(GITHUB_REPOSITORY)/releases/tag/v$(VERSION)"
 
-release-notarized: release
+release-notarized: appcast
+ifndef CHANGELOG
+	$(error Définir CHANGELOG, ex: make release-notarized CHANGELOG="Fix timer ring")
+endif
+	@echo "▸ Publication de la release notarisée v$(VERSION)…"
+	@REQUIRE_NOTARIZATION=true Scripts/publish-release.sh
+	@echo "✓ Release notarisée v$(VERSION) publiée → https://github.com/$(GITHUB_REPOSITORY)/releases/tag/v$(VERSION)"
 
 # Mesure un processus Ledge déjà lancé. Préparer le scénario dans l'app, puis exécuter par ex. :
 #   make measure-performance SCENARIO=idle DURATION=30 INTERVAL=1

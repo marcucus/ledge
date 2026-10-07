@@ -42,8 +42,8 @@ Conforme à la [doc 07](07-architecture-technique.md), avec quelques précisions
 - Frameworks privés via `dlopen`/`dlsym` : **MediaRemote** (média), **DisplayServices**
   (luminosité sur Apple Silicon).
 - Build rapide : `swift build` / `swift test`. Les permissions se testent avec `make app`; la
-  distribution publique passe par un DMG Developer ID notarisé et un appcast signé avec Sparkle
-  EdDSA. Le paquet ad hoc reste disponible uniquement pour la recette locale.
+  distribution publique gratuite passe par un DMG ad hoc et un appcast signé avec Sparkle EdDSA.
+  Le parcours Developer ID/notarisé reste disponible en option.
 
 ## Architecture du cœur (`Core`)
 
@@ -137,7 +137,7 @@ et **remplacer** l'overlay natif de macOS.
 | **Pochette d'album** | ⚠️ Partiel | MediaRemote est bloqué pour Apple Music sur macOS 15 (run non-bundlé) ; la notification distribuée `com.apple.Music.playerInfo` ne fournit pas d'image. Piste : `iTunesLibrary` via « Persistent ID ». |
 | **Seek Apple Music** | ✅ Contourné | MediaRemote bloqué → on passe par **ScriptingBridge** (`set player position`) pour Music, MediaRemote (`MRMediaRemoteSetElapsedTime`) pour les autres lecteurs. Demande la permission **Automation** au 1er usage. |
 | **Suppression HUD natif** | ✅ OK (bundle signé) | Le `CGEventTap` consomme les touches volume/luminosité **si l'Accessibilité est accordée**. Tester via `dist/Ledge.app` (`make app`), pas `swift run` (pas de bundle = pas de permission). `make app` préfère une identité Apple Development stable, mais la machine actuelle n'en possède aucune et retombe sur l'ad hoc : l'autorisation peut alors être redemandée après un rebuild. La barre Ledge (volume événementiel) marche sans permission. |
-| **Distribution** | ⚠️ Code prêt, certificat requis | Le bundle possède une icône native et le DMG propose `Ledge.app → Applications`. `make release` exige Developer ID, notarisation et ticket agrafé avant de publier sur GitHub Releases. Le certificat Apple reste à obtenir. |
+| **Distribution** | ✅ Code prêt | Le bundle possède une icône native et le DMG propose `Ledge.app → Applications`. `make release` publie le paquet ad hoc gratuit ; la notice et le site expliquent la tentative d'ouverture nécessaire avant « Ouvrir quand même ». |
 
 ## Permissions requises (récapitulatif)
 
@@ -340,16 +340,12 @@ build Next.js sans avertissement. Aucun push n'a été effectué.
 **Correction du paquet de distribution (7 octobre 2026)** : le bundle principal déclare désormais
 une vraie icône macOS compilée dans `Assets.car`. Le DMG contient `Ledge.app`, un raccourci
 `Applications` et une notice FR/EN, avec des vérifications automatiques du bundle et du volume.
-L'échec observé sur un autre Mac a confirmé que la signature ad hoc n'est pas un canal public
-acceptable : `publish-release.sh` refuse désormais tout DMG sans ticket Apple agrafé et
-`make release` suit obligatoirement le parcours Developer ID + notarisation. Le nouveau paquet a
-été construit et son agencement vérifié localement, mais la candidate publique doit être
-reconstruite et notarisée après obtention du certificat ; l'ancien hash du DMG n'est plus celui du
-paquet courant. Le site continue légitimement de décrire le parcours non notarisé tant que sa
-dernière release publique reste `0.2.0`; ce texte devra basculer avec la publication notarisée.
-La signature de release suit l'ordre interne imposé par Sparkle, puis signe aussi le DMG avant son
-envoi à Apple. La recette locale ad hoc de ce nouveau format passe `make verify-release` ; elle ne
-constitue pas une autorisation de publication.
+L'échec observé sur un autre Mac venait aussi d'un parcours incomplet : ouvrir le DMG ne déclenche
+pas Gatekeeper. L'utilisateur doit copier Ledge dans Applications, tenter de l'ouvrir, fermer
+l'alerte, puis utiliser « Ouvrir quand même » dans l'heure. Le DMG et le site détaillent désormais
+ces étapes. `make release` publie ce paquet ad hoc gratuit ; `make release-notarized` conserve le
+parcours Apple optionnel, avec signature Sparkle de l'intérieur vers l'extérieur, signature du DMG
+et vérification du ticket. La recette locale de ce nouveau format passe `make verify-release`.
 
 ## Construire & lancer
 
@@ -371,9 +367,9 @@ La version publique est `0.2.0`. La candidate locale suivante est `0.3.0` (build
 2. Valider Apple Music en lecture réelle : pochette, seek, resynchronisation et permission Automation.
 3. Valider manuellement les trois comportements plein écran et les transitions veille/réveil sur
    écran interne et externe.
-4. Obtenir le certificat Developer ID et configurer NotaryTool, puis reconstruire la candidate.
-5. Tester le DMG notarisé et une mise à jour Sparkle `0.2.0` → `0.3.0` sur un autre Mac avant
-   d'exécuter `make release`.
+4. Tester sur un Mac Apple Silicon propre le parcours complet : copie vers Applications, première
+   tentative, apparition de « Ouvrir quand même » puis lancement.
+5. Tester une mise à jour Sparkle `0.2.0` → `0.3.0` avant d'exécuter `make release`.
 6. Finaliser le domaine Vercel : `app-ledge.fr` est connecté et HTTPS fonctionne, mais Vercel
    redirige encore l'apex vers `www.app-ledge.fr` alors que le code déclare l'apex canonique.
    `ledge.app` appartient à un tiers et ne fait pas partie du projet.

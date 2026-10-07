@@ -4,8 +4,8 @@ App macOS d'encoche (notch) : barre d'outils contextuelle sous l'encoche du MacB
 modules (Média, Timers, Drop Zone, Presse-papiers, Système, Raccourcis, Calendrier, Notes).
 Swift Package Manager pur (pas de projet Xcode), Swift 5.10+, macOS 14+, Apple Silicon.
 App `LSUIElement` (pas d'icône Dock, sauf fenêtre Réglages ouverte). Distribution directe hors
-App Store : DMG auto-hébergé, signature Developer ID, notarisation Apple et mises à jour signées
-avec Sparkle EdDSA. Les paquets ad hoc servent uniquement à la recette locale.
+App Store : DMG auto-hébergé, signature ad hoc et mises à jour signées avec Sparkle EdDSA. Le
+premier lancement passe par Confidentialité et sécurité → « Ouvrir quand même ».
 
 ## Commandes
 
@@ -16,9 +16,8 @@ avec Sparkle EdDSA. Les paquets ad hoc servent uniquement à la recette locale.
   bundle/Info.plist, donc macOS (TCC) n'accorde rien.
 - **Lancer :** `open dist/Ledge.app`. **Une seule instance à la fois** — sinon plusieurs encoches
   s'ouvrent en parallèle. Avant relance : `killall Ledge`.
-- **Distribution directe :** `make release` exige Developer ID et la notarisation afin que le DMG
-  téléchargé s'ouvre normalement sur un autre Mac. `make direct-appcast` reste réservé aux tests
-  locaux et ne peut plus être publié.
+- **Distribution directe :** `make release` publie le DMG ad hoc gratuit. `make
+  release-notarized` conserve le parcours Developer ID optionnel.
 
 ## Pièges connus
 
