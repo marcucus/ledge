@@ -32,7 +32,8 @@ gratuit et publié par Adrien Marques en personne physique, à titre non profess
 Conforme à la [doc 07](07-architecture-technique.md), avec quelques précisions issues du code :
 
 - **Swift Package Manager** (pas de projet Xcode). `swift-tools-version: 5.10`, cible
-  **macOS 14+**, localisation par défaut `en`.
+  **macOS 14+**, localisation par défaut `en`. Les suites `import Testing` exigent une toolchain
+  **Swift 6 / Xcode 16+**, même si le manifeste conserve son mode de compatibilité Swift 5.10.
 - Découpage en cibles : `App` (exécutable) → `Core` + 8 modules (`MediaModule`, `TimerModule`,
   `DropZoneModule`, `ClipboardModule`, `SystemModule`, `ShortcutsModule`, `CalendarModule`,
   `NotesModule`).
@@ -356,11 +357,25 @@ lisent un `NotchController`, un `NotchModule` ou une implémentation de module `
 compris les vues compactes et détaillées des huit modules. La chaîne locale équivalente à
 `Quality` est verte : tests de l'automatisation de release, `swift build`, **116 tests dans 17
 suites**, SwiftLint sans avertissement, création ad hoc de `Ledge.app` et vérification de son
-bundle. Le versioning n'utilise plus de patch implicite : sans label, aucune PR de release n'est
-créée. Seuls `version:patch`, `version:minor` et `version:major` déclenchent un bump, et
-`version:none` reste un arrêt explicite. Un job indépendant crée ou remet à jour ces quatre labels
-même lorsque `Quality` échoue. La validation Swift 5.10 distante de ce correctif attend le prochain
-push manuel du propriétaire ; aucun push n'est effectué par l'agent.
+bundle. Le run Swift 5.10 suivant a ensuite atteint `CalendarModule` et révélé une capture faible
+non répétée dans la tâche `@MainActor` du minuteur de rafraîchissement ; cette capture est désormais
+explicite dans les deux fermetures. Le build a alors passé cette étape, puis les tests ont échoué
+avant exécution avec `no such module 'Testing'` : le runner `macos-14` sélectionnait Xcode 15.4,
+qui ne fournit pas Swift Testing. Les workflows `Quality` et `Release version` utilisent désormais
+`macos-15` avec Xcode 16.4 explicitement sélectionné ; la clé de cache Swift inclut cette version
+pour ne pas restaurer d'artefacts produits par une autre toolchain. Les actions officielles
+`checkout` et `cache` sont en v5 afin d'utiliser Node 24 et de ne pas dépendre du runtime Node 20
+retiré par GitHub. Le versioning n'utilise plus de patch implicite : sans label,
+aucune PR de release n'est créée. Seuls `version:patch`, `version:minor` et `version:major`
+déclenchent un bump, et `version:none` reste un arrêt explicite. Un job indépendant crée ou remet à
+jour ces quatre labels même lorsque `Quality` échoue. Chaque propagation `branche → dev → rc →
+main` doit rester conditionnée à une CI `Quality` verte sur la PR correspondante.
+
+Le premier run sous Xcode 16.4 a aussi exposé une attente fixe fragile dans
+`showPeekAutoCollapsesAfterDuration` : le test dormait 100 ms avant de lire l'état, ce qui pouvait
+échouer lorsque le `MainActor` était chargé par l'exécution parallèle. Il attend désormais la
+condition `collapsed` avec le helper borné `eventually`, déjà utilisé par les autres tests
+asynchrones de `NotchController`.
 
 ## Construire & lancer
 

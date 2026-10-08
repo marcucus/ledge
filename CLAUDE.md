@@ -2,7 +2,8 @@
 
 App macOS d'encoche (notch) : barre d'outils contextuelle sous l'encoche du MacBook, avec des
 modules (Média, Timers, Drop Zone, Presse-papiers, Système, Raccourcis, Calendrier, Notes).
-Swift Package Manager pur (pas de projet Xcode), Swift 5.10+, macOS 14+, Apple Silicon.
+Swift Package Manager pur (pas de projet Xcode), manifeste Swift 5.10, macOS 14+, Apple Silicon.
+Les tests utilisent Swift Testing et exigent donc Swift 6 / Xcode 16 ou plus récent.
 App `LSUIElement` (pas d'icône Dock, sauf fenêtre Réglages ouverte). Distribution directe hors
 App Store : DMG auto-hébergé, signature ad hoc et mises à jour signées avec Sparkle EdDSA. Le
 premier lancement passe par Confidentialité et sécurité → « Ouvrir quand même ».
