@@ -1,6 +1,7 @@
 import Core
 import SwiftUI
 
+@MainActor
 struct MediaContentView: View {
     var module: MediaModule
     @Environment(\.panelComposition) private var composition

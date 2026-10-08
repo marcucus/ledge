@@ -4,6 +4,7 @@ import SwiftUI
 // MARK: — SystemPeekView
 
 /// Compact battery gauge shown in the notch peek (hover) state.
+@MainActor
 struct SystemPeekView: View {
     var module: SystemModule
 

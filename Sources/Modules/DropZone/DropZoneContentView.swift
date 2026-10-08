@@ -3,6 +3,7 @@ import Core
 import SwiftUI
 import UniformTypeIdentifiers
 
+@MainActor
 public struct DropZoneContentView: View {
     public var module: DropZoneModule
 

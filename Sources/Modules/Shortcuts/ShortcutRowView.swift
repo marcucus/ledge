@@ -1,6 +1,7 @@
 import Core
 import SwiftUI
 
+@MainActor
 struct ShortcutRowView: View {
     let name: String
     let module: ShortcutsModule

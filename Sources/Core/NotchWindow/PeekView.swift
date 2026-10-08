@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct PeekView: View {
     var controller: NotchController
 
