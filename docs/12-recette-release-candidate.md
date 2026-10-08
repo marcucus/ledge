@@ -114,20 +114,22 @@ Cette partie ne peut pas être validée depuis la machine de développement.
 Après une exécution `Quality` verte sur `main`, le workflow `Release version` prépare une PR qui
 modifie `CFBundleShortVersionString` et incrémente toujours `CFBundleVersion` d'une unité :
 
-- sans label ou avec `version:patch` : `0.3.0` → `0.3.1` ;
+- sans label : aucune PR de version ;
+- avec `version:patch` : `0.3.0` → `0.3.1` ;
 - avec `version:minor` : `0.3.0` → `0.4.0` ;
 - avec `version:major` : `0.3.0` → `1.0.0` ;
 - avec `version:none` : aucune PR de version.
 
 Une PR ne doit porter qu'un seul label `version:*`; la CI refuse les combinaisons contradictoires.
-Un push direct sur `main`, sans PR associée, produit un patch par défaut. Une seule PR
-`release/v…` peut être ouverte à la fois. Quand cette PR est fusionnée, une nouvelle CI complète
-s'exécute sur `main`, puis le tag `v…` est créé uniquement si elle est verte. Ce mécanisme ne
-publie aucun DMG : la recette et `make release` restent des actions explicites.
+Un push direct sur `main`, sans PR associée ni label récupérable, ne produit aucune version. Une
+seule PR `release/v…` peut être ouverte à la fois. Quand cette PR est fusionnée, une nouvelle CI
+complète s'exécute sur `main`, puis le tag `v…` est créé uniquement si elle est verte. Ce mécanisme
+ne publie aucun DMG : la recette et `make release` restent des actions explicites.
 
 À configurer une fois dans GitHub : **Settings → Actions → General → Workflow permissions**,
 activer les permissions d'écriture et l'option autorisant GitHub Actions à créer des pull requests.
-Le workflow crée ensuite lui-même les quatre labels s'ils n'existent pas.
+Le workflow crée ou remet à jour les quatre labels après chaque exécution `Quality` sur `main`,
+même si cette CI échoue. La préparation d'une version reste, elle, conditionnée à une CI verte.
 
 ## Publication
 

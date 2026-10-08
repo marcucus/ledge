@@ -347,6 +347,16 @@ ces étapes. `make release` publie ce paquet ad hoc gratuit ; `make release-nota
 parcours Apple optionnel, avec signature Sparkle de l'intérieur vers l'extérieur, signature du DMG
 et vérification du ticket. La recette locale de ce nouveau format passe `make verify-release`.
 
+**Correction CI et versioning (8 octobre 2026)** : la première CI `Quality` exécutée sur `main`
+avec Swift 5.10 a révélé des accès UI insuffisamment isolés dans `AmbientView`, `ExpandedView` et
+`ModuleLauncherButton`, alors que la toolchain Swift 6.2 locale les acceptait implicitement. Ces
+trois vues sont désormais explicitement `@MainActor`; `swift build`, les 116 tests et SwiftLint
+sont verts localement. Le versioning n'utilise plus de patch implicite : sans label, aucune PR de
+release n'est créée. Seuls `version:patch`, `version:minor` et `version:major` déclenchent un bump,
+et `version:none` reste un arrêt explicite. Un job indépendant crée ou remet à jour ces quatre
+labels même lorsque `Quality` échoue. La validation distante attend le prochain push manuel du
+propriétaire ; aucun push n'est effectué par l'agent.
+
 ## Construire & lancer
 
 ```bash

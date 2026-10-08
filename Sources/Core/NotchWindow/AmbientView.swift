@@ -3,6 +3,7 @@ import SwiftUI
 
 // MARK: — Main ambient view (left pill + transparent notch center + right pill)
 
+@MainActor
 struct AmbientView: View {
     let controller: NotchController
 

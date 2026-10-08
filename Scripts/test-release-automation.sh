@@ -63,7 +63,7 @@ assert_version_bump() {
   assert_equal "$expected_build" "$actual_build" "$bump incrémente le build"
 }
 
-assert_bump patch
+assert_bump none
 assert_bump patch version:patch
 assert_bump minor documentation version:minor
 assert_bump major version:major bug
