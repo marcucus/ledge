@@ -164,9 +164,7 @@ struct NotchControllerTests {
         controller.showPeek(selecting: "timers", duration: 0.01)
         #expect(controller.state == .peeking)
 
-        try? await Task.sleep(for: .milliseconds(100))
-
-        #expect(controller.state == .collapsed)
+        #expect(await Self.eventually { controller.state == .collapsed })
     }
 
     // MARK: — Clic panneau
