@@ -5,6 +5,7 @@ import SwiftUI
 
 /// Compact view shown in the notch peek (hover) state.
 /// Displays a truncated preview of the note, or an icon when empty.
+@MainActor
 struct NotesPeekView: View {
     var module: NotesModule
 

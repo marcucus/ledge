@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct NotchContentView: View {
     var controller: NotchController
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -220,6 +221,7 @@ struct HUDBar: View {
 
 // MARK: — Timer ring
 
+@MainActor
 struct TimerRingView: View {
     let controller: NotchController
 

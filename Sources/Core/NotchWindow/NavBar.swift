@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Barre de navigation toujours visible (peek + expanded).
 /// Gauche : icônes des catégories / Droite : statut (batterie…) + paramètres.
+@MainActor
 struct NavBar: View {
     var controller: NotchController
     @AppStorage("preferredLanguage") private var language: String = "system"
@@ -102,6 +103,7 @@ struct NavBar: View {
 
 // MARK: — Tab button avec hover
 
+@MainActor
 private struct ModuleTabButton: View {
     let item: ModuleItem
     let isSelected: Bool

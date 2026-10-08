@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Façade interne donnant à la cible `MarketingCapture` accès à la véritable hiérarchie du
 /// panneau sans rendre `NotchContentView` publique pour les intégrateurs du package.
+@MainActor
 package struct MarketingCaptureView: View {
     private let controller: NotchController
 
