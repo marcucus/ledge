@@ -363,8 +363,9 @@ explicite dans les deux fermetures. Le build a alors passé cette étape, puis l
 avant exécution avec `no such module 'Testing'` : le runner `macos-14` sélectionnait Xcode 15.4,
 qui ne fournit pas Swift Testing. Les workflows `Quality` et `Release version` utilisent désormais
 `macos-15` avec Xcode 16.4 explicitement sélectionné ; la clé de cache Swift inclut cette version
-pour ne pas restaurer d'artefacts produits par une autre toolchain. Le versioning n'utilise plus de
-patch implicite : sans label,
+pour ne pas restaurer d'artefacts produits par une autre toolchain. Les actions officielles
+`checkout` et `cache` sont en v5 afin d'utiliser Node 24 et de ne pas dépendre du runtime Node 20
+retiré par GitHub. Le versioning n'utilise plus de patch implicite : sans label,
 aucune PR de release n'est créée. Seuls `version:patch`, `version:minor` et `version:major`
 déclenchent un bump, et `version:none` reste un arrêt explicite. Un job indépendant crée ou remet à
 jour ces quatre labels même lorsque `Quality` échoue. Chaque propagation `branche → dev → rc →
