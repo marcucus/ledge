@@ -16,7 +16,9 @@ public struct CalendarContentView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if module.accessState == .denied {
+            if module.accessState == .requestFailed {
+                permissionErrorView
+            } else if module.accessState == .denied {
                 permissionRequiredView
             } else if module.accessState == .notDetermined {
                 permissionRequestView
@@ -37,6 +39,17 @@ public struct CalendarContentView: View {
             titleKey: "calendar.permission.request",
             detailKey: "calendar.permission.request.detail",
             actionKey: "calendar.permission.request.action"
+        ) {
+            Task { await module.requestAccessAndRefresh() }
+        }
+    }
+
+    private var permissionErrorView: some View {
+        ModuleEmptyState(
+            icon: "exclamationmark.triangle",
+            titleKey: "calendar.permission.error",
+            detailKey: "calendar.permission.error.detail",
+            actionKey: "calendar.permission.request.retry"
         ) {
             Task { await module.requestAccessAndRefresh() }
         }

@@ -88,4 +88,17 @@ struct CalendarModuleTests {
         #expect(source.eventQueryCount == 0)
         #expect(!module.isPolling)
     }
+
+    @Test func requestErrorIsDistinctFromUserRefusal() async {
+        struct RequestError: Error {}
+        let source = StubCalendarEventSource(authorizationStatus: .notDetermined)
+        source.accessResult = .failure(RequestError())
+        let module = CalendarModule(eventSource: source)
+
+        await module.requestAccessAndRefresh()
+
+        #expect(module.accessState == .requestFailed)
+        #expect(source.eventQueryCount == 0)
+        #expect(!module.isPolling)
+    }
 }

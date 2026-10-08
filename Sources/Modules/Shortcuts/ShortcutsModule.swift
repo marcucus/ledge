@@ -15,22 +15,34 @@ public final class ShortcutsModule: NotchModule {
     public private(set) var loadFailed = false
     public private(set) var runningShortcutName: String?
     public private(set) var lastRunFailedName: String?
+    public private(set) var lastRunTimedOutName: String?
     public private(set) var lastRunSucceededName: String?
     public private(set) var favoriteShortcutNames: Set<String>
     @ObservationIgnored private var isStarted = false
     @ObservationIgnored private var lifecycleGeneration = 0
     @ObservationIgnored private var successFeedbackTask: Task<Void, Never>?
+    @ObservationIgnored private var refreshTask: Task<Void, Never>?
+    @ObservationIgnored private var runTask: Task<Void, Never>?
     @ObservationIgnored private let commandRunner: any ShortcutsCommandRunning
     @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let listTimeout: Duration
+    @ObservationIgnored private let runTimeout: Duration
     private static let favoriteShortcutNamesKey = "shortcutsFavoriteNames"
 
     public convenience init() {
         self.init(commandRunner: SystemShortcutsCommandRunner(), defaults: .standard)
     }
 
-    init(commandRunner: any ShortcutsCommandRunning, defaults: UserDefaults = .standard) {
+    init(
+        commandRunner: any ShortcutsCommandRunning,
+        defaults: UserDefaults = .standard,
+        listTimeout: Duration = .seconds(5),
+        runTimeout: Duration = .seconds(30)
+    ) {
         self.commandRunner = commandRunner
         self.defaults = defaults
+        self.listTimeout = listTimeout
+        self.runTimeout = runTimeout
         favoriteShortcutNames = Set(
             defaults.stringArray(forKey: Self.favoriteShortcutNamesKey) ?? []
         )
@@ -43,13 +55,15 @@ public final class ShortcutsModule: NotchModule {
         isStarted = true
         lifecycleGeneration += 1
         let generation = lifecycleGeneration
-        Task { await refresh(generation: generation) }
+        refreshTask = Task { await refresh(generation: generation) }
     }
 
     public func stop() {
         guard isStarted else { return }
         isStarted = false
         lifecycleGeneration += 1
+        refreshTask?.cancel()
+        runTask?.cancel()
         successFeedbackTask?.cancel()
         isLoading = false
         runningShortcutName = nil
@@ -106,18 +120,30 @@ public final class ShortcutsModule: NotchModule {
         successFeedbackTask?.cancel()
         runningShortcutName = name
         lastRunFailedName = nil
+        lastRunTimedOutName = nil
         lastRunSucceededName = nil
         let generation = lifecycleGeneration
-        Task {
-            let succeeded = await runShortcut(named: name)
+        runTask = Task {
+            let result = await runShortcut(named: name)
             guard isStarted, lifecycleGeneration == generation else { return }
             runningShortcutName = nil
-            if succeeded {
+            switch result {
+            case .success:
                 showSuccessFeedback(for: name, generation: generation)
-            } else {
+            case .failed:
                 lastRunFailedName = name
+            case .timedOut:
+                lastRunTimedOutName = name
+            case .cancelled:
+                break
             }
         }
+    }
+
+    public func cancelRun() {
+        runTask?.cancel()
+        runTask = nil
+        runningShortcutName = nil
     }
 
     public func isFavorite(_ name: String) -> Bool {
@@ -154,8 +180,8 @@ public final class ShortcutsModule: NotchModule {
     // MARK: — Process helpers
 
     private func listShortcuts() async -> Result<[String], ProcessFailure> {
-        let output = await commandRunner.output(arguments: ["list"])
-        guard let output else { return .failure(.commandFailed) }
+        let result = await commandRunner.output(arguments: ["list"], timeout: listTimeout)
+        guard case let .success(output) = result else { return .failure(.commandFailed) }
         let names = output
             .split(separator: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -163,8 +189,8 @@ public final class ShortcutsModule: NotchModule {
         return .success(names)
     }
 
-    private func runShortcut(named name: String) async -> Bool {
-        await commandRunner.output(arguments: ["run", name]) != nil
+    private func runShortcut(named name: String) async -> ShortcutsCommandResult {
+        await commandRunner.output(arguments: ["run", name], timeout: runTimeout)
     }
 
     private enum ProcessFailure: Error {

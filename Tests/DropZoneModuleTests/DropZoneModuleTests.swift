@@ -55,8 +55,8 @@ struct DropZoneModuleTests {
         let dir = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
 
-        let module = DropZoneModule()
-        let dest = module.uniqueDestination(for: "photo.png", in: dir, fileManager: .default)
+        let copier = DropZoneFileCopier()
+        let dest = copier.uniqueDestination(for: "photo.png", in: dir, fileManager: .default)
 
         #expect(dest == dir.appendingPathComponent("photo.png"))
     }
@@ -66,8 +66,8 @@ struct DropZoneModuleTests {
         defer { try? FileManager.default.removeItem(at: dir) }
         try Data("existing".utf8).write(to: dir.appendingPathComponent("photo.png"))
 
-        let module = DropZoneModule()
-        let dest = module.uniqueDestination(for: "photo.png", in: dir, fileManager: .default)
+        let copier = DropZoneFileCopier()
+        let dest = copier.uniqueDestination(for: "photo.png", in: dir, fileManager: .default)
 
         #expect(dest == dir.appendingPathComponent("photo 2.png"))
     }
@@ -79,8 +79,8 @@ struct DropZoneModuleTests {
         try Data("existing".utf8).write(to: dir.appendingPathComponent("photo 2.png"))
         try Data("existing".utf8).write(to: dir.appendingPathComponent("photo 3.png"))
 
-        let module = DropZoneModule()
-        let dest = module.uniqueDestination(for: "photo.png", in: dir, fileManager: .default)
+        let copier = DropZoneFileCopier()
+        let dest = copier.uniqueDestination(for: "photo.png", in: dir, fileManager: .default)
 
         #expect(dest == dir.appendingPathComponent("photo 4.png"))
     }
@@ -90,10 +90,35 @@ struct DropZoneModuleTests {
         defer { try? FileManager.default.removeItem(at: dir) }
         try Data("existing".utf8).write(to: dir.appendingPathComponent("README"))
 
-        let module = DropZoneModule()
-        let dest = module.uniqueDestination(for: "README", in: dir, fileManager: .default)
+        let copier = DropZoneFileCopier()
+        let dest = copier.uniqueDestination(for: "README", in: dir, fileManager: .default)
 
         #expect(dest == dir.appendingPathComponent("README 2"))
+    }
+
+    @Test @MainActor func copyRunsThroughInjectedCopierAndPublishesProgress() async throws {
+        let sourceDirectory = try makeTempDirectory()
+        let destinationDirectory = try makeTempDirectory()
+        defer {
+            try? FileManager.default.removeItem(at: sourceDirectory)
+            try? FileManager.default.removeItem(at: destinationDirectory)
+        }
+        let first = sourceDirectory.appendingPathComponent("one.txt")
+        let second = sourceDirectory.appendingPathComponent("two.txt")
+        try Data("one".utf8).write(to: first)
+        try Data("two".utf8).write(to: second)
+        let recorder = RecordingDropZoneCopier()
+        let module = DropZoneModule(fileCopier: recorder)
+        module.addURLs([first, second])
+
+        await module.copyItems(to: destinationDirectory)
+
+        #expect(await recorder.copyCount == 2)
+        #expect(module.copiedItemCount == 2)
+        #expect(module.copyItemCount == 2)
+        #expect(module.copyProgress == 1)
+        #expect(module.lastCopyFailureCount == 0)
+        #expect(!module.isCopying)
     }
 
     private func makeTempDirectory() throws -> URL {
@@ -101,5 +126,14 @@ struct DropZoneModuleTests {
             .appendingPathComponent("ledge-dropzone-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
+    }
+}
+
+private actor RecordingDropZoneCopier: DropZoneCopying {
+    private(set) var copyCount = 0
+
+    func copy(_ request: DropZoneCopyRequest, to directory: URL) async -> Bool {
+        copyCount += 1
+        return true
     }
 }

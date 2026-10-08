@@ -22,8 +22,8 @@ final class ClipboardSource {
     var excludedBundleIdentifiers: Set<String> = []
 
     private var timer: Timer?
-    private var lastChangeCount: Int = NSPasteboard.general.changeCount
-    private let pasteboard = NSPasteboard.general
+    private var lastChangeCount: Int
+    private let pasteboard: NSPasteboard
 
     /// Concealed-type UTI used by password managers to flag sensitive copies.
     private static let concealedType = "org.nspasteboard.ConcealedType"
@@ -32,8 +32,10 @@ final class ClipboardSource {
     /// déclare volontairement son identifiant de bundle comme source de la copie.
     private static let sourceType = "org.nspasteboard.source"
 
-    /// Thumbnail max dimension in points.
-    private static let thumbnailMaxSide: CGFloat = 128
+    init(pasteboard: NSPasteboard = .general) {
+        self.pasteboard = pasteboard
+        lastChangeCount = pasteboard.changeCount
+    }
 
     // MARK: — Lifecycle
 
@@ -50,20 +52,30 @@ final class ClipboardSource {
         timer = nil
     }
 
+    /// Marque l'état courant comme déjà traité. Le module l'appelle après avoir lui-même écrit
+    /// dans le presse-papiers afin que le prochain sondage ne réimporte pas cet élément dans
+    /// l'historique.
+    func synchronizeChangeCount() {
+        lastChangeCount = pasteboard.changeCount
+    }
+
     // MARK: — Poll
 
-    private func poll() {
+    /// `internal` pour tester la détection sans attendre le minuteur réel de 0,8 seconde.
+    func poll() {
         let current = pasteboard.changeCount
         guard current != lastChangeCount else { return }
         lastChangeCount = current
-        guard let item = buildItem() else { return }
+        guard let items = pasteboard.pasteboardItems, let item = buildItem(from: items) else { return }
         onNewItem?(item)
     }
 
     // MARK: — Build item
 
-    private func buildItem() -> ClipboardItem? {
-        guard let items = pasteboard.pasteboardItems, !items.isEmpty else { return nil }
+    /// Transforme les représentations brutes en entrée d'historique. L'entrée explicite rend
+    /// le décodage testable sans toucher au presse-papiers système de l'utilisateur.
+    func buildItem(from items: [NSPasteboardItem]) -> ClipboardItem? {
+        guard !items.isEmpty else { return nil }
 
         // Security: skip copies from password managers
         for item in items where item.types.contains(
@@ -84,11 +96,12 @@ final class ClipboardSource {
             return ClipboardItem(content: .url(url))
         }
 
-        if let tiffData = first.data(forType: .tiff) ?? first.data(forType: .png),
-           let image = NSImage(data: tiffData)
+        if let imageData = first.data(forType: .png) ?? first.data(forType: .tiff),
+           let image = NSImage(data: imageData)
         {
-            let thumbnail = makeThumbnail(from: image)
-            return ClipboardItem(content: .image(thumbnail))
+            // Conserver l'image complète : la vignette 128×128 historique dégradait
+            // définitivement l'élément lorsqu'il était recollé depuis Ledge.
+            return ClipboardItem(content: .image(image))
         }
 
         if let string = first.string(forType: .string), !string.isEmpty {
@@ -121,21 +134,5 @@ final class ClipboardSource {
             }
         }
         return NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-    }
-
-    // MARK: — Thumbnail
-
-    private func makeThumbnail(from image: NSImage) -> NSImage {
-        let side = ClipboardSource.thumbnailMaxSide
-        let size = image.size
-        guard size.width > side || size.height > side else { return image }
-
-        let ratio = min(side / size.width, side / size.height)
-        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
-        let thumb = NSImage(size: newSize)
-        thumb.lockFocus()
-        image.draw(in: CGRect(origin: .zero, size: newSize))
-        thumb.unlockFocus()
-        return thumb
     }
 }

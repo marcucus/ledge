@@ -13,8 +13,9 @@ bundle_path="${DMG_PATH:h}/Ledge.app"
 [[ -f "$DMG_PATH" ]] || { print -u2 "DMG introuvable : $DMG_PATH"; exit 1; }
 [[ -f "$APPCAST_PATH" ]] || { print -u2 "Appcast introuvable : $APPCAST_PATH"; exit 1; }
 
-codesign --verify --deep --strict "$bundle_path"
+"${0:A:h}/verify-app-bundle.sh" "$bundle_path"
 hdiutil verify "$DMG_PATH" >/dev/null
+"${0:A:h}/verify-dmg-layout.sh" "$DMG_PATH"
 xmllint --noout "$APPCAST_PATH"
 
 item_xpath="(//*[local-name()='item'][*[local-name()='shortVersionString' and text()='$VERSION']])[1]"

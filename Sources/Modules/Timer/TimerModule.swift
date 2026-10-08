@@ -15,6 +15,7 @@ public final class TimerModule: NotchModule {
     public private(set) var entries: [TimerEntry] = []
     public private(set) var pomodoroState: PomodoroState = .init()
     public private(set) var persistenceIssue: TimerPersistenceIssue?
+    public private(set) var notificationPermissionIssue = false
     public var onAmbientUpdate: ((AmbientContent?) -> Void)?
     /// Appelé quand un minuteur (ou une phase Pomodoro) se termine, en plus de la notification
     /// système — laisse à l'appelant (voir `AppDelegate`) la décision d'afficher ou non un peek
@@ -334,8 +335,13 @@ public final class TimerModule: NotchModule {
         else { return }
         didRequestNotificationPermission = true
         Task {
-            try? await UNUserNotificationCenter.current()
-                .requestAuthorization(options: [.alert, .sound])
+            do {
+                _ = try await UNUserNotificationCenter.current()
+                    .requestAuthorization(options: [.alert, .sound])
+                notificationPermissionIssue = false
+            } catch {
+                notificationPermissionIssue = true
+            }
         }
     }
 
@@ -355,6 +361,13 @@ public final class TimerModule: NotchModule {
             content: content,
             trigger: nil
         )
-        UNUserNotificationCenter.current().add(request)
+        Task {
+            do {
+                try await UNUserNotificationCenter.current().add(request)
+                notificationPermissionIssue = false
+            } catch {
+                notificationPermissionIssue = true
+            }
+        }
     }
 }

@@ -1,6 +1,6 @@
 # 12 — Recette release candidate
 
-> Mise à jour le **30 septembre 2026**.
+> Mise à jour le **5 octobre 2026** après la phase 3 locale.
 >
 > Version publique : `0.2.0` (build `2`). Candidate locale suivante : `0.3.0` (build `3`).
 > La release `v0.2.0` et ses assets ne doivent jamais être remplacés : Sparkle exige une version
@@ -9,17 +9,48 @@
 ## État automatisé de la candidate
 
 - [x] `swift build`
-- [x] `swift test` — 99 tests dans 14 suites
+- [x] `swift test` — 116 tests dans 17 suites
 - [x] `swiftlint lint --quiet Sources Tests` — aucune erreur ni avertissement
 - [x] `make app` — bundle construit avec la licence Sparkle incluse
+- [x] smoke test réel — le bundle optimisé démarre et reste actif pendant la mesure de 30 secondes
 - [x] tests, ESLint et build de production de `ledge-site`
-- [ ] CI GitHub verte sur le commit candidat
-- [x] `make direct-appcast` — DMG et appcast `0.3.0` signés
+- [ ] CI GitHub verte sur le commit candidat — aucun push ne doit être effectué par l'agent
+- [x] Paquet ad hoc local construit avec icône et raccourci Applications
+- [x] Parcours gratuit retenu : DMG ad hoc et autorisation manuelle « Ouvrir quand même »
+- [ ] Variante Developer ID/notarisée — amélioration optionnelle, non bloquante
+- [x] Script de signature Sparkle de l'intérieur vers l'extérieur, sans propagation des
+  entitlements de l'app aux helpers
+- [x] Signature Developer ID du DMG prévue avant l'envoi à NotaryTool
 - [x] `codesign --verify --deep --strict dist/Ledge.app`
 - [x] `hdiutil verify dist/Ledge-0.3.0.dmg`
 - [x] validation XML de `dist/appcast.xml`
 - [x] pages juridiques publiques : mentions, confidentialité, conditions et licences en HTTP 200
 - [x] routes publiques : accueil `200`, appcast `200`, téléchargement `302` vers le DMG GitHub
+
+### Preuves de phase 3 — 5 octobre 2026
+
+- L'ancien DMG de phase 3 pesait **3 565 185 octets**, SHA-256
+  `8b6078d6744a1c9b0c96648a8824ca4807ebb589f59a7eb69059603ef241e1d9`.
+- Ce hash est désormais historique : l'ajout de l'icône et du parcours `Ledge.app → Applications`
+  modifie le paquet.
+- Le paquet ad hoc finalisé du 7 octobre pèse **5 615 093 octets**, SHA-256
+  `318507768f4e4b04c1f60348c62c9c3b3374d29ee1c589c6ce68afe2642c8056`. Son bundle, son
+  agencement de DMG, sa notice Gatekeeper et son appcast sont verts.
+- Appcast local : version `0.3.0`, build `3`, macOS `14.0`, signature EdDSA présente, zéro delta.
+- Gatekeeper rejette normalement l'app et le DMG actuels : ils sont signés ad hoc, sans ticket de
+  notarisation (`source=no usable signature`).
+- Cette machine ne possède actuellement aucune identité de signature valide, ni Apple Development
+  ni Developer ID, et aucune configuration `APPLE_ID`, `TEAM_ID` ou `APP_PASSWORD`. La notarisation
+  est donc bloquée par des prérequis externes, pas par le code.
+- Le site local passe désormais ESLint, 32 tests, le contrat visuel 0.3.0 et le build Next.js de
+  production sans avertissement. Un test protège spécifiquement l'ordre du parcours Gatekeeper.
+- Les routes publiques renvoient `200`, mais l'apex redirige vers `www.app-ledge.fr` et le champ
+  `<link>` de l'appcast public pointait encore vers `ledge-notch.vercel.app`. Le code ignore
+  désormais cette ancienne variable et force `https://app-ledge.fr`; le déploiement public reste
+  à actualiser manuellement. L'ancienne variable Vercel peut être supprimée et l'apex doit encore
+  être choisi comme domaine primaire côté hébergeur.
+- Les traductions juridiques anglaises n'ont pas reçu de validation juridique humaine et gardent
+  volontairement leur avertissement.
 
 ## Recette manuelle sur le Mac de développement
 
@@ -61,6 +92,11 @@ Chaque commande écrit un CSV horodaté dans `dist/` et affiche CPU moyen/max ai
 moyenne/max. Conserver les trois CSV avec les notes de recette pour comparer les mêmes scénarios
 entre candidates.
 
+Mesure stabilisée au repos du 5 octobre 2026, après une première fenêtre incluant le démarrage :
+**0,00 % CPU moyen**, **0,10 % max**, **91,1 Mo RSS moyen** et **91,2 Mo max** sur 30 mesures.
+Les scénarios Timer et Média exigent encore une interaction réelle avec l'encoche et une lecture
+Apple Music/Spotify ; ils ne sont pas cochés par une simple mesure du processus.
+
 ## Recette indispensable sur un autre Mac
 
 Cette partie ne peut pas être validée depuis la machine de développement.
@@ -73,16 +109,38 @@ Cette partie ne peut pas être validée depuis la machine de développement.
 6. Télécharger ensuite le DMG depuis le site public et comparer son SHA-256 avec le changelog et
    les métadonnées de la GitHub Release.
 
+## Versioning automatique sur `main`
+
+Après une exécution `Quality` verte sur `main`, le workflow `Release version` prépare une PR qui
+modifie `CFBundleShortVersionString` et incrémente toujours `CFBundleVersion` d'une unité :
+
+- sans label ou avec `version:patch` : `0.3.0` → `0.3.1` ;
+- avec `version:minor` : `0.3.0` → `0.4.0` ;
+- avec `version:major` : `0.3.0` → `1.0.0` ;
+- avec `version:none` : aucune PR de version.
+
+Une PR ne doit porter qu'un seul label `version:*`; la CI refuse les combinaisons contradictoires.
+Un push direct sur `main`, sans PR associée, produit un patch par défaut. Une seule PR
+`release/v…` peut être ouverte à la fois. Quand cette PR est fusionnée, une nouvelle CI complète
+s'exécute sur `main`, puis le tag `v…` est créé uniquement si elle est verte. Ce mécanisme ne
+publie aucun DMG : la recette et `make release` restent des actions explicites.
+
+À configurer une fois dans GitHub : **Settings → Actions → General → Workflow permissions**,
+activer les permissions d'écriture et l'option autorisant GitHub Actions à créer des pull requests.
+Le workflow crée ensuite lui-même les quatre labels s'ils n'existent pas.
+
 ## Publication
 
 La publication reste une action explicite. Elle ne doit commencer qu'après validation de toutes les
-cases ci-dessus et déploiement des pages juridiques du site.
+cases bloquantes ci-dessus et déploiement des pages juridiques du site.
 
 ```bash
 make release CHANGELOG="Décrire ici les changements de la version 0.3.0"
 ```
 
-Cette commande publie la GitHub Release, le DMG, l'appcast et chaque delta référencé par l'appcast.
+Cette commande construit le DMG ad hoc, génère l'appcast Sparkle, puis publie la GitHub Release et
+ses assets. `make release-notarized` conserve la variante payante et vérifie le ticket Apple avant
+publication.
 Si un upload échoue, la même commande reprend uniquement le brouillon `v0.3.0` visant le même
 commit et remplace ses assets partiels. Elle refuse de modifier une release déjà publique ou un
 brouillon associé à un autre commit, ainsi que de publier un appcast qui référence un delta local

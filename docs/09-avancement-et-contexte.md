@@ -3,7 +3,7 @@
 > Le *où on en est*. Les docs 01–08 décrivent la **vision** ; celui-ci décrit l'**état réel
 > du code** à un instant donné. À mettre à jour au fil des avancées.
 >
-> Dernière mise à jour : **2026-09-30**
+> Dernière mise à jour : **2026-10-07**
 
 ## Vue d'ensemble
 
@@ -42,7 +42,8 @@ Conforme à la [doc 07](07-architecture-technique.md), avec quelques précisions
 - Frameworks privés via `dlopen`/`dlsym` : **MediaRemote** (média), **DisplayServices**
   (luminosité sur Apple Silicon).
 - Build rapide : `swift build` / `swift test`. Les permissions se testent avec `make app`; la
-  distribution directe passe par un DMG signé ad hoc et un appcast signé avec Sparkle EdDSA.
+  distribution publique gratuite passe par un DMG ad hoc et un appcast signé avec Sparkle EdDSA.
+  Le parcours Developer ID/notarisé reste disponible en option.
 
 ## Architecture du cœur (`Core`)
 
@@ -135,8 +136,8 @@ et **remplacer** l'overlay natif de macOS.
 |---|---|---|
 | **Pochette d'album** | ⚠️ Partiel | MediaRemote est bloqué pour Apple Music sur macOS 15 (run non-bundlé) ; la notification distribuée `com.apple.Music.playerInfo` ne fournit pas d'image. Piste : `iTunesLibrary` via « Persistent ID ». |
 | **Seek Apple Music** | ✅ Contourné | MediaRemote bloqué → on passe par **ScriptingBridge** (`set player position`) pour Music, MediaRemote (`MRMediaRemoteSetElapsedTime`) pour les autres lecteurs. Demande la permission **Automation** au 1er usage. |
-| **Suppression HUD natif** | ✅ OK (bundle signé) | Le `CGEventTap` consomme les touches volume/luminosité **si l'Accessibilité est accordée**. Tester via `dist/Ledge.app` (`make app`), pas `swift run` (pas de bundle = pas de permission). `make app` signe avec une identité Apple Development **stable** → l'autorisation persiste entre les rebuilds. La barre Ledge (volume événementiel) marche sans permission. |
-| **Distribution** | ✅ Code prêt | `make release` crée un bundle ad hoc et un DMG sans compte Apple, signe la mise à jour avec Sparkle EdDSA puis publie le DMG et l'appcast dans GitHub Releases. Gatekeeper impose une autorisation manuelle au premier lancement. |
+| **Suppression HUD natif** | ✅ OK (bundle signé) | Le `CGEventTap` consomme les touches volume/luminosité **si l'Accessibilité est accordée**. Tester via `dist/Ledge.app` (`make app`), pas `swift run` (pas de bundle = pas de permission). `make app` préfère une identité Apple Development stable, mais la machine actuelle n'en possède aucune et retombe sur l'ad hoc : l'autorisation peut alors être redemandée après un rebuild. La barre Ledge (volume événementiel) marche sans permission. |
+| **Distribution** | ✅ Code prêt | Le bundle possède une icône native et le DMG propose `Ledge.app → Applications`. `make release` publie le paquet ad hoc gratuit ; la notice et le site expliquent la tentative d'ouverture nécessaire avant « Ouvrir quand même ». |
 
 ## Permissions requises (récapitulatif)
 
@@ -309,6 +310,43 @@ Après une veille ou un déverrouillage de session, le module Système recrée d
 `CGEventTap` avec trois tentatives bornées. Cela évite que le HUD Ledge et le HUD natif macOS
 s'affichent ensemble lorsque l'ancien Mach port existe encore mais n'intercepte plus les touches.
 
+**Phase 2 — fiabilité v1 (5 octobre 2026)** : la Drop Zone copie désormais hors du thread
+principal, publie une progression et permet l'annulation. Le presse-papiers conserve les images
+en pleine définition, ignore ses propres écritures et documente honnêtement la limite macOS de
+l'identification de l'app source. Les commandes Raccourcis ont des délais maximaux (5 s pour la
+liste, 30 s pour une exécution), une annulation qui termine le processus et des erreurs visibles.
+Les erreurs système de permissions Calendrier/Notifications ne sont plus confondues avec un refus.
+Les animations Ambient respectent « Réduire les animations » et les conflits Carbon des
+raccourcis globaux apparaissent dans les réglages. `swift build`, **116 tests dans 17 suites** et
+SwiftLint sont verts, sans avertissement.
+
+**Phase 3 — release candidate locale (5 octobre 2026)** : le bundle optimisé, le DMG et l'appcast
+0.3.0 ont été régénérés et validés. Le DMG pèse 3 565 185 octets et son SHA-256 est
+`8b6078d6744a1c9b0c96648a8824ca4807ebb589f59a7eb69059603ef241e1d9`. Au repos stabilisé,
+Ledge mesure 0,00 % CPU moyen et 91,1 Mo RSS moyen sur 30 secondes. La vérification actuelle ne
+trouve aucune identité de signature valide : Gatekeeper rejette normalement le paquet ad hoc et
+aucune notarisation n'est possible sans certificat Developer ID et configuration NotaryTool. Le site
+local est vert (lint, 33 tests, contrat visuel, build), tandis que la recette interactive, le
+second Mac, la validation juridique anglaise et deux réglages Vercel restent bloquants.
+
+**Synchronisation du site et des captures (5 octobre 2026)** : `MarketingCapture` ne code plus la
+version 0.2.0 dans son manifeste. Le script du site lit la version 0.3.0 dans `Info.plist`, la passe
+explicitement au générateur et le contrat visuel contrôle la version ainsi que la présence des dix
+PNG. Les captures 0.3.0 ont été régénérées dans `ledge-site`. Le site dispose aussi d'un fallback
+de release, d'en-têtes de sécurité, d'une page Support FR/EN, d'un inventaire de licences généré et
+d'une home raccourcie. Sa recette finale passe ESLint, **31 tests**, le contrat visuel 0.3.0 et le
+build Next.js sans avertissement. Aucun push n'a été effectué.
+
+**Correction du paquet de distribution (7 octobre 2026)** : le bundle principal déclare désormais
+une vraie icône macOS compilée dans `Assets.car`. Le DMG contient `Ledge.app`, un raccourci
+`Applications` et une notice FR/EN, avec des vérifications automatiques du bundle et du volume.
+L'échec observé sur un autre Mac venait aussi d'un parcours incomplet : ouvrir le DMG ne déclenche
+pas Gatekeeper. L'utilisateur doit copier Ledge dans Applications, tenter de l'ouvrir, fermer
+l'alerte, puis utiliser « Ouvrir quand même » dans l'heure. Le DMG et le site détaillent désormais
+ces étapes. `make release` publie ce paquet ad hoc gratuit ; `make release-notarized` conserve le
+parcours Apple optionnel, avec signature Sparkle de l'intérieur vers l'extérieur, signature du DMG
+et vérification du ticket. La recette locale de ce nouveau format passe `make verify-release`.
+
 ## Construire & lancer
 
 ```bash
@@ -324,14 +362,14 @@ réinstalle le tap au changement d'application, sans nécessiter de relance.
 La version publique est `0.2.0`. La candidate locale suivante est `0.3.0` (build `3`) ; elle ne doit
 être publiée qu'après la recette de [doc 12](12-recette-release-candidate.md).
 
-1. Fournir au PAT de l'app le scope `workflow`, pousser `codex/release-0.3.0`, puis valider la CI
-   GitHub Actions sur le flux `dev → rc → main`. Le vrai push est toujours refusé malgré une
-   simulation réussie ; celui du site reste refusé en HTTP 403.
+1. Aucun push ne doit être effectué par l'agent. Si Adrien décide de publier les branches, il devra
+   lui-même valider ensuite les CI distantes de l'application et du site.
 2. Valider Apple Music en lecture réelle : pochette, seek, resynchronisation et permission Automation.
 3. Valider manuellement les trois comportements plein écran et les transitions veille/réveil sur
    écran interne et externe.
-4. Tester Gatekeeper puis une mise à jour Sparkle `0.2.0` → `0.3.0` sur un autre Mac.
-5. Effectuer les recettes manuelles restantes avant d'exécuter `make release` : le DMG et
-   l'appcast EdDSA 0.3.0 sont désormais générés et validés par `make verify-release`.
-6. Restaurer `ledge.app` vers le déploiement Vercel : le domaine sert actuellement une page de
-   parking `/lander` et non les routes de téléchargement et d'appcast.
+4. Tester sur un Mac Apple Silicon propre le parcours complet : copie vers Applications, première
+   tentative, apparition de « Ouvrir quand même » puis lancement.
+5. Tester une mise à jour Sparkle `0.2.0` → `0.3.0` avant d'exécuter `make release`.
+6. Finaliser le domaine Vercel : `app-ledge.fr` est connecté et HTTPS fonctionne, mais Vercel
+   redirige encore l'apex vers `www.app-ledge.fr` alors que le code déclare l'apex canonique.
+   `ledge.app` appartient à un tiers et ne fait pas partie du projet.
