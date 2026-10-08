@@ -66,18 +66,26 @@ se rafraîchissent que panneau ouvert.
 
 > Suivi détaillé et prochaines pistes : [doc 10 — Audit & plan](docs/10-audit-et-plan.md).
 
-## Publication gratuite
+## Publication
 
-Les binaires sont hébergés par GitHub Releases, sans bucket ni service payant. Le token GitHub fin
-est limité à ce dépôt avec la permission `Contents: write` et conservé dans le Trousseau macOS sous
-le service `dev.ledge.github-release-token`. Depuis un commit propre déjà poussé sur `origin/main` :
+Les PR vers `main` acceptent les labels `version:patch`, `version:minor`, `version:major` et
+`version:none`. Après une CI verte, GitHub prépare une PR `release/v…` qui met à jour la version et
+le build. Sa fusion crée le tag correspondant, mais ne publie jamais automatiquement le DMG.
+
+Les binaires sont hébergés par GitHub Releases, sans bucket séparé. La distribution gratuite utilise
+une signature ad hoc : après avoir copié Ledge dans Applications, l'utilisateur doit tenter une
+première ouverture, puis choisir Réglages Système → Confidentialité et sécurité → « Ouvrir quand
+même » dans l'heure. Le token GitHub fin est limité à ce dépôt avec la permission `Contents: write`
+et conservé dans le Trousseau macOS sous le service `dev.ledge.github-release-token`. Depuis un
+commit propre déjà poussé sur `origin/main` :
 
 ```bash
 make release CHANGELOG="Première bêta publique"
 ```
 
-Le script crée une release brouillon, téléverse le DMG et l'appcast signé, puis la publie. Le flux
-Sparkle stable est
+Le script crée une release brouillon, téléverse le DMG et l'appcast signé, puis la publie. La variante
+`make release-notarized` exige Developer ID, notarise et vérifie le ticket Apple avant publication.
+Le flux Sparkle stable est
 `https://github.com/marcucus/ledge/releases/latest/download/appcast.xml`.
 
 ## Statut

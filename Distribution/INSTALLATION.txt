@@ -1,0 +1,39 @@
+INSTALLER LEDGE
+===============
+
+Configuration requise : Mac Apple Silicon, macOS 14 ou version ultérieure.
+Ledge est distribuée sans notarisation Apple ; macOS bloque donc sa première ouverture.
+
+1. Glissez Ledge.app sur le raccourci Applications, puis éjectez le volume Ledge.
+2. Dans Applications, ouvrez Ledge une première fois et fermez l’alerte macOS.
+   Cette tentative est indispensable pour faire apparaître « Ouvrir quand même ».
+3. Dans l’heure qui suit, ouvrez Réglages Système > Confidentialité et sécurité.
+4. Descendez jusqu’à Sécurité, cliquez sur « Ouvrir quand même », puis confirmez avec votre mot
+   de passe de session.
+
+Si « Ouvrir quand même » n’apparaît pas, vérifiez que le Mac utilise une puce Apple (M1 ou plus
+récent), macOS 14 ou plus récent, et que le compte est administrateur. Un Mac géré par une
+entreprise ou une école peut interdire cette exception.
+
+Ledge apparaît dans la barre des menus et autour de l’encoche ; l’application n’ajoute pas
+d’icône permanente au Dock.
+
+---
+
+INSTALL LEDGE
+=============
+
+Requirements: Apple silicon Mac, macOS 14 or later.
+Ledge is distributed without Apple notarization, so macOS blocks its first launch.
+
+1. Drag Ledge.app onto the Applications shortcut, then eject the Ledge volume.
+2. Open Ledge once from Applications and dismiss the macOS alert.
+   This attempt is required before “Open Anyway” appears.
+3. Within the next hour, open System Settings > Privacy & Security.
+4. Scroll to Security, click “Open Anyway”, then confirm with your login password.
+
+If “Open Anyway” does not appear, check that the Mac has Apple silicon (M1 or newer), runs macOS
+14 or newer, and that the account is an administrator. A Mac managed by a company or school may
+forbid this exception.
+
+Ledge appears in the menu bar and around the notch; it does not keep a permanent Dock icon.

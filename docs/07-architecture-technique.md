@@ -161,10 +161,12 @@ Ledge/
 > son icône d'onglet, sa vue d'aperçu (survol), sa vue complète (ouvert) et ses réglages.
 > Ajouter un module futur = créer un nouveau type conforme, sans toucher au cœur.
 
-## Distribution (à anticiper)
+## Distribution
 
 - **Hors Mac App Store** probablement nécessaire : les frameworks privés (MediaRemote) et
   certaines permissions (Accessibilité, lecture notifs) sont **incompatibles avec le sandbox MAS**.
-- Décision actuelle : distribution directe par DMG signé ad hoc, sans compte Apple. Gatekeeper
-  demande donc une autorisation manuelle dans Confidentialité et sécurité au premier lancement.
-- Prévoir un mécanisme de mise à jour (Sparkle est le standard).
+- Décision actuelle : distribution directe gratuite par DMG signé ad hoc. Gatekeeper bloque la
+  première ouverture ; l'utilisateur doit ensuite autoriser explicitement Ledge via Confidentialité
+  et sécurité → « Ouvrir quand même ». Le parcours Developer ID/notarisé reste optionnel.
+- Le DMG contient `Ledge.app`, un raccourci vers `/Applications` et une notice d'installation.
+- Les mises à jour sont signées avec Sparkle EdDSA et servies depuis GitHub Releases.

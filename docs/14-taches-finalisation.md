@@ -1,6 +1,6 @@
 # 14 — Tâches de finalisation de Ledge
 
-> Audit du **30 septembre 2026**, établi après lecture des documents et vérification du code.
+> État mis à jour le **5 octobre 2026** après la phase 3 locale.
 >
 > Objectif : terminer et publier la candidate **0.3.0**. Les idées produit futures ne doivent pas
 > retarder cette version.
@@ -8,13 +8,13 @@
 ## État vérifié
 
 - `swift build` : réussi.
-- `swift test` : **110 tests dans 17 suites**, tous réussis.
+- `swift test` : **116 tests dans 17 suites**, tous réussis.
 - `swiftlint lint --quiet Sources Tests` : aucune erreur ni avertissement.
 - `SettingsStore.swift` (328 lignes) et `NotchController.swift` (367 lignes) sont sous le seuil de
   400 lignes.
-- La candidate est découpée sur `codex/release-0.3.0` en commits cohérents. Le push reste
-  bloqué : le jeton HTTPS courant n'a pas le scope `workflow` requis pour modifier la CI et aucune
-  clé SSH autorisée n'est disponible sur cette machine.
+- La candidate est découpée sur `codex/release-0.3.0` en commits cohérents. Adrien a demandé
+  qu'aucun push ne soit effectué par l'agent ; la CI distante reste donc une validation manuelle
+  du propriétaire.
 
 ## P0 — Corriger avant la recette de release
 
@@ -103,9 +103,9 @@ d'observation actives.
   l'URL du DMG attendu.
 - [x] Comparer le SHA-256 calculé avec les métadonnées qui seront publiées.
 
-Le bundle, le DMG et l'appcast ont été régénérés et vérifiés le **1er octobre 2026**. Le
-DMG pèse **3 522 697 octets** et son SHA-256 est
-`60a890c5dfe861e7b44adaa5c42d9c1543ba68c4b62da825de96fe3a57b2e513`. L'appcast contient la
+Le bundle, le DMG et l'appcast ont été régénérés et vérifiés le **5 octobre 2026**. Le
+DMG pèse **3 565 185 octets** et son SHA-256 est
+`8b6078d6744a1c9b0c96648a8824ca4807ebb589f59a7eb69059603ef241e1d9`. L'appcast contient la
 version `0.3.0`, le build `3`, macOS `14.0` et une signature EdDSA, ainsi que l'entrée stable 0.2.0.
 La génération désactive les deltas pour cette release. Le
 script de publication sait néanmoins téléverser chaque delta référencé et refuse un delta local
@@ -128,14 +128,27 @@ manquant si cette option est réactivée.
 - [ ] Ouvrir tous les liens juridiques depuis l'app.
 - [ ] Mesurer CPU et RAM au repos, pendant un timer et pendant une lecture média.
 
-Mesure locale partielle au repos après lancement de `dist/Ledge.app` : **0,0 % CPU** et environ
-**100 Mo RSS**. Les mesures pendant un timer et une lecture média restent à effectuer avec les
-scénarios fonctionnels ci-dessus.
+Mesure stabilisée au repos après lancement de `dist/Ledge.app` : **0,00 % CPU moyen**, **0,10 %
+max**, **91,1 Mo RSS moyen** et **91,2 Mo max** sur 30 secondes. Les mesures pendant un timer et
+une lecture média restent à effectuer avec les scénarios fonctionnels ci-dessus.
+
+### 8 bis. État Developer ID et Gatekeeper
+
+- [x] Vérifier les identités locales : aucune identité de signature valide n'est actuellement
+  installée.
+- [x] Vérifier l'évaluation locale : l'app et le DMG ad hoc sont rejetés par Gatekeeper avec
+  `source=no usable signature`, comportement attendu avant notarisation.
+- [x] Ajouter l'icône native, le raccourci Applications et les contrôles automatiques du DMG.
+- [x] Documenter le parcours exact qui fait apparaître « Ouvrir quand même » pendant environ une
+  heure après la première tentative.
+- [ ] Optionnel : obtenir une adhésion Apple Developer, un certificat Developer ID Application et
+  configurer NotaryTool pour `make release-notarized`.
 
 ### 9. Effectuer la recette indispensable sur un second Mac
 
 - [ ] Installer la version publique `0.2.0` sur une machine vierge.
-- [ ] Valider le parcours Gatekeeper.
+- [ ] Valider la copie dans Applications, la première tentative bloquée puis l'apparition de
+  « Ouvrir quand même » dans Confidentialité et sécurité.
 - [ ] Tester ensuite la mise à jour Sparkle `0.2.0` → `0.3.0`.
 - [ ] Vérifier la conservation des réglages et la relance.
 - [ ] Vérifier macOS 14+ et les écrans interne/externe.
@@ -146,6 +159,7 @@ scénarios fonctionnels ci-dessus.
 - [ ] Vérifier d'abord que les tâches bloquantes de `../ledge-site/docs/TACHES-FINALISATION.md`
   sont terminées.
 - [x] Préparer un changelog utilisateur précis (`docs/RELEASE-NOTES-0.3.0.md`).
+- [x] Reconstruire le DMG et l'appcast ad hoc, puis mettre à jour taille et SHA-256 dans la recette.
 - [ ] Exécuter explicitement `make release CHANGELOG="…"`.
 - [ ] Vérifier la GitHub Release, ses assets et ses métadonnées.
 - [ ] Vérifier immédiatement le téléchargement public, l'appcast et la mise à jour Sparkle.

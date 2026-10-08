@@ -9,6 +9,7 @@ struct PermissionsSettingsView: View {
     @State private var accessibilityGranted = false
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var calendarStatus: EKAuthorizationStatus = .notDetermined
+    @State private var requestErrorKey: LocalizedStringKey?
 
     private let notificationsAvailable = Bundle.main.bundleIdentifier != nil
     private let calendarStore = EKEventStore()
@@ -22,6 +23,15 @@ struct PermissionsSettingsView: View {
             }
 
             Section {
+                if let requestErrorKey {
+                    Label {
+                        Text(requestErrorKey, bundle: localizationBundle)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                }
                 PermissionRow(
                     icon: "figure.arms.open",
                     nameKey: "settings.permissions.accessibility",
@@ -135,14 +145,25 @@ struct PermissionsSettingsView: View {
 
     private func requestNotifications() {
         Task {
-            _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+            do {
+                _ = try await UNUserNotificationCenter.current()
+                    .requestAuthorization(options: [.alert, .sound])
+                requestErrorKey = nil
+            } catch {
+                requestErrorKey = "settings.permissions.notifications.error"
+            }
             await refreshStatuses()
         }
     }
 
     private func requestCalendar() {
         Task {
-            _ = try? await calendarStore.requestFullAccessToEvents()
+            do {
+                _ = try await calendarStore.requestFullAccessToEvents()
+                requestErrorKey = nil
+            } catch {
+                requestErrorKey = "settings.permissions.calendar.error"
+            }
             await refreshStatuses()
         }
     }

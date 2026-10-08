@@ -22,6 +22,11 @@ distribution directe avec mises à jour Sparkle.
 - Accessibilité renforcée pour Média, Timers et le HUD Système, avec prise en charge de Réduire les
   animations.
 - Quick Look au clavier, partage et gestion plus robuste des fichiers supprimés dans Drop Zone.
+- Copie Drop Zone hors du thread principal, avec progression et annulation entre les fichiers.
+- Images du presse-papiers conservées en pleine définition et prévention de la ré-ingestion des
+  contenus écrits par Ledge.
+- Timeout, annulation réelle et retours d'erreur distincts pour les commandes Raccourcis.
+- Conflits de raccourcis globaux et erreurs de permissions Calendrier/Notifications rendus visibles.
 - Modules réellement arrêtés lorsqu'ils sont désactivés globalement ou par un profil d'application.
 - Calendrier, Notes et Raccourcis mieux testés et plus explicites en cas d'autorisation refusée ou
   d'erreur système.
@@ -29,6 +34,7 @@ distribution directe avec mises à jour Sparkle.
 ## Distribution
 
 - macOS 14 ou version ultérieure sur Apple Silicon.
-- Distribution directe, non notarisée : macOS peut demander « Ouvrir quand même » au premier
-  lancement.
+- DMG avec icône native, raccourci Applications et notice d'installation.
+- Distribution directe non notarisée : après une première tentative d'ouverture, autoriser Ledge
+  dans Réglages Système → Confidentialité et sécurité → « Ouvrir quand même ».
 - Mises à jour complètes signées avec Sparkle EdDSA depuis la version 0.2.0.

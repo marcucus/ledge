@@ -86,7 +86,7 @@ Avant une relance manuelle, arrêter l'instance existante avec `killall Ledge`. 
 distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make notarize` et
 `make appcast` selon les secrets disponibles.
 
-## État vérifié le 1er octobre 2026
+## État vérifié le 7 octobre 2026
 
 - Branche `main`, commit observé `fa5f726`.
 - Jalons 3 et 4 de finalisation (doc 13) ajoutés dans une session sans toolchain Swift (agent
@@ -98,7 +98,7 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   `init(directory:)` déclarés `private`/`internal` alors qu'exposés dans une API publique),
   corrigés dans la foulée avec un avertissement de longueur de fonction dans
   `AppDelegate.buildAndRegisterModules(in:)` (câblage du minuteur extrait dans `makeTimerModule(in:)`).
-- `swift test` compile et exécute **110 tests dans 17 suites**, tous verts. Les nouvelles suites
+- `swift test` compile et exécute **116 tests dans 17 suites**, tous verts. Les nouvelles suites
   couvrent aussi Calendrier, Notes, Raccourcis et l'assemblage des modules de l'app.
 - SwiftLint est vert sur `Sources` et `Tests`, sans avertissement. `SettingsStore.swift` et
   `NotchController.swift` ont été ramenés sous 400 lignes par extraction des clés et du contenu
@@ -106,20 +106,25 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   la persistance et l'injection des réglages Drop Zone.
 - Version bundle locale actuelle : `0.3.0` (build `3`), candidate non publiée. La version publique
   GitHub est `0.2.0` ; elle ne doit pas être remplacée ni republier ses assets.
-- Le bundle `0.3.0`, son DMG et son appcast EdDSA ont été reconstruits. Build, 110 tests, SwiftLint,
-  `codesign`, `hdiutil`, `xmllint` et `make verify-release` sont verts. Les attentes asynchrones de
-  tests Raccourcis et de fermeture du panneau ne dépendent plus de délais fixes trop courts.
-- Le vrai push de `codex/release-0.3.0` reste refusé : le PAT HTTPS n'a pas le scope `workflow`
-  requis pour `.github/workflows/ci.yml`, même si `git push --dry-run` l'annonce à tort comme
-  possible. Le dépôt du site reste lui aussi refusé en HTTP 403 ; les deux CI distantes restent à
-  valider.
+- Le bundle `0.3.0`, son DMG et son appcast EdDSA ont été reconstruits. Build, 116 tests, SwiftLint,
+  `codesign`, `hdiutil`, `xmllint` et `make verify-release` sont verts. La machine ne possède
+  actuellement aucune identité de signature valide : ces artefacts locaux sont donc ad hoc. Les
+  attentes asynchrones de tests Raccourcis et de fermeture du panneau ne dépendent plus de délais
+  fixes trop courts.
+- Adrien a demandé qu'aucun push ne soit effectué par l'agent. Les deux CI distantes restent donc
+  à valider manuellement par le propriétaire.
+- Après une CI verte sur `main`, `.github/workflows/release-version.yml` prépare une PR de version.
+  Sans label le bump est `patch`; `version:minor`, `version:major` et `version:none` remplacent ce
+  défaut. La fusion de la PR `release/v…` crée le tag après une nouvelle CI verte, sans publier le
+  DMG. Une seule PR de release peut être ouverte à la fois.
 - La clé publique Sparkle est renseignée. `SUFeedURL` est injectée dans le bundle de distribution
   par `SPARKLE_FEED_URL`; le bundle de développement n'active pas Sparkle sans cette valeur.
-- `make release` crée un DMG signé ad hoc, génère l'appcast Sparkle EdDSA, crée une GitHub Release
-  brouillon, téléverse le DMG, l'appcast et tout delta référencé, puis la publie. Une relance reprend
-  un brouillon du même commit et remplace ses assets partiels. `make verify-release` contrôle le
-  paquet sans publication. Aucun compte Apple, bucket ou service payant n'est requis. Le parcours
-  Developer ID reste optionnel via `make release-notarized`.
+- Le bundle possède une icône native et le DMG contient `Ledge.app`, un raccourci Applications et
+  une notice FR/EN. Les scripts vérifient ce contrat en montant le DMG en lecture seule.
+- `make release` construit et publie le DMG ad hoc gratuit avec son appcast Sparkle EdDSA. Le DMG
+  explique le parcours exact : copier dans Applications, tenter une première ouverture, puis
+  utiliser « Ouvrir quand même » dans l'heure. `make release-notarized` conserve le parcours
+  Developer ID optionnel et vérifie le ticket Apple avant publication.
 - Les fonctionnalités Apple Music et les permissions doivent être validées dans une vraie lecture
   et un bundle signé; les tests unitaires ne couvrent pas ce scénario système.
 
@@ -135,9 +140,10 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
   Les DMG et appcasts sont des assets de release, jamais des fichiers suivis par Git.
 - Les promesses du site doivent suivre le code réel : macOS 14+, modules réellement visibles,
   permissions réellement requises, version publiée réelle et limites connues.
-- La recette du site public était verte le 30 septembre 2026. Le 1er octobre, `ledge.app` sert une
-  page de parking redirigeant vers `/lander`, les API répondent `404` et l'appcast/téléchargement ne
-  servent plus leurs contenus. La configuration DNS/Vercel doit être restaurée avant la release.
+- `app-ledge.fr`, acquis le 5 octobre 2026, est relié à Vercel et ses routes publiques répondent.
+  Vercel redirige toutefois encore l'apex vers `www.app-ledge.fr`, et l'appcast public expose une
+  ancienne origine `ledge-notch.vercel.app` : corriger le domaine primaire et la variable
+  `NEXT_PUBLIC_SITE_URL` avant la release. `ledge.app` appartient à un tiers.
 
 ## Fin de tâche
 

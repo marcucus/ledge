@@ -1,0 +1,176 @@
+name: Release version
+
+on:
+  workflow_run:
+    workflows: [Quality]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-version-main
+  cancel-in-progress: false
+
+jobs:
+  prepare-or-tag:
+    name: Prepare release PR or tag validated version
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: macos-14
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+
+    steps:
+      - name: Checkout validated main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Ensure version labels exist
+        shell: zsh {0}
+        run: |
+          gh label create "version:patch" --color "0E8A16" \
+            --description "Nouvelle version corrective" 2>/dev/null || true
+          gh label create "version:minor" --color "1D76DB" \
+            --description "Nouvelle fonctionnalité rétrocompatible" 2>/dev/null || true
+          gh label create "version:major" --color "B60205" \
+            --description "Changement majeur ou incompatible" 2>/dev/null || true
+          gh label create "version:none" --color "D4C5F9" \
+            --description "Aucune nouvelle version" 2>/dev/null || true
+
+      - name: Ignore an obsolete CI result
+        shell: zsh {0}
+        run: |
+          current_sha=$(git rev-parse HEAD)
+          if [[ "$current_sha" != "$SOURCE_SHA" ]]; then
+            print "main a avancé depuis $SOURCE_SHA ; une exécution plus récente préparera la version."
+            print "skip=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Read the merged PR
+        if: env.skip != 'true'
+        shell: zsh {0}
+        run: |
+          pr=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/$GITHUB_REPOSITORY/commits/$SOURCE_SHA/pulls" \
+            --jq 'map(select(.base.ref == "main")) | first // {}')
+          print -r -- "$pr" > "$RUNNER_TEMP/associated-pr.json"
+
+          head_ref=$(print -r -- "$pr" | jq -r '.head.ref // ""')
+          print "head_ref=$head_ref" >> "$GITHUB_ENV"
+
+      - name: Tag the merged release PR
+        if: env.skip != 'true' && startsWith(env.head_ref, 'release/v')
+        shell: zsh {0}
+        run: |
+          version="${head_ref#release/v}"
+          [[ "$version" =~ '^[0-9]+\.[0-9]+\.[0-9]+$' ]] || {
+            print -u2 "Version de branche invalide : $version"
+            exit 1
+          }
+
+          plist_version=$(/usr/libexec/PlistBuddy \
+            -c "Print :CFBundleShortVersionString" Sources/App/Info.plist)
+
+          [[ "$version" == "$plist_version" ]] || {
+            print -u2 "La branche annonce $version mais Info.plist contient $plist_version."
+            exit 1
+          }
+
+          tag_commit=$(git ls-remote origin "refs/tags/v$version^{}" | awk 'NR == 1 { print $1 }')
+          if [[ -z "$tag_commit" ]]; then
+            tag_commit=$(git ls-remote origin "refs/tags/v$version" | awk 'NR == 1 { print $1 }')
+          fi
+          if [[ -n "$tag_commit" ]]; then
+            [[ "$tag_commit" == "$SOURCE_SHA" ]] || {
+              print -u2 "Le tag v$version existe mais pointe vers $tag_commit au lieu de $SOURCE_SHA."
+              exit 1
+            }
+            print "Le tag v$version existe déjà sur le commit attendu."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$version" -m "Ledge $version"
+          git push origin "refs/tags/v$version"
+
+      - name: Resolve the requested bump
+        if: env.skip != 'true' && !startsWith(env.head_ref, 'release/v')
+        shell: zsh {0}
+        run: |
+          labels=("${(@f)$(jq -r '.labels[]?.name' "$RUNNER_TEMP/associated-pr.json")}")
+          bump=$(Scripts/resolve-version-bump.sh "${labels[@]}")
+          print "bump=$bump" >> "$GITHUB_ENV"
+
+      - name: Stop when no release is requested
+        if: env.bump == 'none'
+        run: echo "Le label version:none désactive la préparation d'une release."
+
+      - name: Ensure there is no pending release PR
+        if: env.bump == 'patch' || env.bump == 'minor' || env.bump == 'major'
+        shell: zsh {0}
+        run: |
+          existing=$(gh pr list \
+            --base main \
+            --state open \
+            --json number,headRefName,url \
+            --jq '[.[] | select(.headRefName | startswith("release/v"))] | first // empty')
+          if [[ -n "$existing" ]]; then
+            print -u2 "Une PR de release est déjà ouverte :"
+            print -u2 -- "$existing"
+            print -u2 "Fusionner ou fermer cette PR avant de préparer une autre version."
+            exit 1
+          fi
+
+      - name: Prepare version files
+        if: env.bump == 'patch' || env.bump == 'minor' || env.bump == 'major'
+        shell: zsh {0}
+        run: |
+          make test-release-automation
+          result=$(Scripts/bump-version.sh "$bump")
+          print -r -- "$result"
+          print -r -- "$result" >> "$GITHUB_ENV"
+
+      - name: Create the release PR
+        if: env.bump == 'patch' || env.bump == 'minor' || env.bump == 'major'
+        shell: zsh {0}
+        run: |
+          branch="release/v$version"
+          branch_pushed=false
+          cleanup_branch() {
+            if [[ "$branch_pushed" == true ]]; then
+              git push origin --delete "$branch" >/dev/null 2>&1 || true
+            fi
+          }
+          trap cleanup_branch EXIT
+
+          source_pr=$(jq -r '.number // empty' "$RUNNER_TEMP/associated-pr.json")
+          source_text="le commit $SOURCE_SHA"
+          [[ -n "$source_pr" ]] && source_text="la PR #$source_pr"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add Sources/App/Info.plist
+          git commit -m "chore(release): prepare v$version"
+          git push origin "$branch"
+          branch_pushed=true
+
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "chore(release): prepare v$version" \
+            --label "version:none" \
+            --body "Prépare automatiquement Ledge **v$version** (build **$build**) après $source_text.\n\n- Bump SemVer : \`$bump\`\n- Publication : reste manuelle après la recette de release\n\nLa fusion de cette PR créera le tag \`v$version\` après une CI verte."
+          branch_pushed=false

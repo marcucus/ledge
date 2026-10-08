@@ -44,7 +44,7 @@ fondateur exige « tout passe les tests » — c'est le point le plus en décala
 | B3 | **Persistance du presse-papiers** entre sessions (perdu au quit ; aucune option d'opt-in). | doc 03 | 🟡 |
 | B4 | **Pochette Apple Music fiable** (toujours partielle via AppleScript). | doc 09 | 🟡 |
 | B5 | **Détail batterie complet** : cycles / santé / temps restant promis par le wireframe. À confirmer. | doc 04 | 🟢 |
-| B6 | **Distribution** : résolu côté code — clé Sparkle réelle, feed injecté au build et publication gratuite via GitHub Releases, sans compte Apple. | doc 09 | ✅ |
+| B6 | **Distribution** : paquet installable et publication gratuite prêts ; le premier lancement ad hoc est expliqué pas à pas. La notarisation reste recommandée pour améliorer confiance et conversion, mais n'est plus bloquante. | doc 09 | ✅ |
 
 > Déjà présent (plus avancé que la doc 09 ne le dit) : AirDrop (`NSSharingServicePicker`), lanceur
 > d'apps, notifications `UserNotifications`, launch-at-login (`SMAppService`), sélecteur de langue.

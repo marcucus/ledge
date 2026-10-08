@@ -16,6 +16,7 @@
 "clipboard.action.paste.hint" = "Clic = coller · ⌘+clic = coller en texte brut";
 "dropzone.action.airdrop" = "AirDrop";
 "dropzone.action.clear" = "Vider";
+"dropzone.action.cancel" = "Annuler";
 "dropzone.action.save" = "Enregistrer…";
 "dropzone.action.remove" = "Retirer le fichier";
 "dropzone.action.preview" = "Aperçu rapide";
@@ -24,6 +25,7 @@
 "dropzone.items.count" = "fichiers";
 "dropzone.unavailable.count" = "%lld élément(s) ne sont plus disponibles.";
 "dropzone.copy.failed.count" = "%lld élément(s) n'ont pas pu être enregistrés.";
+"dropzone.copy.progress" = "Copie %lld sur %lld…";
 "media.nowPlaying.empty" = "Rien en lecture";
 "media.progress.label" = "Progression de la lecture";
 "media.progress.value" = "%@ sur %@";
@@ -139,7 +141,7 @@
 "settings.modules.clipboard.persist" = "Conserver l'historique entre les lancements";
 "settings.modules.clipboard.persist.hint" = "Désactivé par défaut : l'historique ne vit qu'en mémoire et est perdu à la fermeture. Activer cette option l'enregistre sur disque, chiffré avec une clé stockée dans le Trousseau.";
 "settings.modules.clipboard.excludedApps" = "Apps exclues de la capture";
-"settings.modules.clipboard.excludedApps.hint" = "Les copies faites depuis ces apps ne seront jamais ajoutées à l'historique.";
+"settings.modules.clipboard.excludedApps.hint" = "Ledge ignore ces apps quand macOS permet d'identifier la source. Pour une protection stricte, créez aussi un profil qui désactive le module dans l'app concernée.";
 "settings.modules.clipboard.excludedApps.add" = "Ajouter une app…";
 "clipboard.persistence.error.load" = "Impossible de lire l'historique enregistré sur disque. La capture continue normalement en mémoire pour cette session.";
 "clipboard.persistence.error.save" = "Impossible d'enregistrer l'historique sur disque. Vos copies restent disponibles en mémoire, mais ne seront pas retrouvées au prochain lancement tant que ce problème persiste.";
@@ -158,6 +160,8 @@
 "settings.permissions.notifications.detail" = "Prévient lorsqu’un minuteur se termine.";
 "settings.permissions.calendar" = "Calendrier";
 "settings.permissions.calendar.detail" = "Affiche votre prochain événement dans l’encoche.";
+"settings.permissions.notifications.error" = "macOS n’a pas pu terminer la demande d’autorisation des notifications. Réessayez ou ouvrez Réglages Système.";
+"settings.permissions.calendar.error" = "macOS n’a pas pu terminer la demande d’accès au calendrier. Réessayez ou ouvrez Réglages Système.";
 "settings.permissions.intro" = "Ledge fonctionne sans accès obligatoire. Activez uniquement les fonctions qui vous sont utiles.";
 "settings.permissions.openSettings" = "Ouvrir Réglages";
 "settings.permissions.request" = "Demander";
@@ -189,6 +193,7 @@
 "settings.shortcuts.paste" = "Coller depuis l'historique";
 "settings.shortcuts.recorderHint" = "Cliquez sur un raccourci, puis appuyez sur la nouvelle combinaison. Échap annule.";
 "settings.shortcuts.recording" = "Appuyez sur une touche…";
+"settings.shortcuts.conflict" = "Indisponible ou déjà utilisé. Choisissez une autre combinaison.";
 "settings.window.title" = "Ledge — Paramètres";
 "system.battery.charging" = "En charge";
 "system.battery.cycles.format" = "%lld cyc.";
@@ -251,6 +256,7 @@
 "shortcuts.error" = "Raccourcis indisponibles";
 "shortcuts.error.detail" = "La commande Raccourcis n'a pas répondu. Vérifiez l'app Raccourcis puis réessayez.";
 "shortcuts.action.retry" = "Réessayer";
+"shortcuts.action.cancel" = "Annuler";
 "shortcuts.action.clearSearch" = "Effacer la recherche";
 "shortcuts.action.favorite" = "Ajouter aux favoris";
 "shortcuts.action.unfavorite" = "Retirer des favoris";
@@ -260,6 +266,7 @@
 "shortcuts.status.running" = "Exécution en cours";
 "shortcuts.status.completed" = "Terminé";
 "shortcuts.run.error.format" = "Impossible de lancer « %@ ».";
+"shortcuts.run.timeout.format" = "« %@ » a pris trop de temps et a été arrêté.";
 "module.calendar.label" = "Calendrier";
 "module.calendar.description" = "Affiche votre prochain événement";
 "calendar.empty" = "Aucun événement à venir";
@@ -268,6 +275,10 @@
 "calendar.permission.request" = "Connecter Calendrier";
 "calendar.permission.request.detail" = "Ledge demande l’accès uniquement lorsque vous ouvrez ce module.";
 "calendar.permission.request.action" = "Autoriser l’accès";
+"calendar.permission.request.retry" = "Réessayer";
+"calendar.permission.error" = "Échec de la demande Calendrier";
+"calendar.permission.error.detail" = "macOS n’a pas pu terminer la demande d’autorisation. Réessayez ; aucune donnée de calendrier n’a été lue.";
+"timer.notification.error" = "La notification n’a pas pu être autorisée ou envoyée. L’alerte visuelle du minuteur reste active.";
 "module.notes.label" = "Notes";
 "module.notes.description" = "Une note libre rapide sous l'encoche";
 "notes.action.clear" = "Vider la note";

@@ -113,7 +113,11 @@ public struct ShortcutsContentView: View {
     private var shortcutBrowser: some View {
         VStack(spacing: 0) {
             searchField
-            if let failedName = module.lastRunFailedName {
+            if let runningName = module.runningShortcutName {
+                runProgressBanner(name: runningName)
+            } else if let timedOutName = module.lastRunTimedOutName {
+                runFailureBanner(name: timedOutName, timedOut: true)
+            } else if let failedName = module.lastRunFailedName {
                 runFailureBanner(name: failedName)
             }
             if filteredShortcuts.isEmpty {
@@ -157,12 +161,33 @@ public struct ShortcutsContentView: View {
         .onExitCommand { searchQuery = "" }
     }
 
-    private func runFailureBanner(name: String) -> some View {
+    private func runProgressBanner(name: String) -> some View {
+        HStack(spacing: 8) {
+            ProgressView().controlSize(.mini)
+            Text(name)
+                .font(.caption)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Button {
+                module.cancelRun()
+            } label: {
+                Text("shortcuts.action.cancel", bundle: localizationBundle)
+                    .font(.caption.weight(.semibold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.accentColor)
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 32)
+        .background(Color.accentColor.opacity(0.08))
+    }
+
+    private func runFailureBanner(name: String, timedOut: Bool = false) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
                 .accessibilityHidden(true)
-            Text(runFailureMessage(name: name))
+            Text(runFailureMessage(name: name, timedOut: timedOut))
                 .font(.caption)
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -180,9 +205,13 @@ public struct ShortcutsContentView: View {
         .background(Color.orange.opacity(0.08))
     }
 
-    private func runFailureMessage(name: String) -> String {
+    private func runFailureMessage(name: String, timedOut: Bool) -> String {
         String(
-            format: NSLocalizedString("shortcuts.run.error.format", bundle: localizationBundle, comment: ""),
+            format: NSLocalizedString(
+                timedOut ? "shortcuts.run.timeout.format" : "shortcuts.run.error.format",
+                bundle: localizationBundle,
+                comment: ""
+            ),
             name
         )
     }

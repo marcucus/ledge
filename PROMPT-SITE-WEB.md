@@ -78,10 +78,11 @@ et les permissions système). Le téléchargement direct est donc le canal offic
 **Conséquences pour le site :**
 - Le **CTA principal est « Télécharger pour macOS » → un `.dmg`**. Affiche à côté : **version**,
   **taille du fichier**, exigence **macOS 14+ · Apple Silicon**, et la date/numéro de version.
-- Comme l'app est distribuée **hors App Store et sans notarisation Apple**, prévois une **section
-  « Premier lancement »** honnête : tenter une première ouverture, puis aller dans Réglages
-  Système → Confidentialité et sécurité → « Ouvrir quand même ». Expliquer que le DMG et les
-  mises à jour restent protégés par SHA-256 et signature Sparkle EdDSA.
+- L'app est distribuée **hors App Store et sans notarisation Apple**. Présente le parcours exact :
+  glisser `Ledge.app` vers Applications, éjecter le volume, tenter une première ouverture depuis
+  Applications, puis aller dans Réglages Système → Confidentialité et sécurité → « Ouvrir quand
+  même ». Préciser que le bouton n'apparaît qu'après la tentative et reste disponible environ une
+  heure. La variante Developer ID/notarisée reste optionnelle pour plus tard.
 - Idéal : un mécanisme de **mises à jour intégré** (Sparkle prévu côté app) → mentionne « mises à
   jour automatiques » seulement quand ce sera vrai.
 

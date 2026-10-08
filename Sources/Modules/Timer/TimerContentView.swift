@@ -20,6 +20,9 @@ public struct TimerContentView: View {
 
     public var body: some View {
         VStack(spacing: 8) {
+            if module.notificationPermissionIssue {
+                notificationPermissionWarning
+            }
             if let issue = module.persistenceIssue {
                 persistenceBanner(issue)
             }

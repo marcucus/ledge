@@ -24,6 +24,15 @@ final class GlobalShortcutManager {
         case newTimer  = 3
         case openMedia = 4
 
+        var settingsID: String {
+            switch self {
+            case .openClose: "openClose"
+            case .paste: "paste"
+            case .newTimer: "newTimer"
+            case .openMedia: "openMedia"
+            }
+        }
+
         func shortcut(in settings: SettingsStore) -> GlobalKeyboardShortcut {
             switch self {
             case .openClose: settings.shortcutOpenClose
@@ -42,12 +51,14 @@ final class GlobalShortcutManager {
 
     func enable() {
         isEnabled = true
+        settings.clearGlobalShortcutConflicts()
         for id in HotKey.allCases { register(id, id.shortcut(in: settings)) }
     }
 
     func disable() {
         isEnabled = false
         for id in HotKey.allCases { unregister(id) }
+        settings.clearGlobalShortcutConflicts()
     }
 
     /// Réconcilie l'état (activé + combinaisons) avec `SettingsStore` actuel — à appeler à
@@ -64,11 +75,19 @@ final class GlobalShortcutManager {
     // MARK: — Private
 
     private func register(_ id: HotKey, _ shortcut: GlobalKeyboardShortcut) {
-        guard hotKeyRefs[id.rawValue] == nil, shortcut.hasModifier else { return }
+        guard hotKeyRefs[id.rawValue] == nil, shortcut.hasModifier else {
+            settings.setGlobalShortcutConflict(id: id.settingsID, isConflicted: true)
+            return
+        }
         let hkID = EventHotKeyID(signature: 0x4C475348, id: id.rawValue)
         var ref: EventHotKeyRef?
         let err = RegisterEventHotKey(shortcut.keyCode, shortcut.modifiers, hkID, GetApplicationEventTarget(), 0, &ref)
-        if err == noErr, let ref { hotKeyRefs[id.rawValue] = ref }
+        if err == noErr, let ref {
+            hotKeyRefs[id.rawValue] = ref
+            settings.setGlobalShortcutConflict(id: id.settingsID, isConflicted: false)
+        } else {
+            settings.setGlobalShortcutConflict(id: id.settingsID, isConflicted: true)
+        }
     }
 
     private func unregister(_ id: HotKey) {

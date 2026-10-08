@@ -7,7 +7,7 @@ import Foundation
 public enum ClipboardContent {
     case text(String)
     case url(URL)
-    /// Stores a thumbnail (max 128×128) to keep memory usage low.
+    /// Stores the full-resolution image so pasting it back never loses quality.
     case image(NSImage)
 }
 
