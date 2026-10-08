@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct ModuleLauncherButton: View {
     let modules: [any NotchModule]
     let selectedModuleID: String

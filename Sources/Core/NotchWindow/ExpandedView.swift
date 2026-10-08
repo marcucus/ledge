@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct ExpandedView: View {
     var controller: NotchController
 
