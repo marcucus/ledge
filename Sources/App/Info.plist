@@ -2,42 +2,42 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleIdentifier</key>
-    <string>me.adrienmarques.ledge</string>
-    <key>CFBundleName</key>
-    <string>Ledge</string>
-    <key>CFBundleDisplayName</key>
-    <string>Ledge</string>
-    <key>CFBundleExecutable</key>
-    <string>Ledge</string>
-    <key>CFBundleIconName</key>
-    <string>AppIcon</string>
-    <key>CFBundleVersion</key>
-    <string>3</string>
-    <key>CFBundleShortVersionString</key>
-    <string>0.3.0</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>NSPrincipalClass</key>
-    <string>NSApplication</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>14.0</string>
-    <key>CFBundleLocalizations</key>
-    <array>
-        <string>en</string>
-        <string>fr</string>
-    </array>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSHumanReadableCopyright</key>
-    <string>© 2026 Adrien Marques</string>
-    <key>NSAppleEventsUsageDescription</key>
-    <string>Ledge uses Apple Events to control playback (seek, position) in Music and Spotify.</string>
-    <key>NSCalendarsFullAccessUsageDescription</key>
-    <string>Ledge needs access to your calendar to show your next upcoming event in the notch.</string>
-    <key>SUPublicEDKey</key>
-    <string>DAOBnz8aZRDFS04TPHdvhed0Ecb6o/fJ0gDyQj+tEwE=</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Ledge</string>
+	<key>CFBundleExecutable</key>
+	<string>Ledge</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>me.adrienmarques.ledge</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>fr</string>
+	</array>
+	<key>CFBundleName</key>
+	<string>Ledge</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>4</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Ledge uses Apple Events to control playback (seek, position) in Music and Spotify.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Ledge needs access to your calendar to show your next upcoming event in the notch.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Adrien Marques</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>SUPublicEDKey</key>
+	<string>DAOBnz8aZRDFS04TPHdvhed0Ecb6o/fJ0gDyQj+tEwE=</string>
 </dict>
 </plist>
