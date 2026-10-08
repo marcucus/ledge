@@ -1,6 +1,7 @@
 import Core
 import SwiftUI
 
+@MainActor
 struct MediaPeekView: View {
     var module: MediaModule
 
