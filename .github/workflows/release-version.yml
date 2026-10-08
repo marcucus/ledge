@@ -180,10 +180,14 @@ jobs:
           git push origin "$branch"
           branch_pushed=true
 
-          gh pr create \
+          if ! pr_url=$(gh pr create \
             --base main \
             --head "$branch" \
             --title "chore(release): prepare v$version" \
             --label "version:none" \
-            --body "Prépare automatiquement Ledge **v$version** (build **$build**) après $source_text.\n\n- Bump SemVer : \`$bump\`\n- Publication : reste manuelle après la recette de release\n\nLa fusion de cette PR créera le tag \`v$version\` après une CI verte."
+            --body "Prépare automatiquement Ledge **v$version** (build **$build**) après $source_text.\n\n- Bump SemVer : \`$bump\`\n- Publication : reste manuelle après la recette de release\n\nLa fusion de cette PR créera le tag \`v$version\` après une CI verte."); then
+            print -u2 "Impossible de créer la PR de release ; suppression de $branch."
+            exit 1
+          fi
+          print "PR de release créée : $pr_url"
           branch_pushed=false
