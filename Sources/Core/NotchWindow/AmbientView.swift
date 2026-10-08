@@ -6,6 +6,8 @@ import SwiftUI
 struct AmbientView: View {
     let controller: NotchController
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private static let pillWidth: CGFloat = NotchController.ambientPillWidth
     private static let pillGap: CGFloat = NotchController.ambientPillGap
 
@@ -78,20 +80,24 @@ struct AmbientView: View {
                     MusicVisualizerView(color: ambient.accentColor, isPlaying: isPlaying)
                         .frame(width: 34, height: 14)
                     if controller.ambientShowProgress && duration > 0 {
-                        TimelineView(.animation) { ctx in
-                            let live = elapsed + (isPlaying ? ctx.date.timeIntervalSince(ambient.timestamp) : 0)
-                            let progress = min(1.0, live / duration)
-                            Capsule()
-                                .fill(ambient.accentColor.opacity(0.5))
-                                .frame(height: 2)
-                                .overlay(
-                                    GeometryReader { geo in
-                                        Capsule()
-                                            .fill(ambient.accentColor)
-                                            .frame(width: geo.size.width * progress)
-                                    },
-                                    alignment: .leading
+                        Group {
+                            if reduceMotion {
+                                musicProgress(
+                                    elapsed: elapsed,
+                                    duration: duration,
+                                    color: ambient.accentColor
                                 )
+                            } else {
+                                TimelineView(.animation) { context in
+                                    musicProgress(
+                                        elapsed: elapsed + (isPlaying
+                                            ? context.date.timeIntervalSince(ambient.timestamp)
+                                            : 0),
+                                        duration: duration,
+                                        color: ambient.accentColor
+                                    )
+                                }
+                            }
                         }
                         .frame(width: 34, height: 2)
                     }
@@ -106,6 +112,21 @@ struct AmbientView: View {
             }
         }
     }
+
+    private func musicProgress(elapsed: TimeInterval, duration: TimeInterval, color: Color) -> some View {
+        let progress = min(1.0, elapsed / duration)
+        return Capsule()
+            .fill(color.opacity(0.5))
+            .frame(height: 2)
+            .overlay(
+                GeometryReader { geometry in
+                    Capsule()
+                        .fill(color)
+                        .frame(width: geometry.size.width * progress)
+                },
+                alignment: .leading
+            )
+    }
 }
 
 // MARK: — Animated waveform for music
@@ -114,15 +135,18 @@ struct MusicVisualizerView: View {
     let color: Color
     let isPlaying: Bool
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private let speeds: [Double] = [1.0, 1.4, 0.85, 1.2]
     private let phases: [Double] = [0, .pi / 3, .pi * 0.8, .pi * 1.5]
 
     var body: some View {
-        TimelineView(.animation(paused: !isPlaying)) { context in
+        TimelineView(.animation(paused: !isPlaying || reduceMotion)) { context in
             let elapsed = context.date.timeIntervalSinceReferenceDate
             HStack(alignment: .center, spacing: 3) {
                 ForEach(0..<4, id: \.self) { index in
-                    let raw = sin(elapsed * speeds[index] * .pi * 2 + phases[index])
+                    let phaseTime = reduceMotion ? 0 : elapsed
+                    let raw = sin(phaseTime * speeds[index] * .pi * 2 + phases[index])
                     let height = isPlaying ? 0.3 + 0.7 * (raw * 0.5 + 0.5) : 0.2
                     Capsule()
                         .fill(color)

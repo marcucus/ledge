@@ -26,6 +26,9 @@ public struct DropZoneContentView: View {
             if module.lastCopyFailureCount > 0 {
                 copyFailureWarning
             }
+            if module.isCopying {
+                copyProgress
+            }
             if !module.items.isEmpty {
                 actionBar
             }
@@ -43,6 +46,34 @@ public struct DropZoneContentView: View {
 
     private var copyFailureWarning: some View {
         warningLabel(key: "dropzone.copy.failed.count", count: module.lastCopyFailureCount)
+    }
+
+    private var copyProgress: some View {
+        HStack(spacing: 8) {
+            ProgressView(value: module.copyProgress)
+                .frame(maxWidth: 120)
+            Text(
+                String(
+                    format: NSLocalizedString(
+                        "dropzone.copy.progress",
+                        bundle: localizationBundle,
+                        comment: ""
+                    ),
+                    module.copiedItemCount,
+                    module.copyItemCount
+                )
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            Spacer()
+            Button {
+                module.cancelCopy()
+            } label: {
+                Text("dropzone.action.cancel", bundle: localizationBundle)
+            }
+            .buttonStyle(.plain)
+            .font(.caption.weight(.medium))
+        }
     }
 
     private func warningLabel(key: String, count: Int) -> some View {
@@ -116,10 +147,12 @@ public struct DropZoneContentView: View {
             actionButton(label: "dropzone.action.save", icon: "folder") {
                 module.saveAllToFolder()
             }
+            .disabled(module.isCopying)
             Spacer()
             actionButton(label: "dropzone.action.clear", icon: "trash", isDestructive: true) {
                 module.clearAll()
             }
+            .disabled(module.isCopying)
         }
         .anchorNSView { actionBarAnchorView = $0 }
     }

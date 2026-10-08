@@ -16,6 +16,7 @@
 "clipboard.action.paste.hint" = "Click to paste · ⌘+click to paste as plain text";
 "dropzone.action.airdrop" = "AirDrop";
 "dropzone.action.clear" = "Clear";
+"dropzone.action.cancel" = "Cancel";
 "dropzone.action.save" = "Save…";
 "dropzone.action.remove" = "Remove file";
 "dropzone.action.preview" = "Quick Look";
@@ -24,6 +25,7 @@
 "dropzone.items.count" = "files";
 "dropzone.unavailable.count" = "%lld item(s) are no longer available.";
 "dropzone.copy.failed.count" = "%lld item(s) could not be saved.";
+"dropzone.copy.progress" = "Copying %lld of %lld…";
 "media.nowPlaying.empty" = "Nothing playing";
 "media.progress.label" = "Playback progress";
 "media.progress.value" = "%@ of %@";
@@ -139,7 +141,7 @@
 "settings.modules.clipboard.persist" = "Keep history between launches";
 "settings.modules.clipboard.persist.hint" = "Off by default: history lives in memory only and is lost on quit. Enabling this saves it to disk, encrypted with a key stored in the Keychain.";
 "settings.modules.clipboard.excludedApps" = "Apps excluded from capture";
-"settings.modules.clipboard.excludedApps.hint" = "Copies made from these apps are never added to the history.";
+"settings.modules.clipboard.excludedApps.hint" = "Ledge ignores these apps when macOS exposes the source. For strict protection, also create a profile that disables the module in the relevant app.";
 "settings.modules.clipboard.excludedApps.add" = "Add an app…";
 "clipboard.persistence.error.load" = "Couldn't read the saved history from disk. Capture keeps working normally in memory for this session.";
 "clipboard.persistence.error.save" = "Couldn't save the history to disk. Your copies stay available in memory, but won't be there next launch until this is fixed.";
@@ -158,6 +160,8 @@
 "settings.permissions.notifications.detail" = "Lets you know when a timer finishes.";
 "settings.permissions.calendar" = "Calendar";
 "settings.permissions.calendar.detail" = "Shows your next event in the notch.";
+"settings.permissions.notifications.error" = "macOS could not complete the notification permission request. Try again or open System Settings.";
+"settings.permissions.calendar.error" = "macOS could not complete the Calendar permission request. Try again or open System Settings.";
 "settings.permissions.intro" = "Ledge works without mandatory access. Enable only the features that are useful to you.";
 "settings.permissions.openSettings" = "Open Settings";
 "settings.permissions.request" = "Request";
@@ -189,6 +193,7 @@
 "settings.shortcuts.paste" = "Paste from history";
 "settings.shortcuts.recorderHint" = "Click a shortcut, then press a new key combination. Esc cancels.";
 "settings.shortcuts.recording" = "Press a key…";
+"settings.shortcuts.conflict" = "Unavailable or already used. Choose another combination.";
 "settings.window.title" = "Ledge — Settings";
 "system.battery.charging" = "Charging";
 "system.battery.cycles.format" = "%lld cyc.";
@@ -251,6 +256,7 @@
 "shortcuts.error" = "Shortcuts unavailable";
 "shortcuts.error.detail" = "The Shortcuts command did not respond. Check the Shortcuts app and try again.";
 "shortcuts.action.retry" = "Try again";
+"shortcuts.action.cancel" = "Cancel";
 "shortcuts.action.clearSearch" = "Clear search";
 "shortcuts.action.favorite" = "Add to favorites";
 "shortcuts.action.unfavorite" = "Remove from favorites";
@@ -260,6 +266,7 @@
 "shortcuts.status.running" = "Running";
 "shortcuts.status.completed" = "Completed";
 "shortcuts.run.error.format" = "Could not run “%@”.";
+"shortcuts.run.timeout.format" = "“%@” took too long and was stopped.";
 "module.calendar.label" = "Calendar";
 "module.calendar.description" = "Shows your next upcoming event";
 "calendar.empty" = "No upcoming events";
@@ -268,6 +275,10 @@
 "calendar.permission.request" = "Connect Calendar";
 "calendar.permission.request.detail" = "Ledge asks for access only when you open this module.";
 "calendar.permission.request.action" = "Allow access";
+"calendar.permission.request.retry" = "Try again";
+"calendar.permission.error" = "Calendar request failed";
+"calendar.permission.error.detail" = "macOS could not complete the permission request. Try again; no calendar data was read.";
+"timer.notification.error" = "The notification could not be authorized or delivered. The visual timer alert remains active.";
 "module.notes.label" = "Notes";
 "module.notes.description" = "A quick free-text note under the notch";
 "notes.action.clear" = "Clear note";

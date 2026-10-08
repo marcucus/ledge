@@ -23,6 +23,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate release labels
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        shell: zsh {0}
+        run: |
+          labels=("${(@f)$(jq -r '.pull_request.labels[]?.name' "$GITHUB_EVENT_PATH")}")
+          bump=$(Scripts/resolve-version-bump.sh "${labels[@]}")
+          echo "Version bump: $bump"
+
+      - name: Test release automation
+        run: make test-release-automation
+
       - name: Cache Swift packages
         uses: actions/cache@v4
         with:
@@ -51,11 +62,10 @@ jobs:
 
       - name: Verify application bundle
         run: |
-          test -x dist/Ledge.app/Contents/MacOS/Ledge
+          Scripts/verify-app-bundle.sh dist/Ledge.app
           test -f dist/Ledge.app/Contents/Resources/en.lproj/InfoPlist.strings
           test -f dist/Ledge.app/Contents/Resources/fr.lproj/InfoPlist.strings
           test -f dist/Ledge.app/Contents/Resources/Sparkle-LICENSE.txt
           /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" dist/Ledge.app/Contents/Info.plist
           /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" dist/Ledge.app/Contents/Info.plist
           cmp .build/checkouts/Sparkle/LICENSE dist/Ledge.app/Contents/Resources/Sparkle-LICENSE.txt
-          codesign --verify --deep --strict dist/Ledge.app

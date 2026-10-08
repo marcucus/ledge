@@ -12,11 +12,25 @@ private actor StubShortcutsCommandRunner: ShortcutsCommandRunning {
         self.delay = delay
     }
 
-    func output(arguments: [String]) async -> String? {
+    func output(arguments: [String], timeout: Duration) async -> ShortcutsCommandResult {
         calls.append(arguments)
-        if let delay { try? await Task.sleep(for: delay) }
-        guard !responses.isEmpty else { return nil }
-        return responses.removeFirst()
+        if let delay {
+            if delay > timeout {
+                do {
+                    try await Task.sleep(for: timeout)
+                } catch {
+                    return .cancelled
+                }
+                return .timedOut
+            }
+            do {
+                try await Task.sleep(for: delay)
+            } catch {
+                return .cancelled
+            }
+        }
+        guard !responses.isEmpty, let response = responses.removeFirst() else { return .failed }
+        return .success(response)
     }
 }
 
@@ -111,5 +125,43 @@ struct ShortcutsModuleTests {
 
         #expect(module.shortcuts.isEmpty)
         #expect(!module.isLoading)
+    }
+
+    @Test func timedOutRunBecomesVisibleAndClearsRunningState() async {
+        let runner = StubShortcutsCommandRunner(
+            responses: ["Slow\n", "never returned"],
+            delay: .milliseconds(40)
+        )
+        let module = ShortcutsModule(
+            commandRunner: runner,
+            listTimeout: .seconds(1),
+            runTimeout: .milliseconds(10)
+        )
+        module.start()
+        #expect(await eventually { module.shortcuts == ["Slow"] })
+
+        module.run("Slow")
+
+        #expect(await eventually { module.lastRunTimedOutName == "Slow" })
+        #expect(module.runningShortcutName == nil)
+    }
+
+    @Test func cancellingRunClearsRunningStateWithoutFailure() async {
+        let runner = StubShortcutsCommandRunner(
+            responses: ["Slow\n", "never returned"],
+            delay: .milliseconds(80)
+        )
+        let module = ShortcutsModule(commandRunner: runner)
+        module.start()
+        #expect(await eventually { module.shortcuts == ["Slow"] })
+        module.run("Slow")
+        #expect(await eventually { module.runningShortcutName == "Slow" })
+
+        module.cancelRun()
+        try? await Task.sleep(for: .milliseconds(20))
+
+        #expect(module.runningShortcutName == nil)
+        #expect(module.lastRunFailedName == nil)
+        #expect(module.lastRunTimedOutName == nil)
     }
 }

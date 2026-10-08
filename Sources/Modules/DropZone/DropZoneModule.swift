@@ -11,6 +11,9 @@ public final class DropZoneModule: NotchModule {
 
     public private(set) var items: [ShelfItem] = []
     public private(set) var lastCopyFailureCount = 0
+    public private(set) var isCopying = false
+    public private(set) var copiedItemCount = 0
+    public private(set) var copyItemCount = 0
     public var isDragActive = false {
         didSet { updateAmbient() }
     }
@@ -18,9 +21,17 @@ public final class DropZoneModule: NotchModule {
     public var onAmbientUpdate: ((AmbientContent?) -> Void)?
     @ObservationIgnored private var isStarted = false
     @ObservationIgnored private let settings: SettingsStore
+    @ObservationIgnored private let fileCopier: any DropZoneCopying
+    @ObservationIgnored private var copyTask: Task<Void, Never>?
 
     public init(settings: SettingsStore = .shared) {
         self.settings = settings
+        fileCopier = DropZoneFileCopier()
+    }
+
+    init(settings: SettingsStore = .shared, fileCopier: any DropZoneCopying) {
+        self.settings = settings
+        self.fileCopier = fileCopier
     }
 
     // MARK: — NotchModule
@@ -33,6 +44,7 @@ public final class DropZoneModule: NotchModule {
 
     public func stop() {
         guard isStarted else { return }
+        cancelCopy()
         isStarted = false
         isDragActive = false
         onAmbientUpdate?(nil)
@@ -83,6 +95,7 @@ public final class DropZoneModule: NotchModule {
     }
 
     public func clearAll() {
+        cancelCopy()
         items.removeAll()
         updateAmbient()
     }
@@ -121,43 +134,49 @@ public final class DropZoneModule: NotchModule {
         panel.begin { [weak self] response in
             guard response == .OK, let destination = panel.url, let self else { return }
             Task { @MainActor in
-                await self.copyItems(to: destination)
+                self.beginCopy(to: destination)
             }
         }
     }
 
-    private func copyItems(to destination: URL) async {
-        let fileManager = FileManager.default
-        var failureCount = 0
-        for item in items where item.isAvailable {
-            let dest = uniqueDestination(for: item.displayName, in: destination, fileManager: fileManager)
-            do {
-                try fileManager.copyItem(at: item.url, to: dest)
-            } catch {
-                failureCount += 1
-            }
+    func beginCopy(to destination: URL) {
+        cancelCopy()
+        copyTask = Task { @MainActor [weak self] in
+            await self?.copyItems(to: destination)
         }
-        failureCount += items.filter { !$0.isAvailable }.count
-        lastCopyFailureCount = failureCount
     }
 
-    /// Évite un échec silencieux quand un fichier du même nom existe déjà à destination :
-    /// ajoute un suffixe numéroté à la façon du Finder ("nom 2.ext", "nom 3.ext", …) jusqu'à
-    /// trouver un nom libre, plutôt que de laisser `copyItem` échouer et compter une collision
-    /// de nom comme une vraie erreur de copie.
-    /// Accès `internal` (plutôt que `private`) pour rester testable via `@testable import`.
-    func uniqueDestination(for displayName: String, in destination: URL, fileManager: FileManager) -> URL {
-        var candidate = destination.appendingPathComponent(displayName)
-        guard fileManager.fileExists(atPath: candidate.path) else { return candidate }
+    public func cancelCopy() {
+        copyTask?.cancel()
+        copyTask = nil
+    }
 
-        let baseName = (displayName as NSString).deletingPathExtension
-        let fileExtension = (displayName as NSString).pathExtension
-        var suffix = 2
-        repeat {
-            let newName = fileExtension.isEmpty ? "\(baseName) \(suffix)" : "\(baseName) \(suffix).\(fileExtension)"
-            candidate = destination.appendingPathComponent(newName)
-            suffix += 1
-        } while fileManager.fileExists(atPath: candidate.path)
-        return candidate
+    var copyProgress: Double {
+        guard copyItemCount > 0 else { return 0 }
+        return Double(copiedItemCount) / Double(copyItemCount)
+    }
+
+    func copyItems(to destination: URL) async {
+        let requests = items.compactMap { item -> DropZoneCopyRequest? in
+            guard item.isAvailable else { return nil }
+            return DropZoneCopyRequest(sourceURL: item.url, displayName: item.displayName)
+        }
+        var failureCount = items.count - requests.count
+        copyItemCount = items.count
+        copiedItemCount = 0
+        lastCopyFailureCount = 0
+        isCopying = !items.isEmpty
+        defer {
+            lastCopyFailureCount = failureCount
+            isCopying = false
+            copyTask = nil
+        }
+
+        for request in requests {
+            guard !Task.isCancelled else { break }
+            let didCopy = await fileCopier.copy(request, to: destination)
+            copiedItemCount += 1
+            if !didCopy { failureCount += 1 }
+        }
     }
 }
