@@ -356,11 +356,13 @@ lisent un `NotchController`, un `NotchModule` ou une implémentation de module `
 compris les vues compactes et détaillées des huit modules. La chaîne locale équivalente à
 `Quality` est verte : tests de l'automatisation de release, `swift build`, **116 tests dans 17
 suites**, SwiftLint sans avertissement, création ad hoc de `Ledge.app` et vérification de son
-bundle. Le versioning n'utilise plus de patch implicite : sans label, aucune PR de release n'est
-créée. Seuls `version:patch`, `version:minor` et `version:major` déclenchent un bump, et
-`version:none` reste un arrêt explicite. Un job indépendant crée ou remet à jour ces quatre labels
-même lorsque `Quality` échoue. La validation Swift 5.10 distante de ce correctif attend le prochain
-push manuel du propriétaire ; aucun push n'est effectué par l'agent.
+bundle. Le run Swift 5.10 suivant a ensuite atteint `CalendarModule` et révélé une capture faible
+non répétée dans la tâche `@MainActor` du minuteur de rafraîchissement ; cette capture est désormais
+explicite dans les deux fermetures. Le versioning n'utilise plus de patch implicite : sans label,
+aucune PR de release n'est créée. Seuls `version:patch`, `version:minor` et `version:major`
+déclenchent un bump, et `version:none` reste un arrêt explicite. Un job indépendant crée ou remet à
+jour ces quatre labels même lorsque `Quality` échoue. Chaque propagation `branche → dev → rc →
+main` doit rester conditionnée à une CI `Quality` verte sur la PR correspondante.
 
 ## Construire & lancer
 
