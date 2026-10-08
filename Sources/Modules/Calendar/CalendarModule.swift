@@ -102,7 +102,9 @@ public final class CalendarModule: NotchModule {
     private func startPollingIfNeeded() {
         guard refreshTimer == nil, accessState == .authorized else { return }
         let timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refreshNextEvent() }
+            Task { @MainActor [weak self] in
+                self?.refreshNextEvent()
+            }
         }
         refreshTimer = timer
     }
