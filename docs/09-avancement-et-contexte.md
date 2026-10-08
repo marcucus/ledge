@@ -371,6 +371,12 @@ déclenchent un bump, et `version:none` reste un arrêt explicite. Un job indép
 jour ces quatre labels même lorsque `Quality` échoue. Chaque propagation `branche → dev → rc →
 main` doit rester conditionnée à une CI `Quality` verte sur la PR correspondante.
 
+Le premier run sous Xcode 16.4 a aussi exposé une attente fixe fragile dans
+`showPeekAutoCollapsesAfterDuration` : le test dormait 100 ms avant de lire l'état, ce qui pouvait
+échouer lorsque le `MainActor` était chargé par l'exécution parallèle. Il attend désormais la
+condition `collapsed` avec le helper borné `eventually`, déjà utilisé par les autres tests
+asynchrones de `NotchController`.
+
 ## Construire & lancer
 
 ```bash
