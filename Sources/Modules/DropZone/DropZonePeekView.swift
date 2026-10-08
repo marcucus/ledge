@@ -1,6 +1,7 @@
 import Core
 import SwiftUI
 
+@MainActor
 public struct DropZonePeekView: View {
     public var module: DropZoneModule
 

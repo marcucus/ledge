@@ -1,6 +1,7 @@
 import Core
 import SwiftUI
 
+@MainActor
 public struct TimerContentView: View {
     public var module: TimerModule
 
@@ -312,6 +313,7 @@ private struct WheelColumn: View {
 
 // MARK: — Timer row
 
+@MainActor
 private struct TimerRowView: View {
     let entry: TimerEntry
     let module: TimerModule

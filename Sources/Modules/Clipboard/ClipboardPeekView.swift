@@ -5,6 +5,7 @@ import SwiftUI
 
 /// Compact view shown in the notch peek (hover) state.
 /// Displays the most-recently copied item, or an icon when history is empty.
+@MainActor
 struct ClipboardPeekView: View {
     var module: ClipboardModule
 

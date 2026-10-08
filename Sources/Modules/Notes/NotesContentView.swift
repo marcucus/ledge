@@ -3,6 +3,7 @@ import SwiftUI
 
 // MARK: — NotesContentView
 
+@MainActor
 struct NotesContentView: View {
     var module: NotesModule
 

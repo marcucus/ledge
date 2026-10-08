@@ -1,6 +1,7 @@
 import Core
 import SwiftUI
 
+@MainActor
 public struct TimerPeekView: View {
     public var module: TimerModule
 

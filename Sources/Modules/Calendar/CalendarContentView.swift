@@ -7,6 +7,7 @@ import SwiftUI
 
 /// Full content view: next event title + relative time, a "permission required" state
 /// with a button opening System Settings → Privacy, or an "no upcoming events" message.
+@MainActor
 public struct CalendarContentView: View {
     public var module: CalendarModule
 

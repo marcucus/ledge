@@ -4,6 +4,7 @@ import SwiftUI
 
 // MARK: — ClipboardContentView
 
+@MainActor
 struct ClipboardContentView: View {
     var module: ClipboardModule
 

@@ -1,6 +1,7 @@
 import Core
 import SwiftUI
 
+@MainActor
 public struct ShortcutsContentView: View {
     public var module: ShortcutsModule
 

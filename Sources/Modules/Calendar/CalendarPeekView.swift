@@ -4,6 +4,7 @@ import SwiftUI
 // MARK: — CalendarPeekView
 
 /// Compact peek (hover) state: just the truncated title of the next event, or empty.
+@MainActor
 public struct CalendarPeekView: View {
     public var module: CalendarModule
 
