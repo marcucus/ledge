@@ -32,7 +32,8 @@ gratuit et publié par Adrien Marques en personne physique, à titre non profess
 Conforme à la [doc 07](07-architecture-technique.md), avec quelques précisions issues du code :
 
 - **Swift Package Manager** (pas de projet Xcode). `swift-tools-version: 5.10`, cible
-  **macOS 14+**, localisation par défaut `en`.
+  **macOS 14+**, localisation par défaut `en`. Les suites `import Testing` exigent une toolchain
+  **Swift 6 / Xcode 16+**, même si le manifeste conserve son mode de compatibilité Swift 5.10.
 - Découpage en cibles : `App` (exécutable) → `Core` + 8 modules (`MediaModule`, `TimerModule`,
   `DropZoneModule`, `ClipboardModule`, `SystemModule`, `ShortcutsModule`, `CalendarModule`,
   `NotesModule`).
@@ -358,7 +359,12 @@ compris les vues compactes et détaillées des huit modules. La chaîne locale �
 suites**, SwiftLint sans avertissement, création ad hoc de `Ledge.app` et vérification de son
 bundle. Le run Swift 5.10 suivant a ensuite atteint `CalendarModule` et révélé une capture faible
 non répétée dans la tâche `@MainActor` du minuteur de rafraîchissement ; cette capture est désormais
-explicite dans les deux fermetures. Le versioning n'utilise plus de patch implicite : sans label,
+explicite dans les deux fermetures. Le build a alors passé cette étape, puis les tests ont échoué
+avant exécution avec `no such module 'Testing'` : le runner `macos-14` sélectionnait Xcode 15.4,
+qui ne fournit pas Swift Testing. Les workflows `Quality` et `Release version` utilisent désormais
+`macos-15` avec Xcode 16.4 explicitement sélectionné ; la clé de cache Swift inclut cette version
+pour ne pas restaurer d'artefacts produits par une autre toolchain. Le versioning n'utilise plus de
+patch implicite : sans label,
 aucune PR de release n'est créée. Seuls `version:patch`, `version:minor` et `version:major`
 déclenchent un bump, et `version:none` reste un arrêt explicite. Un job indépendant crée ou remet à
 jour ces quatre labels même lorsque `Quality` échoue. Chaque propagation `branche → dev → rc →

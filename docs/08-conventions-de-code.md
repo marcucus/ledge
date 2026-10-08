@@ -22,7 +22,7 @@
 
 | Élément | Choix |
 |---|---|
-| Langage | **Swift 5.10+** (ou la dernière stable), `swift-tools-version` figé dans le Package. |
+| Langage | Sources compatibles avec le manifeste **Swift 5.10** ; toolchain **Swift 6 / Xcode 16+** obligatoire pour les tests Swift Testing. |
 | UI | **SwiftUI** pour le contenu, **AppKit** pour la fenêtre/encoche. |
 | Concurrence | **`async/await` + `actor`** exclusivement. Pas de `DispatchQueue` manuel sauf cas bas niveau justifié. Pas de complétions par closures pour du nouveau code. |
 | Cible | macOS 14.0 minimum. |
