@@ -114,9 +114,10 @@ distribution se vérifient aussi avec les cibles `make sign`, `make dmg`, `make 
 - Adrien a demandé qu'aucun push ne soit effectué par l'agent. Les deux CI distantes restent donc
   à valider manuellement par le propriétaire.
 - Après une CI verte sur `main`, `.github/workflows/release-version.yml` prépare une PR de version.
-  Sans label le bump est `patch`; `version:minor`, `version:major` et `version:none` remplacent ce
-  défaut. La fusion de la PR `release/v…` crée le tag après une nouvelle CI verte, sans publier le
-  DMG. Une seule PR de release peut être ouverte à la fois.
+  Aucune PR de version n'est créée sans label explicite. `version:patch`, `version:minor` ou
+  `version:major` choisit le bump ; `version:none` le désactive explicitement. La fusion de la PR
+  `release/v…` crée le tag après une nouvelle CI verte, sans publier le DMG. Une seule PR de
+  release peut être ouverte à la fois.
 - La clé publique Sparkle est renseignée. `SUFeedURL` est injectée dans le bundle de distribution
   par `SPARKLE_FEED_URL`; le bundle de développement n'active pas Sparkle sans cette valeur.
 - Le bundle possède une icône native et le DMG contient `Ledge.app`, un raccourci Applications et
