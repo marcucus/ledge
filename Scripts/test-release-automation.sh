@@ -4,6 +4,7 @@ set -euo pipefail
 project_root="${0:A:h:h}"
 resolver="$project_root/Scripts/resolve-version-bump.sh"
 bumper="$project_root/Scripts/bump-version.sh"
+workflow="$project_root/.github/workflows/release-version.yml"
 fixture_dir=$(mktemp -d)
 
 cleanup() {
@@ -18,6 +19,7 @@ fail() {
 
 [[ -x "$resolver" ]] || fail "resolve-version-bump.sh est absent ou non exécutable"
 [[ -x "$bumper" ]] || fail "bump-version.sh est absent ou non exécutable"
+[[ -f "$workflow" ]] || fail "release-version.yml est absent"
 
 assert_equal() {
   local expected="$1"
@@ -86,5 +88,10 @@ make_plist "0.3" 3 "$invalid_plist"
 if $bumper patch "$invalid_plist" >/dev/null 2>&1; then
   fail "une version non SemVer doit être refusée"
 fi
+
+grep -Fq 'if ! pr_url=$(gh pr create \' "$workflow" || \
+  fail "la création de la PR de release doit propager les erreurs de gh"
+grep -Fq 'Impossible de créer la PR de release' "$workflow" || \
+  fail "l'échec de création de la PR doit rester explicite dans les logs"
 
 print "✓ Automatisation de version : tests réussis"

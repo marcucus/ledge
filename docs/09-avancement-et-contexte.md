@@ -377,6 +377,12 @@ Le premier run sous Xcode 16.4 a aussi exposé une attente fixe fragile dans
 condition `collapsed` avec le helper borné `eventually`, déjà utilisé par les autres tests
 asynchrones de `NotchController`.
 
+La préparation de `v1.0.0` a ensuite révélé que GitHub peut refuser `gh pr create` lorsque le
+réglage du dépôt autorisant Actions à créer des pull requests est désactivé. Le script zsh ne
+propageait pas ce code d'erreur et affichait donc le job en succès, en laissant la branche de
+release sans PR. L'étape vérifie désormais explicitement le résultat : elle échoue et supprime la
+branche temporaire si la création de la PR est refusée.
+
 ## Construire & lancer
 
 ```bash
