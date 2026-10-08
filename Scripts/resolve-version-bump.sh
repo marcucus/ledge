@@ -29,5 +29,5 @@ for label in "$@"; do
   resolved="$candidate"
 done
 
-# Une PR ou un push direct sans label produit une correction par défaut.
-print "${resolved:-patch}"
+# Sans label explicite, aucune version ne doit être préparée.
+print "${resolved:-none}"

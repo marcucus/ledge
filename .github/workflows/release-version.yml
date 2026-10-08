@@ -14,8 +14,33 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  ensure-labels:
+    name: Ensure version labels exist
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Create or update version labels
+        shell: bash
+        run: |
+          gh label create "version:patch" --repo "$GITHUB_REPOSITORY" --force --color "0E8A16" \
+            --description "Nouvelle version corrective"
+          gh label create "version:minor" --repo "$GITHUB_REPOSITORY" --force --color "1D76DB" \
+            --description "Nouvelle fonctionnalité rétrocompatible"
+          gh label create "version:major" --repo "$GITHUB_REPOSITORY" --force --color "B60205" \
+            --description "Changement majeur ou incompatible"
+          gh label create "version:none" --repo "$GITHUB_REPOSITORY" --force --color "D4C5F9" \
+            --description "Aucune nouvelle version"
+
   prepare-or-tag:
     name: Prepare release PR or tag validated version
+    needs: ensure-labels
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: macos-14
     timeout-minutes: 10
@@ -34,18 +59,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
-
-      - name: Ensure version labels exist
-        shell: zsh {0}
-        run: |
-          gh label create "version:patch" --color "0E8A16" \
-            --description "Nouvelle version corrective" 2>/dev/null || true
-          gh label create "version:minor" --color "1D76DB" \
-            --description "Nouvelle fonctionnalité rétrocompatible" 2>/dev/null || true
-          gh label create "version:major" --color "B60205" \
-            --description "Changement majeur ou incompatible" 2>/dev/null || true
-          gh label create "version:none" --color "D4C5F9" \
-            --description "Aucune nouvelle version" 2>/dev/null || true
 
       - name: Ignore an obsolete CI result
         shell: zsh {0}

@@ -69,8 +69,9 @@ se rafraîchissent que panneau ouvert.
 ## Publication
 
 Les PR vers `main` acceptent les labels `version:patch`, `version:minor`, `version:major` et
-`version:none`. Après une CI verte, GitHub prépare une PR `release/v…` qui met à jour la version et
-le build. Sa fusion crée le tag correspondant, mais ne publie jamais automatiquement le DMG.
+`version:none`. Sans label, aucune version n'est préparée. Après une CI verte, un label de bump
+explicite fait préparer par GitHub une PR `release/v…` qui met à jour la version et le build. Sa
+fusion crée le tag correspondant, mais ne publie jamais automatiquement le DMG.
 
 Les binaires sont hébergés par GitHub Releases, sans bucket séparé. La distribution gratuite utilise
 une signature ad hoc : après avoir copié Ledge dans Applications, l'utilisateur doit tenter une
