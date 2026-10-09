@@ -49,9 +49,7 @@ export APPCAST_PATH := $(DIST_DIR)/appcast.xml
 APP_ICON_CATALOG := Distribution/AppIcon.xcassets
 APP_ICON_INFO    := $(DIST_DIR)/AppIcon-Info.plist
 
-SPARKLE_XCF   := $(shell find .build/artifacts -name "Sparkle.xcframework" 2>/dev/null | head -1)
-SPARKLE_FW    := $(SPARKLE_XCF)/macos-arm64_x86_64/Sparkle.framework
-GENERATE_APPCAST := $(shell find .build/artifacts -path "*/bin/generate_appcast" 2>/dev/null | head -1)
+GENERATE_APPCAST = $(shell find .build/artifacts -path "*/bin/generate_appcast" 2>/dev/null | head -1)
 
 .PHONY: all app direct-sign direct-dmg direct-appcast sign dmg notarize appcast \
 	release release-notarized dmg-image appcast-image verify-release test-release-automation \
@@ -110,9 +108,12 @@ app:
 	fi
 
 	# Sparkle.framework (si disponible)
-	@if [ -d "$(SPARKLE_FW)" ]; then \
+	@if sparkle_fw=$$(find .build/artifacts \
+	    -path "*/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework" \
+	    -type d 2>/dev/null | head -1); \
+	  [ -n "$$sparkle_fw" ] && [ -d "$$sparkle_fw" ]; then \
 	  echo "  Sparkle.framework → Frameworks/"; \
-	  ditto $(SPARKLE_FW) $(FRAMEWORKS)/Sparkle.framework; \
+	  ditto "$$sparkle_fw" $(FRAMEWORKS)/Sparkle.framework; \
 	  install_name_tool -add_rpath @executable_path/../Frameworks $(BINARY) 2>/dev/null || true; \
 	else \
 	  echo "  ⚠  Sparkle.framework non trouvé (exécuter swift build d'abord)"; \
@@ -219,7 +220,7 @@ ifeq ($(strip $(GENERATE_APPCAST)),)
 endif
 	@echo "▸ Génération de l'appcast Sparkle…"
 	rm -f $(DIST_DIR)/appcast.xml $(DIST_DIR)/*.delta
-	$(GENERATE_APPCAST) --maximum-deltas 0 $(DIST_DIR)
+	Scripts/generate-appcast.sh "$(GENERATE_APPCAST)" "$(DIST_DIR)"
 	@echo "✓ $(DIST_DIR)/appcast.xml"
 
 verify-release:

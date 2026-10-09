@@ -17,8 +17,10 @@ premier lancement passe par Confidentialité et sécurité → « Ouvrir quand m
   bundle/Info.plist, donc macOS (TCC) n'accorde rien.
 - **Lancer :** `open dist/Ledge.app`. **Une seule instance à la fois** — sinon plusieurs encoches
   s'ouvrent en parallèle. Avant relance : `killall Ledge`.
-- **Distribution directe :** `make release` publie le DMG ad hoc gratuit. `make
-  release-notarized` conserve le parcours Developer ID optionnel.
+- **Distribution directe :** après la fusion d'une PR `release/v…`, le workflow
+  `Publish release` construit et publie automatiquement le DMG ad hoc et l'appcast Sparkle.
+  `make release` reste le secours local ; `make release-notarized` conserve le parcours
+  Developer ID optionnel.
 
 ## Pièges connus
 
