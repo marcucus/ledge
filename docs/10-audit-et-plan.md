@@ -5,15 +5,18 @@
 >
 > Légende gravité : 🔴 bloquant / important · 🟡 à traiter · 🟢 mineur / cosmétique.
 
-## État courant au 30 septembre 2026
+## État courant au 9 octobre 2026
 
 - Les jalons historiques 0 à 3 et les jalons de finalisation 1 à 4 sont terminés.
-- L'application compte huit modules compilés, sept onglets visibles et 110 tests dans 17 suites.
-- La version publique est `0.2.0`. La candidate locale est `0.3.0` (build `3`).
-- Le plan actif est désormais le **jalon 5** de [l'audit de finalisation](13-audit-finalisation.md) :
-  CI, recette manuelle, second Mac, mise à jour Sparkle et publication.
+- L'application compte huit modules compilés, sept onglets visibles et 116 tests dans 17 suites.
+- La version publique est `1.0.0` (build `4`) ; son DMG et son appcast signé sont publiés sur
+  GitHub Releases et servis par `app-ledge.fr`.
+- Le plan actif est désormais la validation matérielle restante du **jalon 5** de
+  [l'audit de finalisation](13-audit-finalisation.md) : second Mac, permissions réelles, Apple
+  Music et mise à jour Sparkle depuis une ancienne version.
 - Les routes juridiques et de distribution de `ledge-site` sont maintenant déployées et répondent
-  correctement. La CI de l'app reste à valider après commit sur GitHub.
+  correctement. La CI `Quality` de l'app est verte sur `dev`, `rc`, `main` et leurs PR de
+  propagation du 9 octobre 2026.
 - Les constats ci-dessous décrivent l'état au moment de l'audit initial. Le tableau **Suivi** indique
   leur résolution ; le code et les docs 09, 12 et 13 priment en cas de contradiction.
 
@@ -134,6 +137,6 @@ paresseux ; animations factorisées.
 Les jalons issus de cet audit ont été traités ou explicitement écartés. Leur historique détaillé
 est conservé dans les commits et dans [l'audit de finalisation](13-audit-finalisation.md).
 
-Ce document n'est plus un plan d'action. Le backlog opérationnel unique de la candidate 0.3.0 est
+Ce document n'est plus un plan d'action. Le backlog opérationnel de la v1 publiée est
 [la liste de finalisation](14-taches-finalisation.md), tandis que [l'état courant](09-avancement-et-contexte.md)
 décrit le produit effectivement livré.

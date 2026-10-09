@@ -1,0 +1,122 @@
+name: Publish release
+
+on:
+  workflow_run:
+    workflows: [Release version]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag existant à publier, par exemple v1.0.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-release-${{ inputs.tag || github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build and publish signed DMG
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+
+    steps:
+      - name: Checkout validated commit
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag || github.event.workflow_run.head_sha }}
+
+      - name: Resolve release tag
+        id: release
+        shell: zsh {0}
+        run: |
+          requested_tag="${{ inputs.tag }}"
+          if [[ -n "$requested_tag" ]]; then
+            tag="$requested_tag"
+          else
+            tags=(${(f)$(git tag --points-at HEAD --list 'v*')})
+            if (( ${#tags} == 0 )); then
+              print "Aucun tag de version sur ce commit ; aucune publication à effectuer."
+              print "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            (( ${#tags} == 1 )) || {
+              print -u2 "Plusieurs tags de version pointent sur ce commit : ${tags[*]}"
+              exit 1
+            }
+            tag="$tags[1]"
+          fi
+
+          [[ "$tag" =~ '^v[0-9]+\.[0-9]+\.[0-9]+$' ]] || {
+            print -u2 "Tag de release invalide : $tag"
+            exit 1
+          }
+
+          version="${tag#v}"
+          plist_version=$(/usr/libexec/PlistBuddy \
+            -c "Print :CFBundleShortVersionString" Sources/App/Info.plist)
+          [[ "$version" == "$plist_version" ]] || {
+            print -u2 "Le tag annonce $version mais Info.plist contient $plist_version."
+            exit 1
+          }
+
+          tagged_commit=$(git rev-parse "$tag^{commit}")
+          [[ "$tagged_commit" == "$(git rev-parse HEAD)" ]] || {
+            print -u2 "Le tag $tag ne pointe pas sur le commit extrait."
+            exit 1
+          }
+
+          print "tag=$tag" >> "$GITHUB_OUTPUT"
+          print "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Require the Sparkle signing key
+        if: steps.release.outputs.skip != 'true'
+        shell: zsh {0}
+        run: |
+          [[ -n "$SPARKLE_PRIVATE_KEY" ]] || {
+            print -u2 "Le secret GitHub SPARKLE_PRIVATE_KEY est absent."
+            exit 1
+          }
+
+      - name: Generate release notes
+        if: steps.release.outputs.skip != 'true'
+        shell: zsh {0}
+        run: |
+          changelog=$(gh api \
+            --method POST \
+            "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            -f tag_name="${{ steps.release.outputs.tag }}" \
+            -f target_commitish="$(git rev-parse HEAD)" \
+            --jq '.body')
+          delimiter="LEDGE_CHANGELOG_$(uuidgen)"
+          print "CHANGELOG<<$delimiter" >> "$GITHUB_ENV"
+          print -r -- "$changelog" >> "$GITHUB_ENV"
+          print "$delimiter" >> "$GITHUB_ENV"
+
+      - name: Build, sign and publish release
+        if: steps.release.outputs.skip != 'true'
+        run: make release DEV_SIGN=-
+
+      - name: Verify published assets
+        if: steps.release.outputs.skip != 'true'
+        shell: zsh {0}
+        run: |
+          assets=$(gh release view "${{ steps.release.outputs.tag }}" \
+            --json assets,isDraft \
+            --jq '{draft:.isDraft,names:[.assets[].name]}')
+          print -r -- "$assets"
+          [[ "$(print -r -- "$assets" | jq -r '.draft')" == false ]]
+          print -r -- "$assets" | jq -e \
+            --arg dmg "Ledge-${{ steps.release.outputs.version }}.dmg" \
+            '.names | index($dmg) != null and index("appcast.xml") != null' >/dev/null
