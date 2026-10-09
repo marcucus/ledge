@@ -383,6 +383,15 @@ propageait pas ce code d'erreur et affichait donc le job en succès, en laissant
 release sans PR. L'étape vérifie désormais explicitement le résultat : elle échoue et supprime la
 branche temporaire si la création de la PR est refusée.
 
+**Publication automatique (9 octobre 2026)** : la fusion de la PR de version a bien créé le tag
+`v1.0.0`, mais aucune GitHub Release, car la chaîne s'arrêtait volontairement au tag et
+`make release` restait local. Le workflow `Publish release` complète désormais la chaîne après
+`Release version` : il retrouve le tag du commit validé, vérifie sa cohérence avec `Info.plist`,
+construit le DMG ad hoc, signe l'appcast avec le secret Actions `SPARKLE_PRIVATE_KEY`, publie les
+assets puis les relit via GitHub. Un déclenchement manuel par tag permet de reprendre une version
+dont le tag existe déjà, comme `v1.0.0`. Le déclenchement passe par `workflow_run`, car GitHub ne
+relance pas un workflow `push` pour un tag créé avec le `GITHUB_TOKEN` d'un autre workflow.
+
 ## Construire & lancer
 
 ```bash
@@ -395,8 +404,9 @@ réinstalle le tap au changement d'application, sans nécessiter de relance.
 
 ## Prochaines étapes suggérées
 
-La version publique est `0.2.0`. La candidate locale suivante est `0.3.0` (build `3`) ; elle ne doit
-être publiée qu'après la recette de [doc 12](12-recette-release-candidate.md).
+La version publique reste `0.2.0` tant que la GitHub Release n'est pas publiée. Le tag candidat
+actuel est `v1.0.0` (build `4`) ; sa publication doit être reprise avec le workflow manuel après
+configuration du secret décrite dans la [doc 12](12-recette-release-candidate.md).
 
 1. Aucun push ne doit être effectué par l'agent. Si Adrien décide de publier les branches, il devra
    lui-même valider ensuite les CI distantes de l'application et du site.

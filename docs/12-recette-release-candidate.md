@@ -1,8 +1,9 @@
 # 12 — Recette release candidate
 
-> Mise à jour le **5 octobre 2026** après la phase 3 locale.
+> Mise à jour le **9 octobre 2026** après la création du tag `v1.0.0`.
 >
-> Version publique : `0.2.0` (build `2`). Candidate locale suivante : `0.3.0` (build `3`).
+> Version publique tant que la nouvelle Release n'est pas publiée : `0.2.0` (build `2`).
+> Candidate taguée : `1.0.0` (build `4`).
 > La release `v0.2.0` et ses assets ne doivent jamais être remplacés : Sparkle exige une version
 > et un build strictement supérieurs pour proposer correctement une mise à jour.
 
@@ -14,7 +15,7 @@
 - [x] `make app` — bundle construit avec la licence Sparkle incluse
 - [x] smoke test réel — le bundle optimisé démarre et reste actif pendant la mesure de 30 secondes
 - [x] tests, ESLint et build de production de `ledge-site`
-- [ ] CI GitHub verte sur le commit candidat — aucun push ne doit être effectué par l'agent
+- [x] CI GitHub verte sur le commit candidat et tag `v1.0.0` créé
 - [x] Paquet ad hoc local construit avec icône et raccourci Applications
 - [x] Parcours gratuit retenu : DMG ad hoc et autorisation manuelle « Ouvrir quand même »
 - [ ] Variante Developer ID/notarisée — amélioration optionnelle, non bloquante
@@ -123,18 +124,27 @@ modifie `CFBundleShortVersionString` et incrémente toujours `CFBundleVersion` d
 Une PR ne doit porter qu'un seul label `version:*`; la CI refuse les combinaisons contradictoires.
 Un push direct sur `main`, sans PR associée ni label récupérable, ne produit aucune version. Une
 seule PR `release/v…` peut être ouverte à la fois. Quand cette PR est fusionnée, une nouvelle CI
-complète s'exécute sur `main`, puis le tag `v…` est créé uniquement si elle est verte. Ce mécanisme
-ne publie aucun DMG : la recette et `make release` restent des actions explicites.
+complète s'exécute sur `main`, puis le tag `v…` est créé uniquement si elle est verte. Le workflow
+`Publish release`, déclenché après `Release version`, construit alors le DMG ad hoc, génère
+l'appcast signé, publie la GitHub Release et vérifie la présence des deux assets. Il ignore sans
+erreur les exécutions qui ne créent aucun tag.
 
 À configurer une fois dans GitHub : **Settings → Actions → General → Workflow permissions**,
 activer les permissions d'écriture et l'option autorisant GitHub Actions à créer des pull requests.
+Ajouter également dans **Settings → Secrets and variables → Actions** un secret de dépôt nommé
+`SPARKLE_PRIVATE_KEY`, contenant la clé privée EdDSA déjà utilisée localement par Sparkle. Cette
+clé ne doit jamais apparaître dans Git, les logs ou une variable non chiffrée.
 Le workflow crée ou remet à jour les quatre labels après chaque exécution `Quality` sur `main`,
 même si cette CI échoue. La préparation d'une version reste, elle, conditionnée à une CI verte.
 
 ## Publication
 
-La publication reste une action explicite. Elle ne doit commencer qu'après validation de toutes les
-cases bloquantes ci-dessus et déploiement des pages juridiques du site.
+La publication stable est automatique après la fusion de la PR de version et la création du tag.
+Pour reprendre un tag déjà créé, ouvrir **Actions → Publish release → Run workflow** et renseigner
+le tag, par exemple `v1.0.0`. Le workflow refuse une version incohérente avec `Info.plist`, une clé
+Sparkle absente ou une Release dépourvue du DMG et de `appcast.xml`.
+
+La commande locale reste disponible comme solution de secours :
 
 ```bash
 make release CHANGELOG="Décrire ici les changements de la version 0.3.0"
