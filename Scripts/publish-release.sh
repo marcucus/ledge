@@ -61,11 +61,19 @@ command -v jq >/dev/null || { print -u2 "jq est requis pour publier sur GitHub";
 
 branch=$(git branch --show-current)
 commit=$(git rev-parse HEAD)
-remote_commit=$(git ls-remote origin "refs/heads/$branch" | awk '{print $1}')
-[[ -n "$remote_commit" && "$remote_commit" == "$commit" ]] || {
-  print -u2 "Le commit local doit être poussé sur origin/$branch avant la publication"
-  exit 1
-}
+if [[ -n "$branch" ]]; then
+  remote_commit=$(git ls-remote origin "refs/heads/$branch" | awk '{print $1}')
+  [[ -n "$remote_commit" && "$remote_commit" == "$commit" ]] || {
+    print -u2 "Le commit local doit être poussé sur origin/$branch avant la publication"
+    exit 1
+  }
+else
+  remote_commit=$(git ls-remote origin "refs/tags/v$VERSION^{}" | awk 'NR == 1 { print $1 }')
+  [[ -n "$remote_commit" && "$remote_commit" == "$commit" ]] || {
+    print -u2 "Le HEAD détaché doit correspondre au tag distant v$VERSION avant la publication"
+    exit 1
+  }
+fi
 
 metadata=$(jq -cn \
   --arg buildNumber "$BUILD_NUMBER" \

@@ -383,6 +383,22 @@ propageait pas ce code d'erreur et affichait donc le job en succès, en laissant
 release sans PR. L'étape vérifie désormais explicitement le résultat : elle échoue et supprime la
 branche temporaire si la création de la PR est refusée.
 
+**Publication automatique (9 octobre 2026)** : la fusion de la PR de version a bien créé le tag
+`v1.0.0`, mais aucune GitHub Release, car la chaîne s'arrêtait volontairement au tag et
+`make release` restait local. Le workflow `Publish release` complète désormais la chaîne après
+`Release version` : il retrouve le tag du commit validé, vérifie sa cohérence avec `Info.plist`,
+construit le DMG ad hoc, signe l'appcast avec le secret Actions `SPARKLE_PRIVATE_KEY`, publie les
+assets puis les relit via GitHub. Un déclenchement manuel par tag permet de reprendre une version
+dont le tag existe déjà, comme `v1.0.0`. Le déclenchement passe par `workflow_run`, car GitHub ne
+relance pas un workflow `push` pour un tag créé avec le `GITHUB_TOKEN` d'un autre workflow.
+
+La release `v1.0.0` a finalement été publiée le 9 octobre avec le mécanisme local de secours, sur
+le commit tagué `fa41e4e`. Elle contient `Ledge-1.0.0.dmg` (5 599 071 octets, SHA-256
+`54e486149c742cacba89e9f8c7a7e1461814d2a09d6800e13ffef29d6db63902`) et `appcast.xml`.
+Les routes publiques du site exposent `1.0.0` après leur délai de cache normal de cinq minutes et
+le DMG réellement téléchargé présente la même empreinte. Le workflow automatique reste à fusionner
+sur `main` et son secret Actions `SPARKLE_PRIVATE_KEY` reste à renseigner pour les versions futures.
+
 ## Construire & lancer
 
 ```bash
@@ -395,8 +411,8 @@ réinstalle le tap au changement d'application, sans nécessiter de relance.
 
 ## Prochaines étapes suggérées
 
-La version publique est `0.2.0`. La candidate locale suivante est `0.3.0` (build `3`) ; elle ne doit
-être publiée qu'après la recette de [doc 12](12-recette-release-candidate.md).
+La version publique est `1.0.0` (build `4`). La GitHub Release, le DMG, l'appcast, l'API du site et
+la redirection de téléchargement ont été vérifiés ensemble le 9 octobre 2026.
 
 1. Aucun push ne doit être effectué par l'agent. Si Adrien décide de publier les branches, il devra
    lui-même valider ensuite les CI distantes de l'application et du site.
@@ -405,7 +421,9 @@ La version publique est `0.2.0`. La candidate locale suivante est `0.3.0` (build
    écran interne et externe.
 4. Tester sur un Mac Apple Silicon propre le parcours complet : copie vers Applications, première
    tentative, apparition de « Ouvrir quand même » puis lancement.
-5. Tester une mise à jour Sparkle `0.2.0` → `0.3.0` avant d'exécuter `make release`.
-6. Finaliser le domaine Vercel : `app-ledge.fr` est connecté et HTTPS fonctionne, mais Vercel
+5. Tester sur un autre Mac la mise à jour Sparkle `0.2.0` → `1.0.0` depuis l'appcast public.
+6. Fusionner le workflow de publication sur `main` et renseigner le secret Actions
+   `SPARKLE_PRIVATE_KEY` avant la prochaine version.
+7. Finaliser le domaine Vercel : `app-ledge.fr` est connecté et HTTPS fonctionne, mais Vercel
    redirige encore l'apex vers `www.app-ledge.fr` alors que le code déclare l'apex canonique.
    `ledge.app` appartient à un tiers et ne fait pas partie du projet.

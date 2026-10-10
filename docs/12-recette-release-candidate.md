@@ -1,8 +1,8 @@
 # 12 — Recette release candidate
 
-> Mise à jour le **5 octobre 2026** après la phase 3 locale.
+> Mise à jour le **9 octobre 2026** après la publication de `v1.0.0`.
 >
-> Version publique : `0.2.0` (build `2`). Candidate locale suivante : `0.3.0` (build `3`).
+> Version publique : `1.0.0` (build `4`).
 > La release `v0.2.0` et ses assets ne doivent jamais être remplacés : Sparkle exige une version
 > et un build strictement supérieurs pour proposer correctement une mise à jour.
 
@@ -14,7 +14,8 @@
 - [x] `make app` — bundle construit avec la licence Sparkle incluse
 - [x] smoke test réel — le bundle optimisé démarre et reste actif pendant la mesure de 30 secondes
 - [x] tests, ESLint et build de production de `ledge-site`
-- [ ] CI GitHub verte sur le commit candidat — aucun push ne doit être effectué par l'agent
+- [x] CI GitHub verte sur le commit candidat et tag `v1.0.0` créé
+- [x] GitHub Release `v1.0.0` publique avec DMG et appcast signé
 - [x] Paquet ad hoc local construit avec icône et raccourci Applications
 - [x] Parcours gratuit retenu : DMG ad hoc et autorisation manuelle « Ouvrir quand même »
 - [ ] Variante Developer ID/notarisée — amélioration optionnelle, non bloquante
@@ -22,10 +23,20 @@
   entitlements de l'app aux helpers
 - [x] Signature Developer ID du DMG prévue avant l'envoi à NotaryTool
 - [x] `codesign --verify --deep --strict dist/Ledge.app`
-- [x] `hdiutil verify dist/Ledge-0.3.0.dmg`
+- [x] `hdiutil verify dist/Ledge-1.0.0.dmg`
 - [x] validation XML de `dist/appcast.xml`
 - [x] pages juridiques publiques : mentions, confidentialité, conditions et licences en HTTP 200
 - [x] routes publiques : accueil `200`, appcast `200`, téléchargement `302` vers le DMG GitHub
+
+### Preuves de publication — 9 octobre 2026
+
+- Release : `https://github.com/marcucus/ledge/releases/tag/v1.0.0`.
+- `Ledge-1.0.0.dmg` : **5 599 071 octets**, SHA-256
+  `54e486149c742cacba89e9f8c7a7e1461814d2a09d6800e13ffef29d6db63902`.
+- `/api/releases/latest` expose `1.0.0` (build `4`) après le délai de cache de cinq minutes.
+- `/download/latest` redirige vers le DMG `v1.0.0` et le fichier téléchargé possède exactement
+  l'empreinte ci-dessus.
+- `/appcast.xml` propose `1.0.0`, puis conserve `0.2.0` et `0.1.0` pour l'historique Sparkle.
 
 ### Preuves de phase 3 — 5 octobre 2026
 
@@ -56,7 +67,7 @@
 
 1. Fermer toute instance existante de Ledge.
 2. Construire avec `make app`, ouvrir `dist/Ledge.app` et vérifier que la version affichée est
-   `0.3.0` (build `3`).
+   `1.0.0` (build `4`).
 3. Vérifier les trois compositions, l'ouverture et la fermeture, le menu grille et le maintien
    ouvert pendant son utilisation.
 4. Vérifier le choix de l'écran cible, puis déconnecter et reconnecter l'écran externe.
@@ -101,9 +112,9 @@ Apple Music/Spotify ; ils ne sont pas cochés par une simple mesure du processus
 
 Cette partie ne peut pas être validée depuis la machine de développement.
 
-1. Installer d'abord la version publique `0.2.0` depuis son DMG GitHub.
+1. Installer d'abord l'ancienne version publique `0.2.0` depuis son DMG GitHub.
 2. Vérifier son parcours Gatekeeper sur une machine qui n'a jamais lancé Ledge.
-3. Publier ensuite la candidate `0.3.0` et utiliser « Vérifier les mises à jour… » depuis `0.2.0`.
+3. Utiliser « Vérifier les mises à jour… » depuis `0.2.0` et confirmer la proposition de `1.0.0`.
 4. Confirmer téléchargement, validation Sparkle, remplacement, relance et conservation des réglages.
 5. Confirmer le lancement sur macOS 14 ou plus récent et l'affichage sur écran interne/externe.
 6. Télécharger ensuite le DMG depuis le site public et comparer son SHA-256 avec le changelog et
@@ -123,27 +134,36 @@ modifie `CFBundleShortVersionString` et incrémente toujours `CFBundleVersion` d
 Une PR ne doit porter qu'un seul label `version:*`; la CI refuse les combinaisons contradictoires.
 Un push direct sur `main`, sans PR associée ni label récupérable, ne produit aucune version. Une
 seule PR `release/v…` peut être ouverte à la fois. Quand cette PR est fusionnée, une nouvelle CI
-complète s'exécute sur `main`, puis le tag `v…` est créé uniquement si elle est verte. Ce mécanisme
-ne publie aucun DMG : la recette et `make release` restent des actions explicites.
+complète s'exécute sur `main`, puis le tag `v…` est créé uniquement si elle est verte. Le workflow
+`Publish release`, déclenché après `Release version`, construit alors le DMG ad hoc, génère
+l'appcast signé, publie la GitHub Release et vérifie la présence des deux assets. Il ignore sans
+erreur les exécutions qui ne créent aucun tag.
 
 À configurer une fois dans GitHub : **Settings → Actions → General → Workflow permissions**,
 activer les permissions d'écriture et l'option autorisant GitHub Actions à créer des pull requests.
+Ajouter également dans **Settings → Secrets and variables → Actions** un secret de dépôt nommé
+`SPARKLE_PRIVATE_KEY`, contenant la clé privée EdDSA déjà utilisée localement par Sparkle. Cette
+clé ne doit jamais apparaître dans Git, les logs ou une variable non chiffrée.
 Le workflow crée ou remet à jour les quatre labels après chaque exécution `Quality` sur `main`,
 même si cette CI échoue. La préparation d'une version reste, elle, conditionnée à une CI verte.
 
 ## Publication
 
-La publication reste une action explicite. Elle ne doit commencer qu'après validation de toutes les
-cases bloquantes ci-dessus et déploiement des pages juridiques du site.
+La publication stable est automatique après la fusion de la PR de version et la création du tag.
+Pour reprendre un tag déjà créé, ouvrir **Actions → Publish release → Run workflow** et renseigner
+le tag, par exemple `v1.0.0`. Le workflow refuse une version incohérente avec `Info.plist`, une clé
+Sparkle absente ou une Release dépourvue du DMG et de `appcast.xml`.
+
+La commande locale reste disponible comme solution de secours :
 
 ```bash
-make release CHANGELOG="Décrire ici les changements de la version 0.3.0"
+make release CHANGELOG="Décrire ici les changements de la prochaine version"
 ```
 
 Cette commande construit le DMG ad hoc, génère l'appcast Sparkle, puis publie la GitHub Release et
 ses assets. `make release-notarized` conserve la variante payante et vérifie le ticket Apple avant
 publication.
-Si un upload échoue, la même commande reprend uniquement le brouillon `v0.3.0` visant le même
+Si un upload échoue, la même commande reprend uniquement le brouillon de la version visant le même
 commit et remplace ses assets partiels. Elle refuse de modifier une release déjà publique ou un
 brouillon associé à un autre commit, ainsi que de publier un appcast qui référence un delta local
 absent. Elle ne doit pas être lancée pour une simple vérification locale.
